@@ -217,7 +217,6 @@ members = [
     "crates/theme_settings",
     "crates/time_format",
     "crates/title_bar",
-    "crates/toolchain_selector",
     "crates/ui",
     "crates/ui_input",
     "crates/ui_macros",

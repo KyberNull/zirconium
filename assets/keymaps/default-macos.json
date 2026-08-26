@@ -754,7 +754,6 @@
       "cmd-alt-s": "workspace::SaveAll",
       "cmd-k n": "encoding_selector::Toggle",
       "cmd-k m": "language_selector::Toggle",
-      "cmd-k cmd-m": "toolchain::AddToolchain",
       "escape": "workspace::Unfollow",
       "cmd-k cmd-left": "workspace::ActivatePaneLeft",
       "cmd-k cmd-right": "workspace::ActivatePaneRight",
@@ -1252,13 +1251,6 @@
     "use_key_equivalents": true,
     "bindings": {
       "tab": "channel_modal::ToggleMode",
-    },
-  },
-  {
-    "context": "ToolchainSelector",
-    "use_key_equivalents": true,
-    "bindings": {
-      "cmd-shift-a": "toolchain::AddToolchain",
     },
   },
   {

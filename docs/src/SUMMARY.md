@@ -112,7 +112,7 @@
 
 - [All Languages](./languages.md)
 - [Configuring Languages](./configuring-languages.md)
-  - [Toolchains](./toolchains.md)
+  - [Toolchains] Removed from the codebase.
   - [Semantic Tokens](./semantic-tokens.md)
 - [Ansible](./languages/ansible.md)
 - [AsciiDoc](./languages/asciidoc.md)
