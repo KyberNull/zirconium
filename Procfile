@@ -1,4 +1,3 @@
 collab: RUST_LOG=${RUST_LOG:-info} cargo run --package=collab serve all
 cloud: cd ../cloud; cargo make dev
-livekit: livekit-server --dev
-blob_store: ./script/run-local-minio
+# MinIO and LiveKit: `devenv up` (or run `script/run-local-minio` / `livekit-server` from the devenv shell)

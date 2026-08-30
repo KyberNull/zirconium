@@ -5,6 +5,9 @@
 .webrtc-sys/
 **/venv
 **/.direnv
+.devenv
+.devenv.flake.nix
+devenv.local.nix
 *.wasm
 *.xcodeproj
 .DS_Store

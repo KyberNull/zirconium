@@ -1,0 +1,16 @@
+# Local development. Editor packaging stays in flake.nix (`nix build`).
+nixpkgs:
+  # nixpkgs marks this MinIO release insecure; we only use it for local blob_store.
+  permitted_insecure_packages:
+    - minio-2025-10-15T17-29-55Z
+inputs:
+  nixpkgs:
+    url: github:NixOS/nixpkgs/nixos-unstable
+  rust-overlay:
+    url: github:oxalica/rust-overlay
+    inputs:
+      nixpkgs:
+        follows: nixpkgs
+  nixpkgs-mdbook:
+    # Pinned for mdBook 0.4.40 (see crates/docs_preprocessor/Cargo.toml).
+    url: github:NixOS/nixpkgs/6ecabf9e3f617aeec1a23a27d0080cab066a9d5b
