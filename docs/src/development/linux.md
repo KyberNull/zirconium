@@ -21,6 +21,18 @@ Clone the [Zed repository](https://github.com/zed-industries/zed).
 
   If you prefer to install the system libraries manually, you can find the list of required packages in the `script/linux` file.
 
+If you use Nix, skip rustup/`script/linux` and use [devenv](https://devenv.sh) instead:
+
+```sh
+devenv shell
+```
+
+`devenv up` starts local MinIO and LiveKit. To package the editor:
+
+```sh
+devenv build
+```
+
 ## Building from source
 
 Once the dependencies are installed, you can build Zed using [Cargo](https://doc.rust-lang.org/cargo/).

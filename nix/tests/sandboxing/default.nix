@@ -42,9 +42,7 @@
 # shown to reach `echo1` while `echo2` is blocked.
 #
 # Build one scenario:
-#   nix build .#checks.x86_64-linux.sandbox-working
-# Interactive:
-#   nix run .#checks.x86_64-linux.sandbox-working.driverInteractive
+#   devenv build outputs.sandbox-working
 {
   pkgs,
   inputs,

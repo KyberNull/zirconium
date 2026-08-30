@@ -84,6 +84,8 @@ fn publish(deps: &[&NamedJob]) -> NamedJob {
         named::bash("doctl registry login")
     }
 
+    // Dockerfile-collab is the last Docker leftover; replace with a Nix-built
+    // image (`pkgs.dockerTools` / nix2container) when collab packaging moves to Nix.
     fn build_docker_image() -> Step<Run> {
         named::bash(indoc! {r#"
             docker build -f Dockerfile-collab \

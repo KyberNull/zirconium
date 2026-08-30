@@ -13,13 +13,15 @@ mdbook serve docs
 
 The first command dumps an action manifest to `crates/docs_preprocessor/actions.json`. Without it, the preprocessor cannot validate keybinding and action references in the docs and will report errors. You only need to re-run it when actions change.
 
-If you use Nix, the development shell provides a pinned `mdbook` (0.4.40) and a
+If you use Nix, the [devenv](https://devenv.sh) shell provides a pinned `mdbook` (0.4.40) and a
 prebuilt docs preprocessor, so you can build the docs without installing anything
 or compiling the preprocessor on every run:
 
 ```sh
-nix develop -c mdbook build docs
+devenv shell -- mdbook build docs
 ```
+
+Or `devenv run docs`.
 
 (When `actions.json` has not been generated, action/keybinding validation is
 skipped with a warning rather than failing the build.)
