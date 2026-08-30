@@ -1,15 +1,7 @@
 # NixOS VM integration test for GPUI AccessKit (X11).
 #
-# Interactive use:
-#   nix run .#checks.x86_64-linux.a11y-test.driverInteractive
-#
-# Then in the Python REPL:
-#   start_all()
-#   machine.wait_for_x()
-#   machine.succeed("su - user -c 'DISPLAY=:0 gpui-a11y-example &'")
-#
 # Automated run:
-#   nix build .#checks.x86_64-linux.a11y-test
+#   devenv build outputs.a11y-test
 {
   pkgs,
   inputs,

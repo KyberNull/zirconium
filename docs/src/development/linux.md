@@ -27,7 +27,11 @@ If you use Nix, skip rustup/`script/linux` and use [devenv](https://devenv.sh) i
 devenv shell
 ```
 
-`devenv up` starts local MinIO and LiveKit. Packaging the editor is still `nix build`.
+`devenv up` starts local MinIO and LiveKit. To package the editor:
+
+```sh
+devenv build
+```
 
 ## Building from source
 
