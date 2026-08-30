@@ -170,7 +170,7 @@ let
         fontconfig
         freetype
         # TODO: need staticlib of this for linking the musl remote server.
-        # should make it a separate derivation/flake output
+        # should make it a separate derivation/devenv output
         # see https://crane.dev/examples/cross-musl.html
         libgit2
         openssl

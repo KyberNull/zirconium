@@ -26,6 +26,9 @@ let
 
   gpuLib = pkgs.vulkan-loader;
 
+  mkZed = import ./nix/toolchain.nix { inherit inputs; };
+  zed-editor = mkZed pkgs;
+
   nativePackages = [
     pkgs.cmake
     pkgs.curl
@@ -64,10 +67,6 @@ let
   ++ lib.optionals darwin [ pkgs.lld ];
 in
 {
-  # devenv 2.1 treats Nix eval *warnings* on stdout as a failed drvPath lookup
-  # when the user is not in trusted-users (it also passes `--option system`).
-  # Do not pull in crane/`zed-editor` here — that emits crane/mold warnings and
-  # breaks `devenv shell`. Packaging still uses crane via flake.nix.
   cachix.enable = false;
 
   languages.rust = {
@@ -140,4 +139,16 @@ in
   processes.livekit.exec = ''
     exec ${lib.getExe pkgs.livekit} --config ./livekit.yaml
   '';
+
+  outputs =
+    {
+      zed-editor = zed-editor;
+      debug = zed-editor.override { profile = "dev"; };
+    }
+    // lib.optionalAttrs linux (
+      {
+        a11y-test = import ./nix/tests/a11y.nix { inherit pkgs inputs; };
+      }
+      // import ./nix/tests/sandboxing { inherit pkgs inputs; }
+    );
 }
