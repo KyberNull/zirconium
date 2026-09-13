@@ -349,7 +349,7 @@ To set expectations clearly, here's what PyCharm offers that Zed doesn't have:
 
 PyCharm offers Code With Me as a separate plugin for collaboration. Zed has collaboration built into the core experience.
 
-- Open the Collab Panel in the left dock
+
 - Create a channel and [invite your collaborators](https://zed.dev/docs/collaboration#inviting-a-collaborator) to join
 - [Share your screen or your codebase](https://zed.dev/docs/collaboration#share-a-project) directly
 

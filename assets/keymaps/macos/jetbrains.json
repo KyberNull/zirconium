@@ -210,7 +210,7 @@
     },
   },
   {
-    "context": "Dock || Workspace || OutlinePanel || ProjectPanel || CollabPanel",
+    "context": "Dock || Workspace || OutlinePanel || ProjectPanel",
     "bindings": {
       "escape": "editor::ToggleFocus",
       "shift-escape": "workspace::CloseActiveDock",

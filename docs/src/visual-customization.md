@@ -118,7 +118,6 @@ To disable this behavior use:
   // Individual status bar icons can be hidden:
   // "project_panel": {"button": false },
   // "outline_panel": {"button": false },
-  // "collaboration_panel": {"button": false },
   // "git_panel": {"button": false },
 
   // "agent": {"button": false },

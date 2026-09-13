@@ -66,14 +66,8 @@
 # Real-time collaboration, channels, calls, remote development
 # ═══════════════════════════════════════════════════════════════════════════════
 
-/crates/call/ @zed-industries/collab-team
-/crates/channel/ @zed-industries/collab-team
 /crates/client/ @zed-industries/collab-team
-/crates/collab/ @zed-industries/collab-team
-/crates/collab_ui/ @zed-industries/collab-team
 /crates/dev_container/ @zed-industries/collab-team
-/crates/livekit_api/ @zed-industries/collab-team
-/crates/livekit_client/ @zed-industries/collab-team
 /crates/proto/ @zed-industries/collab-team
 /crates/remote/ @zed-industries/collab-team
 /crates/remote_server/ @zed-industries/collab-team

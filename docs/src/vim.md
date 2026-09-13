@@ -282,7 +282,6 @@ These ex commands open Zed's various panels and windows.
 | Command                      | Default Shortcut |
 | ---------------------------- | ---------------- |
 | Open the project panel       | `:E[xplore]`     |
-| Open the collaboration panel | `:C[ollab]`      |
 | Open the chat panel          | `:Ch[at]`        |
 | Open the AI panel            | `:A[I]`          |
 | Open the git panel           | `:G[it]`         |

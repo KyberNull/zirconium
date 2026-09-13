@@ -25,7 +25,6 @@ const DIRS: &[&str] = &[
     "crates/settings/src",
     "crates/diagnostics/src",
     "crates/search/src",
-    "crates/collab/src",
     "crates/db/src",
     "crates/lsp/src",
 ];

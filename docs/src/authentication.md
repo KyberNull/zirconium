@@ -1,6 +1,6 @@
 ---
 title: Authenticate with Zed
-description: "Sign in to Zed to access collaboration features and AI services."
+description: "Sign in to Zed to access AI services and account features."
 ---
 
 # Authenticate with Zed
@@ -9,8 +9,7 @@ Signing in to Zed is not required. You can use most features you'd expect in a c
 
 ## What Features Require Signing In?
 
-1. All real-time [collaboration features](./collaboration/overview.md).
-2. [LLM-powered features](./ai/overview.md), if you are using Zed as the provider of your LLM models. To use AI without signing in, you can [bring and configure your own API keys](./ai/use-api-access.md).
+1. [LLM-powered features](./ai/overview.md), if you are using Zed as the provider of your LLM models. To use AI without signing in, you can [bring and configure your own API keys](./ai/use-api-access.md).
 
 ## Signing In
 
@@ -21,7 +20,7 @@ Zed uses GitHub's OAuth flow to authenticate users, requiring only the `read:use
 3. Authenticate with your GitHub account when prompted.
 4. After successful authentication, your browser will display a confirmation, and you'll be automatically signed in to Zed.
 
-**Note**: If you're behind a corporate firewall, ensure that connections to `zed.dev` and `collab.zed.dev` are allowed.
+**Note**: If you're behind a corporate firewall, ensure that connections to `zed.dev` are allowed.
 
 ## Signing Out
 
