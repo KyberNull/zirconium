@@ -14,13 +14,12 @@ use collab::{
     executor::Executor,
     rpc::{CLEANUP_TIMEOUT, Principal, RECONNECT_TIMEOUT, Server, ZedVersion},
 };
-use collab_ui::channel_view::ChannelView;
 use collections::{HashMap, HashSet};
 
 use fs::FakeFs;
 use futures::{StreamExt as _, channel::oneshot};
 use git::GitHostingProviderRegistry;
-use gpui::{AppContext as _, BackgroundExecutor, Entity, Task, TestAppContext, VisualTestContext};
+use gpui::{AppContext as _, BackgroundExecutor, Entity, TestAppContext, VisualTestContext};
 use http_client::{FakeHttpClient, Method};
 use language::LanguageRegistry;
 use node_runtime::NodeRuntime;
@@ -361,7 +360,7 @@ impl TestServer {
             call::init(client.clone(), user_store.clone(), cx);
             channel::init(&client, user_store.clone(), cx);
             notifications::init(client.clone(), user_store, cx);
-            collab_ui::init(&app_state, cx);
+            title_bar::init(cx);
             file_finder::init(cx);
             menu::init();
             cx.bind_keys(settings::KeymapFile::load_asset_cached(os_keymap, cx).unwrap());
@@ -954,23 +953,6 @@ impl TestClient {
         // it might be nice to try and cleanup these at the end of each test.
         (entity, cx)
     }
-}
-
-pub fn open_channel_notes(
-    channel_id: ChannelId,
-    cx: &mut VisualTestContext,
-) -> Task<anyhow::Result<Entity<ChannelView>>> {
-    let window = cx.update(|_, cx| {
-        cx.active_window()
-            .unwrap()
-            .downcast::<MultiWorkspace>()
-            .unwrap()
-    });
-    let entity = window
-        .read_with(cx, |mw, _| mw.workspace().clone())
-        .unwrap();
-
-    cx.update(|window, cx| ChannelView::open(channel_id, None, entity.clone(), window, cx))
 }
 
 impl Drop for TestClient {

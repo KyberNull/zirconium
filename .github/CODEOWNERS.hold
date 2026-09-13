@@ -70,7 +70,6 @@
 /crates/channel/ @zed-industries/collab-team
 /crates/client/ @zed-industries/collab-team
 /crates/collab/ @zed-industries/collab-team
-/crates/collab_ui/ @zed-industries/collab-team
 /crates/dev_container/ @zed-industries/collab-team
 /crates/livekit_api/ @zed-industries/collab-team
 /crates/livekit_client/ @zed-industries/collab-team

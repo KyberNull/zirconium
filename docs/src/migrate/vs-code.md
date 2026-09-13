@@ -304,7 +304,6 @@ You won’t find one-to-one replacements for every VS Code extension, especially
 
 Unlike VS Code, Zed doesn’t require an extension to collaborate. It’s built into the core experience.
 
-- Open the Collab Panel in the left dock.
 - Create a channel and [invite your collaborators](https://zed.dev/docs/collaboration#inviting-a-collaborator) to join.
 - [Share your screen or your codebase](https://zed.dev/docs/collaboration#share-a-project) directly.
 
