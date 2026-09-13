@@ -85,7 +85,6 @@ in
     pkgs.zig
     pkgs.sqlx-cli
     pkgs.minio
-    pkgs.livekit
     mdbook
     pkgs.gobject-introspection
     pkgs.at-spi2-core
@@ -134,10 +133,6 @@ in
     export MINIO_ROOT_USER=the-blob-store-access-key
     export MINIO_ROOT_PASSWORD=the-blob-store-secret-key
     exec ${lib.getExe pkgs.minio} server --quiet .blob_store
-  '';
-
-  processes.livekit.exec = ''
-    exec ${lib.getExe pkgs.livekit} --config ./livekit.yaml
   '';
 
   outputs =
