@@ -5,7 +5,7 @@ description: Get started with Zed, the fast open-source code editor. Essential c
 
 # Getting Started
 
-Zed is an open-source code editor with built-in collaboration and AI tools.
+Zed is an open-source code editor with built-in AI tools.
 
 This guide covers the essential commands, environment setup, and navigation basics.
 
