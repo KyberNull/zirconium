@@ -62,7 +62,7 @@ use std::{
 };
 use theme::{ActiveTheme, GlobalTheme, ThemeRegistry};
 use theme_settings::load_user_theme;
-use util::{ResultExt, maybe};
+use util::ResultExt;
 use uuid::Uuid;
 use workspace::{
     AppState, MultiWorkspace, SerializedWorkspaceLocation, SessionWorkspace, Toast,
@@ -1306,39 +1306,7 @@ fn handle_open_request(request: OpenRequest, app_state: Arc<AppState>, cx: &mut 
         }));
     }
 
-    if !request.open_channel_notes.is_empty() || request.join_channel.is_some() {
-        cx.spawn(async move |cx| {
-            let result = maybe!(async {
-                if let Some(task) = task {
-                    task.await?;
-                }
-                let client = app_state.client.clone();
-                // we continue even if connection fails as join_channel/ open channel notes will
-                // show a visible error message.
-                client.connect(true, cx).await.into_response().log_err();
-
-                if let Some(channel_id) = request.join_channel {
-                    cx.update(|cx| {
-                        workspace::join_channel(
-                            client::ChannelId(channel_id),
-                            app_state.clone(),
-                            None,
-                            None,
-                            cx,
-                        )
-                    })
-                    .await?;
-                }
-
-                anyhow::Ok(())
-            })
-            .await;
-            if let Err(err) = result {
-                fail_to_open_window_async(err, cx);
-            }
-        })
-        .detach()
-    } else if let Some(task) = task {
+    if let Some(task) = task {
         cx.spawn(async move |cx| {
             if let Err(err) = task.await {
                 fail_to_open_window_async(err, cx);
