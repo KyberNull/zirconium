@@ -2,7 +2,6 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use call::{ActiveCall, Room};
-use channel::ChannelStore;
 use client::{User, proto::PeerId};
 use gpui::{
     AnyElement, Empty, Hsla, IntoElement, MouseButton, Path, ScreenCaptureSource, Styled, TaskExt,
@@ -11,17 +10,14 @@ use gpui::{
 use gpui::{App, Task, Window};
 use icons::IconName;
 use livekit_client::ConnectionQuality;
-use project::WorktreeSettings;
 use remote_connection::RemoteConnectionModal;
 use rpc::proto::{self};
-use settings::{Settings as _, SettingsLocation};
 use theme::ActiveTheme;
 use ui::{
     Avatar, AvatarAudioStatusIndicator, ContextMenu, ContextMenuItem, Divider, DividerColor,
     Facepile, KeyBinding, PopoverMenu, SplitButton, SplitButtonStyle, TintColor, Tooltip,
     prelude::*,
 };
-use util::rel_path::RelPath;
 use workspace::{ParticipantLocation, notifications::DetachAndPromptErr};
 use zed_actions::ShowCallStats;
 
@@ -368,11 +364,6 @@ impl TitleBar {
             .map(|d| d.read(cx).stats().clone())
             .unwrap_or_default();
 
-        let channel_store = ChannelStore::global(cx);
-        let channel = room
-            .channel_id()
-            .and_then(|channel_id| channel_store.read(cx).channel_for_id(channel_id).cloned());
-
         let effective_quality = stats
             .effective_quality
             .map(|inner| inner.0)
@@ -522,23 +513,7 @@ impl TitleBar {
             .when(
                 is_local && can_share_projects && !is_connecting_to_project,
                 |this| {
-                    let is_sharing_disabled =
-                        channel.is_some_and(|channel| match channel.visibility {
-                            proto::ChannelVisibility::Public => {
-                                project.visible_worktrees(cx).any(|worktree| {
-                                    let worktree_id = worktree.read(cx).id();
-
-                                    let settings_location = Some(SettingsLocation {
-                                        worktree_id,
-                                        path: RelPath::empty(),
-                                    });
-
-                                    WorktreeSettings::get(settings_location, cx)
-                                        .prevent_sharing_in_public_channels
-                                })
-                            }
-                            proto::ChannelVisibility::Members => false,
-                        });
+                    let is_sharing_disabled = false;
 
                     let icon = if is_shared {
                         IconName::FolderShared
