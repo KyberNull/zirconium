@@ -17,9 +17,6 @@ extend-exclude = [
     # Some mock data is flagged as typos.
     "crates/assistant_tools/src/web_search_tool.rs",
 
-    # Suppress false positives in database schema.
-    "crates/collab/migrations/20251208000000_test_schema.sql",
-
     # Vendored JSON schemas from SchemaStore.
     "crates/json_schema_store/src/schemas/",
 
