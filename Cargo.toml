@@ -41,7 +41,6 @@ members = [
     "crates/crashes",
     "crates/credentials_provider",
     "crates/dap",
-    "crates/dap_adapters",
     "crates/db",
     "crates/debug_adapter_extension",
     "crates/deepseek",
@@ -306,7 +305,6 @@ copilot_ui = { path = "crates/copilot_ui" }
 crashes = { path = "crates/crashes" }
 credentials_provider = { path = "crates/credentials_provider" }
 dap = { path = "crates/dap" }
-dap_adapters = { path = "crates/dap_adapters" }
 db = { path = "crates/db" }
 debug_adapter_extension = { path = "crates/debug_adapter_extension" }
 deepseek = { path = "crates/deepseek" }
