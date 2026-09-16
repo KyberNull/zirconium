@@ -97,7 +97,6 @@ crashes.workspace = true
 dap_adapters.workspace = true
 db.workspace = true
 debug_adapter_extension.workspace = true
-debugger_tools.workspace = true
 dev_container.workspace = true
 diagnostics.workspace = true
 editor.workspace = true

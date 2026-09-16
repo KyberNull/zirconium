@@ -4376,23 +4376,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "debugger_tools"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "dap",
- "editor",
- "futures 0.3.32",
- "gpui",
- "project",
- "serde_json",
- "settings",
- "smol",
- "util",
- "workspace",
-]
-
-[[package]]
 name = "debugid"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -21499,7 +21482,6 @@ dependencies = [
  "dap_adapters",
  "db",
  "debug_adapter_extension",
- "debugger_tools",
  "dev_container",
  "diagnostics",
  "edit_prediction",
