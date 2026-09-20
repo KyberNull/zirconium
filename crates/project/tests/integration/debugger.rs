@@ -1,6 +1,5 @@
 mod go_locator {
     use collections::HashMap;
-    use dap::{DapLocator, adapters::DebugAdapterName};
     use gpui::TestAppContext;
     use project::debugger::locators::go::{DelveLaunchRequest, GoLocator};
     use task::{HideStrategy, RevealStrategy, RevealTarget, SaveStrategy, Shell, TaskTemplate};
@@ -241,7 +240,6 @@ mod go_locator {
 }
 
 mod python_locator {
-    use dap::{DapLocator, adapters::DebugAdapterName};
     use serde_json::json;
 
     use project::debugger::locators::python::*;
@@ -249,7 +247,6 @@ mod python_locator {
 
     #[gpui::test]
     async fn test_python_locator() {
-        let adapter = DebugAdapterName("Debugpy".into());
         let build_task = TaskTemplate {
             label: "run module '$ZED_FILE'".into(),
             command: "$ZED_CUSTOM_PYTHON_ACTIVE_ZED_TOOLCHAIN".into(),
@@ -270,7 +267,6 @@ mod python_locator {
         };
 
         let expected_scenario = DebugScenario {
-            adapter: "Debugpy".into(),
             label: "run module 'main.py'".into(),
             build: None,
             config: json!({

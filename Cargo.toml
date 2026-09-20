@@ -40,9 +40,7 @@ members = [
     "crates/copilot_chat",
     "crates/crashes",
     "crates/credentials_provider",
-    "crates/dap",
     "crates/db",
-    "crates/debug_adapter_extension",
     "crates/deepseek",
     "crates/dev_container",
     "crates/diagnostics",
@@ -304,9 +302,7 @@ copilot_chat = { path = "crates/copilot_chat" }
 copilot_ui = { path = "crates/copilot_ui" }
 crashes = { path = "crates/crashes" }
 credentials_provider = { path = "crates/credentials_provider" }
-dap = { path = "crates/dap" }
 db = { path = "crates/db" }
-debug_adapter_extension = { path = "crates/debug_adapter_extension" }
 deepseek = { path = "crates/deepseek" }
 derive_refineable = { path = "crates/refineable/derive_refineable" }
 dev_container = { path = "crates/dev_container" }

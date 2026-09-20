@@ -1,7 +1,6 @@
 use anyhow::Context as _;
 use collections::HashMap;
 use context_server::ContextServerCommand;
-use dap::adapters::DebugAdapterName;
 use fs::Fs;
 use futures::StreamExt as _;
 use git::repository::DEFAULT_WORKTREE_DIRECTORY;
@@ -22,7 +21,7 @@ pub use settings::BinarySettings;
 pub use settings::DirenvSettings;
 pub use settings::LspSettings;
 use settings::{
-    DapSettingsContent, EditorconfigEvent, InvalidSettingsError, LocalSettingsKind,
+    EditorconfigEvent, InvalidSettingsError, LocalSettingsKind,
     LocalSettingsPath, RegisterSetting, SemanticTokenRules, Settings, SettingsLocation,
     SettingsStore, parse_json_with_comments, watch_config_file,
 };
@@ -57,7 +56,7 @@ pub struct ProjectSettings {
     pub global_lsp_settings: GlobalLspSettings,
 
     /// Configuration for Debugger-related features
-    pub dap: HashMap<DebugAdapterName, DapSettings>,
+    // pub dap: HashMap<DebugAdapterName, DapSettings>,
 
     /// Settings for context servers used for AI-related features.
     pub context_servers: HashMap<Arc<str>, ContextServerSettings>,
@@ -772,12 +771,6 @@ impl Settings for ProjectSettings {
                     .unwrap()
                     .clone(),
             },
-            dap: project
-                .dap
-                .clone()
-                .into_iter()
-                .map(|(key, value)| (DebugAdapterName(key.into()), DapSettings::from(value)))
-                .collect(),
             diagnostics: DiagnosticsSettings {
                 button: diagnostics.button.unwrap(),
                 include_warnings: diagnostics.include_warnings.unwrap(),

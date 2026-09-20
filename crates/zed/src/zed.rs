@@ -5879,7 +5879,6 @@ mod tests {
                 "context_server",
                 "copilot",
                 "copilot_edit_predictions",
-                "debugger",
                 "dev",
                 "diagnostics",
                 "edit_prediction",

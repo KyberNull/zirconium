@@ -95,7 +95,6 @@ copilot_chat.workspace = true
 copilot_ui.workspace = true
 crashes.workspace = true
 db.workspace = true
-debug_adapter_extension.workspace = true
 dev_container.workspace = true
 diagnostics.workspace = true
 editor.workspace = true

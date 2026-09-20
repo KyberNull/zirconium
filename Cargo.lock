@@ -4104,39 +4104,6 @@ dependencies = [
  "syn 2.0.117",
 ]
 
-[[package]]
-name = "dap"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-compression",
- "async-pipe",
- "async-tar",
- "async-trait",
- "client",
- "collections",
- "dap-types",
- "fs",
- "futures 0.3.32",
- "gpui",
- "http_client",
- "language",
- "log",
- "node_runtime",
- "parking_lot",
- "paths",
- "proto",
- "schemars 1.0.4",
- "serde",
- "serde_json",
- "settings",
- "smallvec",
- "smol",
- "task",
- "telemetry",
- "util",
- "zlog",
-]
 
 [[package]]
 name = "dap-types"
@@ -4333,21 +4300,6 @@ dependencies = [
  "libc",
  "libdbus-sys",
  "windows-sys 0.59.0",
-]
-
-[[package]]
-name = "debug_adapter_extension"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "collections",
- "dap",
- "extension",
- "gpui",
- "serde_json",
- "task",
- "util",
 ]
 
 [[package]]
@@ -4873,7 +4825,6 @@ dependencies = [
  "cloud_llm_client",
  "collections",
  "db",
- "debug_adapter_extension",
  "dirs",
  "edit_prediction",
  "edit_prediction_context",
@@ -5030,7 +4981,6 @@ dependencies = [
  "collections",
  "convert_case 0.11.0",
  "ctor",
- "dap",
  "db",
  "edit_prediction_types",
  "emojis",
@@ -5429,7 +5379,6 @@ dependencies = [
  "client",
  "ctrlc",
  "db",
- "debug_adapter_extension",
  "env_logger 0.11.8",
  "extension",
  "feature_flags",
@@ -5543,7 +5492,6 @@ dependencies = [
  "async-trait",
  "cloud_api_types",
  "collections",
- "dap",
  "fs",
  "futures 0.3.32",
  "gpui",
@@ -5613,7 +5561,6 @@ dependencies = [
  "collections",
  "criterion",
  "ctor",
- "dap",
  "extension",
  "fs",
  "futures 0.3.32",
@@ -8609,7 +8556,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "collections",
- "dap",
  "extension",
  "feature_flags",
  "gpui",
@@ -13082,7 +13028,6 @@ dependencies = [
  "collections",
  "context_server",
  "credentials_provider",
- "dap",
  "encoding_rs",
  "extension",
  "fancy-regex 0.18.0",
@@ -14200,7 +14145,6 @@ dependencies = [
  "clock",
  "collections",
  "crashes",
- "debug_adapter_extension",
  "editor",
  "env_logger 0.11.8",
  "extension",
@@ -21436,7 +21380,6 @@ dependencies = [
  "copilot_ui",
  "crashes",
  "db",
- "debug_adapter_extension",
  "dev_container",
  "diagnostics",
  "edit_prediction",
