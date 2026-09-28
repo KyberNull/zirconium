@@ -39,7 +39,6 @@ use workspace::{
 use crate::{
     Autoscroll, DiffHunkDelegate, Editor, EditorEvent, EditorSettings, ResolvedDiffHunks,
     ToggleSoftWrap, UncommittedDiffHunkDelegate,
-    actions::{DisableBreakpoint, EditLogBreakpoint, EnableBreakpoint, ToggleBreakpoint},
     display_map::Companion,
 };
 use zed_actions::{OpenSettingsAt, assistant::InlineAssist};
@@ -1070,78 +1069,6 @@ impl SplittableEditor {
                     self.unsplit(window, cx);
                 }
             }
-        }
-    }
-
-    fn intercept_toggle_breakpoint(
-        &mut self,
-        _: &ToggleBreakpoint,
-        _window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        // Only block breakpoint actions when the left (lhs) editor has focus
-        if let Some(lhs) = &self.lhs {
-            if lhs.was_last_focused {
-                cx.stop_propagation();
-            } else {
-                cx.propagate();
-            }
-        } else {
-            cx.propagate();
-        }
-    }
-
-    fn intercept_enable_breakpoint(
-        &mut self,
-        _: &EnableBreakpoint,
-        _window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        // Only block breakpoint actions when the left (lhs) editor has focus
-        if let Some(lhs) = &self.lhs {
-            if lhs.was_last_focused {
-                cx.stop_propagation();
-            } else {
-                cx.propagate();
-            }
-        } else {
-            cx.propagate();
-        }
-    }
-
-    fn intercept_disable_breakpoint(
-        &mut self,
-        _: &DisableBreakpoint,
-        _window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        // Only block breakpoint actions when the left (lhs) editor has focus
-        if let Some(lhs) = &self.lhs {
-            if lhs.was_last_focused {
-                cx.stop_propagation();
-            } else {
-                cx.propagate();
-            }
-        } else {
-            cx.propagate();
-        }
-    }
-
-    fn intercept_edit_log_breakpoint(
-        &mut self,
-        _: &EditLogBreakpoint,
-        _window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        // Only block breakpoint actions when the left (lhs) editor has focus
-        if let Some(lhs) = &self.lhs {
-            if lhs.was_last_focused {
-                cx.stop_propagation();
-            } else {
-                cx.propagate();
-            }
-        } else {
-            cx.propagate();
         }
     }
 
@@ -2335,10 +2262,6 @@ impl Render for SplittableEditor {
             .on_action(cx.listener(Self::toggle_split))
             .on_action(cx.listener(Self::activate_pane_left))
             .on_action(cx.listener(Self::activate_pane_right))
-            .on_action(cx.listener(Self::intercept_toggle_breakpoint))
-            .on_action(cx.listener(Self::intercept_enable_breakpoint))
-            .on_action(cx.listener(Self::intercept_disable_breakpoint))
-            .on_action(cx.listener(Self::intercept_edit_log_breakpoint))
             .on_action(cx.listener(Self::intercept_inline_assist))
             .capture_action(cx.listener(Self::toggle_soft_wrap))
             .size_full()
