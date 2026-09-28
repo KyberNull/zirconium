@@ -5,7 +5,6 @@ use crate::{
     edit_prediction_tests::FakeEditPredictionDelegate,
     element::{StickyHeader, header_jump_data},
     linked_editing_ranges::LinkedEditingRanges,
-    mouse_context_menu::MenuPosition,
     runnables::RunnableTasks,
     scroll::scroll_amount::ScrollAmount,
     test::{
@@ -44,7 +43,7 @@ use multi_buffer::{IndentGuide, MultiBuffer, MultiBufferOffset, MultiBufferOffse
 use parking_lot::Mutex;
 use pretty_assertions::{assert_eq, assert_ne};
 use project::{
-    FakeFs, Project, ProjectPath,
+    FakeFs, Project,
     bookmark_store::SerializedBookmark,
     project_settings::LspSettings,
     trusted_worktrees::{PathTrust, TrustedWorktrees},

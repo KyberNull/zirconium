@@ -98,7 +98,6 @@ use postage::stream::Stream;
 use project::{
     DirectoryLister, Project, ProjectEntryId, ProjectPath, ResolvedPath, Worktree, WorktreeId,
     WorktreeSettings,
-    debugger::{breakpoint_store::BreakpointStoreEvent, session::ThreadStatus},
     project_settings::ProjectSettings,
     toolchain_store::ToolchainStoreEvent,
     trusted_worktrees::{RemoteHostLocation, TrustedWorktrees, TrustedWorktreesEvent},
@@ -219,8 +218,6 @@ pub trait DebuggerProvider {
     fn task_scheduled(&self, cx: &mut App);
     fn debug_scenario_scheduled(&self, cx: &mut App);
     fn debug_scenario_scheduled_last(&self, cx: &App) -> bool;
-
-    fn active_thread_state(&self, cx: &App) -> Option<ThreadStatus>;
 }
 
 /// Opens a file or directory.
@@ -1652,18 +1649,6 @@ impl Workspace {
         })
         .detach();
 
-        cx.subscribe_in(
-            &project.read(cx).breakpoint_store(),
-            window,
-            |workspace, _, event, window, cx| match event {
-                BreakpointStoreEvent::BreakpointsUpdated(_, _)
-                | BreakpointStoreEvent::BreakpointsCleared(_) => {
-                    workspace.serialize_workspace(window, cx);
-                }
-                BreakpointStoreEvent::SetDebugLine | BreakpointStoreEvent::ClearDebugLines => {}
-            },
-        )
-        .detach();
         if let Some(toolchain_store) = project.read(cx).toolchain_store() {
             cx.subscribe_in(
                 &toolchain_store,
@@ -7239,12 +7224,7 @@ impl Workspace {
                         .all_serialized_bookmarks(cx)
                 });
 
-                let breakpoints = self.project.update(cx, |project, cx| {
-                    project
-                        .breakpoint_store()
-                        .read(cx)
-                        .all_source_breakpoints(cx)
-                });
+                let breakpoints = Default::default();
                 let user_toolchains = self
                     .project
                     .read(cx)
@@ -7494,17 +7474,6 @@ impl Workspace {
                 .await
                 .log_err();
 
-            let _ = project
-                .update(cx, |project, cx| {
-                    project
-                        .breakpoint_store()
-                        .update(cx, |breakpoint_store, cx| {
-                            breakpoint_store
-                                .with_serialized_breakpoints(serialized_workspace.breakpoints, cx)
-                        })
-                })
-                .await;
-
             // Clean up all the items that have _not_ been loaded. Our ItemIds aren't stable. That means
             // after loading the items, we might have different items and in order to avoid
             // the database filling up, we delete items that haven't been loaded now.
@@ -7546,29 +7515,6 @@ impl Workspace {
         let mut context = KeyContext::new_with_defaults();
         context.add("Workspace");
         context.set("keyboard_layout", cx.keyboard_layout().name().to_string());
-        if let Some(status) = self
-            .debugger_provider
-            .as_ref()
-            .and_then(|provider| provider.active_thread_state(cx))
-        {
-            match status {
-                ThreadStatus::Running | ThreadStatus::Stepping => {
-                    context.add("debugger_running");
-                }
-                ThreadStatus::Stopped => context.add("debugger_stopped"),
-                ThreadStatus::Exited | ThreadStatus::Ended => {}
-            }
-            // A coarse "there is a live debug session" flag (running, stepping,
-            // or stopped at a breakpoint) used to gate debugger controls like
-            // step/pause/stop. Distinct from `debugger_running`, which is only
-            // true while the program is actually executing.
-            if matches!(
-                status,
-                ThreadStatus::Running | ThreadStatus::Stepping | ThreadStatus::Stopped
-            ) {
-                context.add("debugger_session");
-            }
-        }
 
         if self.left_dock.read(cx).is_open() {
             if let Some(active_panel) = self.left_dock.read(cx).active_panel() {

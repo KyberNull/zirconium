@@ -248,7 +248,7 @@ use theme::{
 };
 use theme_settings::{ThemeSettings, observe_buffer_font_size_adjustment};
 use ui::{
-    Avatar, ContextMenu, Disclosure, IconButtonShape, Indicator, Key, KeyBinding, Tooltip,
+    Avatar, ContextMenu, Disclosure, IconButtonShape, Key, KeyBinding, Tooltip,
     prelude::*, scrollbars::ScrollbarAutoHide, tooltip_container, utils::WithRemSize,
 };
 use ui_input::ErasedEditor;
@@ -5758,7 +5758,6 @@ impl Editor {
         }
     }
 
-    #[cfg(any(test, feature = "test-support"))]
     pub fn reverse_lines(&mut self, _: &ReverseLines, window: &mut Window, cx: &mut Context<Self>) {
         self.manipulate_immutable_lines(window, cx, |lines| lines.reverse())
     }

@@ -71,7 +71,7 @@ impl Editor {
                         Self::build_tasks_context(&project, &buffer, buffer_row, tasks, cx);
                 }
 
-                cx.spawn_in(window, async move |editor, cx| {
+                cx.spawn_in(window, async move |_editor, cx| {
                         let task_context = match workspace {
                             Some(ws) => task_context_task
                                 .await
@@ -91,7 +91,6 @@ impl Editor {
                                     )),
                                 });
                         anyhow::Ok((resolved_tasks, task_context))
-                    }
                 })
             }
         };

@@ -1549,7 +1549,6 @@ impl CompletionsMenu {
 
             let sort_text = match &completion.source {
                 CompletionSource::Lsp { lsp_completion, .. } => lsp_completion.sort_text.as_deref(),
-                CompletionSource::Dap { sort_text } => Some(sort_text.as_str()),
                 _ => None,
             };
 
@@ -1905,8 +1904,6 @@ impl CodeActionContents {
                     action: available.action.clone(),
                     provider: available.provider.clone(),
                 });
-            } else {
-                index -= actions.len();
             }
         }
 

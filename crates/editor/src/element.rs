@@ -8397,7 +8397,7 @@ impl Element for EditorElement {
                         })
                         .unwrap_or_else(|| (Vec::new(), Vec::new(), HashMap::default()));
 
-                    let (selections, mut active_rows, newest_selection_head) = self
+                    let (selections, active_rows, newest_selection_head) = self
                         .layout_selections(
                             start_anchor,
                             end_anchor,
