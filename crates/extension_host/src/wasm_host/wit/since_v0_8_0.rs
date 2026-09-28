@@ -88,26 +88,6 @@ impl From<Command> for extension::Command {
     }
 }
 
-impl From<StartDebuggingRequestArgumentsRequest>
-    for extension::StartDebuggingRequestArgumentsRequest
-{
-    fn from(value: StartDebuggingRequestArgumentsRequest) -> Self {
-        match value {
-            StartDebuggingRequestArgumentsRequest::Launch => Self::Launch,
-            StartDebuggingRequestArgumentsRequest::Attach => Self::Attach,
-        }
-    }
-}
-impl TryFrom<dap::StartDebuggingRequestArguments> for extension::StartDebuggingRequestArguments {
-    type Error = anyhow::Error;
-
-    fn try_from(value: dap::StartDebuggingRequestArguments) -> Result<Self, Self::Error> {
-        Ok(Self {
-            configuration: serde_json::from_str(&value.configuration)?,
-            request: value.request.into(),
-        })
-    }
-}
 impl From<dap::IpAddress> for IpAddr {
     fn from(value: dap::IpAddress) -> Self {
         match value {
@@ -134,16 +114,6 @@ impl From<IpAddr> for dap::IpAddress {
     }
 }
 
-impl From<dap::TcpArguments> for extension::TcpArguments {
-    fn from(value: dap::TcpArguments) -> Self {
-        Self {
-            host: value.host.into(),
-            port: value.port,
-            timeout: value.timeout,
-        }
-    }
-}
-
 impl From<extension::TcpArgumentsTemplate> for dap::TcpArgumentsTemplate {
     fn from(value: extension::TcpArgumentsTemplate) -> Self {
         Self {
@@ -161,18 +131,6 @@ impl From<dap::TcpArgumentsTemplate> for extension::TcpArgumentsTemplate {
             port: value.port,
             timeout: value.timeout,
         }
-    }
-}
-
-impl TryFrom<extension::DebugTaskDefinition> for DebugTaskDefinition {
-    type Error = anyhow::Error;
-    fn try_from(value: extension::DebugTaskDefinition) -> Result<Self, Self::Error> {
-        Ok(Self {
-            label: value.label.to_string(),
-            adapter: value.adapter.to_string(),
-            config: value.config.to_string(),
-            tcp_connection: value.tcp_connection.map(Into::into),
-        })
     }
 }
 
@@ -241,20 +199,6 @@ impl From<ZedDebugConfig> for DebugConfig {
         }
     }
 }
-impl TryFrom<DebugAdapterBinary> for extension::DebugAdapterBinary {
-    type Error = anyhow::Error;
-    fn try_from(value: DebugAdapterBinary) -> Result<Self, Self::Error> {
-        Ok(Self {
-            command: value.command,
-            arguments: value.arguments,
-            envs: value.envs.into_iter().collect(),
-            cwd: value.cwd.map(|s| s.into()),
-            connection: value.connection.map(Into::into),
-            request_args: value.request_args.try_into()?,
-        })
-    }
-}
-
 impl From<dap::BuildTaskDefinition> for extension::BuildTaskDefinition {
     fn from(value: dap::BuildTaskDefinition) -> Self {
         match value {
@@ -920,18 +864,8 @@ impl dap::Host for WasmState {
         template: dap::TcpArgumentsTemplate,
     ) -> wasmtime::Result<Result<dap::TcpArguments, String>> {
         maybe!(async {
-            let (host, port, timeout) =
-                ::dap::configure_tcp_connection(task::TcpArgumentsTemplate {
-                    port: template.port,
-                    host: template.host.map(Into::into),
-                    timeout: template.timeout,
-                })
-                .await?;
-            Ok(dap::TcpArguments {
-                port,
-                host: host.into(),
-                timeout,
-            })
+            let _ = template;
+            anyhow::bail!("debug adapter TCP templates are no longer supported")
         })
         .await
         .to_wasmtime_result()
