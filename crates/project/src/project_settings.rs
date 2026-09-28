@@ -55,9 +55,6 @@ pub struct ProjectSettings {
     /// Common language server settings.
     pub global_lsp_settings: GlobalLspSettings,
 
-    /// Configuration for Debugger-related features
-    // pub dap: HashMap<DebugAdapterName, DapSettings>,
-
     /// Settings for context servers used for AI-related features.
     pub context_servers: HashMap<Arc<str>, ContextServerSettings>,
 
