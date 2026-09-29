@@ -7,10 +7,10 @@ pub mod settings;
 use core::fmt;
 
 use wit::*;
-use wit::zed::extension::dap::{
-    DebugAdapterBinary, DebugConfig, DebugRequest, DebugScenario, DebugTaskDefinition,
-    StartDebuggingRequestArgumentsRequest, TaskTemplate,
-};
+// use wit::zed::extension::dap::{
+//     DebugAdapterBinary, DebugConfig, DebugRequest, DebugScenario, DebugTaskDefinition,
+//     StartDebuggingRequestArgumentsRequest, TaskTemplate,
+// };
 
 pub use serde_json;
 
@@ -451,41 +451,41 @@ impl wit::Guest for Component {
         extension().index_docs(provider, package, database)
     }
 
-    fn get_dap_binary(
-        _adapter_name: String,
-        _config: DebugTaskDefinition,
-        _user_installed_path: Option<String>,
-        _worktree: &Worktree,
-    ) -> Result<DebugAdapterBinary, String> {
-        Err("debug adapters are no longer supported".into())
-    }
+    // fn get_dap_binary(
+    //     _adapter_name: String,
+    //     _config: DebugTaskDefinition,
+    //     _user_installed_path: Option<String>,
+    //     _worktree: &Worktree,
+    // ) -> Result<DebugAdapterBinary, String> {
+    //     Err("debug adapters are no longer supported".into())
+    // }
 
-    fn dap_request_kind(
-        _adapter_name: String,
-        _config: String,
-    ) -> Result<StartDebuggingRequestArgumentsRequest, String> {
-        Err("debug adapters are no longer supported".into())
-    }
+    // fn dap_request_kind(
+    //     _adapter_name: String,
+    //     _config: String,
+    // ) -> Result<StartDebuggingRequestArgumentsRequest, String> {
+    //     Err("debug adapters are no longer supported".into())
+    // }
 
-    fn dap_config_to_scenario(_config: DebugConfig) -> Result<DebugScenario, String> {
-        Err("debug adapters are no longer supported".into())
-    }
+    // fn dap_config_to_scenario(_config: DebugConfig) -> Result<DebugScenario, String> {
+    //     Err("debug adapters are no longer supported".into())
+    // }
 
-    fn dap_locator_create_scenario(
-        _locator_name: String,
-        _build_task: TaskTemplate,
-        _resolved_label: String,
-        _debug_adapter_name: String,
-    ) -> Option<DebugScenario> {
-        None
-    }
+    // fn dap_locator_create_scenario(
+    //     _locator_name: String,
+    //     _build_task: TaskTemplate,
+    //     _resolved_label: String,
+    //     _debug_adapter_name: String,
+    // ) -> Option<DebugScenario> {
+    //     None
+    // }
 
-    fn run_dap_locator(
-        _locator_name: String,
-        _build_task: TaskTemplate,
-    ) -> Result<DebugRequest, String> {
-        Err("debug adapters are no longer supported".into())
-    }
+    // fn run_dap_locator(
+    //     _locator_name: String,
+    //     _build_task: TaskTemplate,
+    // ) -> Result<DebugRequest, String> {
+    //     Err("debug adapters are no longer supported".into())
+    // }
 }
 
 /// The ID of a language server.
