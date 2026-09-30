@@ -811,19 +811,6 @@ actions!(
     ]
 );
 
-pub mod debug_panel {
-    use gpui::actions;
-    actions!(
-        debug_panel,
-        [
-            /// Toggles the debug panel.
-            Toggle,
-            /// Toggles focus on the debug panel.
-            ToggleFocus
-        ]
-    );
-}
-
 actions!(
     debugger,
     [
