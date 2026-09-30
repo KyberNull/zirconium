@@ -21,9 +21,7 @@ use db::{
 };
 use gpui::{Axis, Bounds, Task, WindowBounds, WindowId, point, size};
 use project::{
-    ProjectGroupKey,
-    bookmark_store::SerializedBookmark,
-    debugger::breakpoint_store::{BreakpointState, SourceBreakpoint},
+    ProjectGroupKey, bookmark_store::SerializedBookmark,
     trusted_worktrees::{DbTrustedPaths, RemoteHostLocation},
 };
 
@@ -426,6 +424,31 @@ impl Column for Bookmark {
 
         Ok((Bookmark { row, label }, next_index))
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BreakpointState {
+    Enabled,
+    Disabled,
+}
+
+impl BreakpointState {
+    fn to_int(self) -> i32 {
+        match self {
+            Self::Enabled => 0,
+            Self::Disabled => 1,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SourceBreakpoint {
+    pub row: u32,
+    pub path: Arc<Path>,
+    pub message: Option<Arc<str>>,
+    pub condition: Option<Arc<str>>,
+    pub hit_condition: Option<Arc<str>>,
+    pub state: BreakpointState,
 }
 
 #[derive(Debug)]

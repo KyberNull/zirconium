@@ -10,7 +10,6 @@ use std::{
 
 use anyhow::Result;
 use collections::{HashMap, HashSet, VecDeque};
-use dap::DapRegistry;
 use gpui::{App, AppContext as _, Context, Entity, SharedString, Task, WeakEntity};
 use itertools::Itertools;
 use language::{
@@ -329,72 +328,6 @@ impl Inventory {
 
     pub fn last_scheduled_scenario(&self) -> Option<&(DebugScenario, DebugScenarioContext)> {
         self.last_scheduled_scenarios.back()
-    }
-
-    pub fn list_debug_scenarios(
-        &self,
-        task_contexts: &TaskContexts,
-        lsp_tasks: Vec<(TaskSourceKind, task::ResolvedTask)>,
-        current_resolved_tasks: Vec<(TaskSourceKind, task::ResolvedTask)>,
-        add_current_language_tasks: bool,
-        cx: &mut App,
-    ) -> Task<(
-        Vec<(DebugScenario, DebugScenarioContext)>,
-        Vec<(TaskSourceKind, DebugScenario)>,
-    )> {
-        let mut scenarios = Vec::new();
-
-        if let Some(worktree_id) = task_contexts
-            .active_worktree_context
-            .iter()
-            .chain(task_contexts.other_worktree_contexts.iter())
-            .map(|context| context.0)
-            .next()
-        {
-            scenarios.extend(self.worktree_scenarios_from_settings(worktree_id));
-        }
-        scenarios.extend(self.global_debug_scenarios_from_settings());
-
-        let last_scheduled_scenarios = self.last_scheduled_scenarios.iter().cloned().collect();
-
-        let adapter = task_contexts.location().and_then(|location| {
-            let buffer = location.buffer.read(cx);
-            let adapter = LanguageSettings::for_buffer(&buffer, cx)
-                .debuggers
-                .first()
-                .map(SharedString::from)
-                .or_else(|| {
-                    buffer
-                        .language()
-                        .and_then(|l| l.config().debuggers.first().map(SharedString::from))
-                });
-            adapter.map(|adapter| (adapter, DapRegistry::global(cx).locators()))
-        });
-        cx.background_spawn(async move {
-            if let Some((adapter, locators)) = adapter {
-                for (kind, task) in
-                    lsp_tasks
-                        .into_iter()
-                        .chain(current_resolved_tasks.into_iter().filter(|(kind, _)| {
-                            add_current_language_tasks
-                                || !matches!(kind, TaskSourceKind::Language { .. })
-                        }))
-                {
-                    let adapter = adapter.clone().into();
-
-                    for locator in locators.values() {
-                        if let Some(scenario) = locator
-                            .create_scenario(task.original_task(), task.display_label(), &adapter)
-                            .await
-                        {
-                            scenarios.push((kind, scenario));
-                            break;
-                        }
-                    }
-                }
-            }
-            (last_scheduled_scenarios, scenarios)
-        })
     }
 
     pub fn task_template_by_label(
@@ -733,19 +666,6 @@ impl Inventory {
         &self,
     ) -> impl '_ + Iterator<Item = (TaskSourceKind, TaskTemplate)> {
         self.templates_from_settings.global_scenarios()
-    }
-
-    fn global_debug_scenarios_from_settings(
-        &self,
-    ) -> impl '_ + Iterator<Item = (TaskSourceKind, DebugScenario)> {
-        self.scenarios_from_settings.global_scenarios()
-    }
-
-    fn worktree_scenarios_from_settings(
-        &self,
-        worktree: WorktreeId,
-    ) -> impl '_ + Iterator<Item = (TaskSourceKind, DebugScenario)> {
-        self.scenarios_from_settings.worktree_scenarios(worktree)
     }
 
     fn worktree_templates_from_settings(

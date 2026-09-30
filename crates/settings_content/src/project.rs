@@ -62,8 +62,8 @@ pub struct ProjectSettingsContent {
     pub terminal: Option<ProjectTerminalSettingsContent>,
 
     /// Configuration for Debugger-related features
-    #[serde(default)]
-    pub dap: HashMap<Arc<str>, DapSettingsContent>,
+    // #[serde(default)]
+    // pub dap: HashMap<Arc<str>, DapSettingsContent>,
 
     /// Settings for context servers used for AI-related features.
     #[serde(default)]

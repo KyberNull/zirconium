@@ -107,7 +107,6 @@ pub fn init(cx: &mut App) -> EpAppState {
 
     let extension_host_proxy = ExtensionHostProxy::global(cx);
 
-    debug_adapter_extension::init(extension_host_proxy.clone(), cx);
     language_extension::init(LspAccess::Noop, extension_host_proxy, languages.clone());
     language_model::init(cx);
     RefreshLlmTokenListener::register(client.clone(), user_store.clone(), cx);

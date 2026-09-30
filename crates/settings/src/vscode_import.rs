@@ -520,7 +520,6 @@ impl VsCodeSettings {
             worktree: self.worktree_settings_content(),
             lsp: Default::default(),
             terminal: None,
-            dap: Default::default(),
             context_servers: self.context_servers(),
             context_server_timeout: None,
             load_direnv: None,
