@@ -265,11 +265,6 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
                 ),
                 MenuItem::separator(),
                 MenuItem::action("Edit tasks.json…", zed_actions::OpenProjectTasks),
-                MenuItem::action("Edit debug.json…", zed_actions::OpenProjectDebugTasks),
-                MenuItem::separator(),
-                MenuItem::separator(),
-                MenuItem::action("Toggle Breakpoint", editor::actions::ToggleBreakpoint),
-                MenuItem::action("Edit Breakpoint", editor::actions::EditLogBreakpoint),
             ],
         },
         Menu {

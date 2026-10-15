@@ -811,18 +811,6 @@ actions!(
     ]
 );
 
-actions!(
-    debugger,
-    [
-        /// Toggles the enabled state of a breakpoint.
-        ToggleEnableBreakpoint,
-        /// Removes a breakpoint.
-        UnsetBreakpoint,
-        /// Opens the project debug tasks configuration.
-        OpenProjectDebugTasks,
-    ]
-);
-
 pub mod vim {
     use gpui::actions;
 

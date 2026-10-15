@@ -55,10 +55,7 @@ use migrator::migrate_keymap;
 use onboarding::multibuffer_hint::MultibufferHint;
 pub use open_listener::*;
 use outline_panel::OutlinePanel;
-use paths::{
-    local_debug_file_relative_path, local_settings_file_relative_path,
-    local_tasks_file_relative_path,
-};
+use paths::{local_settings_file_relative_path, local_tasks_file_relative_path};
 use project::{
     DirectoryLister, DisableAiSettings, ProjectItem,
     project_settings::{SettingsObserver, SettingsObserverEvent},
@@ -72,8 +69,8 @@ use search::project_search::ProjectSearchBar;
 use settings::{
     BaseKeymap, DEFAULT_KEYMAP_PATH, DefaultOpenBehavior, InvalidSettingsError, KeybindSource,
     KeymapFile, KeymapFileLoadResult, MigrationStatus, SPECIFIC_OVERRIDES_KEYMAP_PATH, Settings,
-    SettingsFile, SettingsStore, VIM_KEYMAP_PATH, initial_local_debug_tasks_content,
-    initial_project_settings_content, initial_tasks_content, update_settings_file,
+    SettingsFile, SettingsStore, VIM_KEYMAP_PATH, initial_project_settings_content,
+    initial_tasks_content, update_settings_file,
 };
 use sidebar::Sidebar;
 #[cfg(debug_assertions)]
@@ -1275,7 +1272,7 @@ fn register_actions(
         .register_action(open_project_settings_file)
         .register_action(open_project_tasks_file)
         .register_action(open_worktree_setup_tasks_file)
-        .register_action(open_project_debug_tasks_file)
+
         .register_action(
             |workspace: &mut Workspace,
              _: &zed_actions::project_panel::ToggleFocus,
@@ -2566,23 +2563,6 @@ fn open_worktree_setup_tasks_file(
         })?
     })
     .detach_and_log_err(cx);
-}
-
-fn open_project_debug_tasks_file(
-    workspace: &mut Workspace,
-    _: &zed_actions::OpenProjectDebugTasks,
-    window: &mut Window,
-    cx: &mut Context<Workspace>,
-) {
-    if let Some(task) = open_local_file(
-        workspace,
-        local_debug_file_relative_path(),
-        initial_local_debug_tasks_content(),
-        window,
-        cx,
-    ) {
-        task.detach_and_log_err(cx);
-    }
 }
 
 fn open_local_file(
