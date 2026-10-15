@@ -2042,9 +2042,6 @@ fn init_global_config_error_notifications(cx: &mut App) {
                         window.dispatch_action(OpenTasks.boxed_clone(), cx)
                     })
                 }
-                SettingsObserverEvent::GlobalDebugScenariosUpdated(result) => {
-                    (result, "debug scenarios", |_, _| {})
-                }
                 _ => return,
             };
             let id = NotificationId::Named(format!("invalid-global-{file_kind}-file").into());
