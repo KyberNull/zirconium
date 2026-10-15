@@ -393,9 +393,6 @@ async fn resolve_dynamic_schema(
             inject_feature_flags_schema(&mut schema);
             schema
         }
-        "debug_tasks" => {
-            task::DebugTaskFile::generate_json_schema(&task::AdapterSchemas::default())
-        }
         "keymap" => cx.update(settings::KeymapFile::generate_json_schema_for_registered_actions),
         "action" => {
             let normalized_action_name = rest.context("No Action name provided")?;
@@ -458,13 +455,6 @@ pub fn all_schema_file_associations(
                 paths::local_tasks_file_relative_path()
             ],
             "url": format!("{SCHEMA_URI_PREFIX}tasks"),
-        },
-        {
-            "fileMatch": [
-                schema_file_match(paths::debug_scenarios_file()),
-                paths::local_debug_file_relative_path()
-            ],
-            "url": format!("{SCHEMA_URI_PREFIX}debug_tasks"),
         },
         {
             "fileMatch": [

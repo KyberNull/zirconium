@@ -7,7 +7,6 @@ import "buffer.proto";
 import "call.proto";
 import "channel.proto";
 import "core.proto";
-import "debugger.proto";
 import "download.proto";
 import "git.proto";
 import "image.proto";
@@ -333,9 +332,6 @@ message Envelope {
     GetCodeLensResponse get_code_lens_response = 324;
     RefreshCodeLens refresh_code_lens = 325;
 
-    ToggleBreakpoint toggle_breakpoint = 326;
-    BreakpointsForFile breakpoints_for_file = 327;
-
     UpdateRepository update_repository = 328;
     RemoveRepository remove_repository = 329;
 
@@ -350,18 +346,11 @@ message Envelope {
     LspExtRunnables lsp_ext_runnables = 337;
     LspExtRunnablesResponse lsp_ext_runnables_response = 338;
 
-    GetDebugAdapterBinary get_debug_adapter_binary = 339;
-    DebugAdapterBinary debug_adapter_binary = 340;
-    RunDebugLocators run_debug_locators = 341;
-    DebugRequest debug_request = 342;
-
     LspExtGoToParentModule lsp_ext_go_to_parent_module = 343;
     LspExtGoToParentModuleResponse lsp_ext_go_to_parent_module_response = 344;
     LspExtCancelFlycheck lsp_ext_cancel_flycheck = 345;
     LspExtRunFlycheck lsp_ext_run_flycheck = 346;
     LspExtClearFlycheck lsp_ext_clear_flycheck = 347;
-
-    LogToDebugConsole log_to_debug_console = 348;
 
     GetDocumentDiagnostics get_document_diagnostics = 350;
     GetDocumentDiagnosticsResponse get_document_diagnostics_response = 351;
@@ -389,9 +378,6 @@ message Envelope {
     ToggleLspLogs toggle_lsp_logs = 367;
 
     UpdateUserSettings update_user_settings = 368;
-
-    GetProcesses get_processes = 369;
-    GetProcessesResponse get_processes_response = 370;
 
     ResolveToolchain resolve_toolchain = 371;
     ResolveToolchainResponse resolve_toolchain_response = 372;

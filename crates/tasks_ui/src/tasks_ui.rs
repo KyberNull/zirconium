@@ -14,7 +14,7 @@ use workspace::Workspace;
 
 mod modal;
 
-pub use modal::{Rerun, ShowAttachModal, Spawn, TaskOverrides, TasksModal};
+pub use modal::{Rerun, Spawn, TaskOverrides, TasksModal};
 
 /// Inserts `new_task` (pretty-printed JSON object text) at the end of the top-level JSON
 /// array in the editor's buffer, creating the array if the buffer has none, and moves the

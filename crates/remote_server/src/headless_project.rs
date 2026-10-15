@@ -44,7 +44,6 @@ use std::{
     },
     time::Instant,
 };
-use sysinfo::{ProcessRefreshKind, RefreshKind, System, UpdateKind};
 use util::{ResultExt, paths::PathStyle, rel_path::RelPath};
 use worktree::Worktree;
 
@@ -263,7 +262,6 @@ impl HeadlessProject {
         session.add_request_handler(cx.weak_entity(), Self::handle_get_path_metadata);
         session.add_request_handler(cx.weak_entity(), Self::handle_shutdown_remote_server);
         session.add_request_handler(cx.weak_entity(), Self::handle_ping);
-        session.add_request_handler(cx.weak_entity(), Self::handle_get_processes);
         session.add_request_handler(cx.weak_entity(), Self::handle_get_remote_profiling_data);
 
         session.add_entity_request_handler(Self::handle_add_worktree);
@@ -1191,41 +1189,6 @@ impl HeadlessProject {
     ) -> Result<proto::Ack> {
         log::debug!("Received ping from client");
         Ok(proto::Ack {})
-    }
-
-    async fn handle_get_processes(
-        _this: Entity<Self>,
-        _envelope: TypedEnvelope<proto::GetProcesses>,
-        _cx: AsyncApp,
-    ) -> Result<proto::GetProcessesResponse> {
-        let mut processes = Vec::new();
-        let refresh_kind = RefreshKind::nothing().with_processes(
-            ProcessRefreshKind::nothing()
-                .without_tasks()
-                .with_cmd(UpdateKind::Always),
-        );
-
-        for process in System::new_with_specifics(refresh_kind)
-            .processes()
-            .values()
-        {
-            let name = process.name().to_string_lossy().into_owned();
-            let command = process
-                .cmd()
-                .iter()
-                .map(|s| s.to_string_lossy().into_owned())
-                .collect::<Vec<_>>();
-
-            processes.push(proto::ProcessInfo {
-                pid: process.pid().as_u32(),
-                name,
-                command,
-            });
-        }
-
-        processes.sort_by_key(|p| p.name.clone());
-
-        Ok(proto::GetProcessesResponse { processes })
     }
 
     async fn handle_get_remote_profiling_data(
