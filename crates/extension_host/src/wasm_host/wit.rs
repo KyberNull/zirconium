@@ -13,8 +13,6 @@ use gpui::BackgroundExecutor;
 use language::LanguageName;
 use lsp::LanguageServerName;
 use release_channel::ReleaseChannel;
-use task::{DebugScenario, SpawnInTerminal, TaskTemplate, ZedDebugConfig};
-
 use super::{WasmState, wasm_engine};
 use anyhow::{Context as _, Result, anyhow};
 use semver::Version;

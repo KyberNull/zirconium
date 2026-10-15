@@ -1,5 +1,4 @@
 mod context_server;
-// mod dap;
 mod lsp;
 mod slash_command;
 

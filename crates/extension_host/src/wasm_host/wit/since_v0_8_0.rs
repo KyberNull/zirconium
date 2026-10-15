@@ -23,7 +23,6 @@ use std::{
     str::FromStr,
     sync::{Arc, OnceLock},
 };
-use task::{SpawnInTerminal};
 use url::Url;
 use util::{
     archive::extract_zip, fs::make_file_executable, maybe, paths::PathStyle, rel_path::RelPath,
@@ -87,7 +86,6 @@ impl From<Command> for extension::Command {
         }
     }
 }
-
 
 impl From<CodeLabel> for extension::CodeLabel {
     fn from(value: CodeLabel) -> Self {
@@ -650,7 +648,6 @@ impl slash_command::Host for WasmState {}
 
 #[async_trait]
 impl context_server::Host for WasmState {}
-
 
 impl ExtensionImports for WasmState {
     async fn get_settings(

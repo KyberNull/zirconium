@@ -9,8 +9,8 @@ use util::serde::default_true;
 use util::{ResultExt, truncate_and_remove_front};
 
 use crate::{
-    AttachRequest, ResolvedTask, RevealTarget, Shell, SpawnInTerminal, TaskContext, TaskId,
-    VariableName, ZED_VARIABLE_NAME_PREFIX, serde_helpers::non_empty_string_vec,
+    ResolvedTask, RevealTarget, Shell, SpawnInTerminal, TaskContext, TaskId, VariableName,
+    ZED_VARIABLE_NAME_PREFIX, serde_helpers::non_empty_string_vec,
 };
 
 /// A template definition of a Zed task to run.
@@ -78,15 +78,6 @@ pub struct TaskTemplate {
     /// Hooks that this task runs when emitted.
     #[serde(default)]
     pub hooks: HashSet<TaskHook>,
-}
-
-#[derive(Deserialize, Eq, PartialEq, Clone, Debug)]
-/// Use to represent debug request type
-pub enum DebugArgsRequest {
-    /// launch (program, cwd) are stored in TaskTemplate as (command, cwd)
-    Launch,
-    /// Attach
-    Attach(AttachRequest),
 }
 
 /// What to do with the terminal pane and tab, after the command was started.
