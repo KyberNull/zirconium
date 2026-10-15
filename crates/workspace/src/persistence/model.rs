@@ -15,7 +15,6 @@ use gpui::{AsyncWindowContext, Entity, WeakEntity, WindowId};
 use language::{Toolchain, ToolchainScope};
 use project::{Project, ProjectGroupKey, bookmark_store::SerializedBookmark};
 
-use super::SourceBreakpoint;
 use remote::RemoteConnectionOptions;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -143,7 +142,6 @@ pub(crate) struct SerializedWorkspace {
     pub(crate) docks: DockStructure,
     pub(crate) session_id: Option<String>,
     pub(crate) bookmarks: BTreeMap<Arc<Path>, Vec<SerializedBookmark>>,
-    pub(crate) breakpoints: BTreeMap<Arc<Path>, Vec<SourceBreakpoint>>,
     pub(crate) user_toolchains: BTreeMap<ToolchainScope, IndexSet<Toolchain>>,
     pub(crate) recent_navigation_history: Vec<PathBuf>,
     pub(crate) window_id: Option<u64>,

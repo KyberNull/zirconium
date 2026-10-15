@@ -7224,7 +7224,6 @@ impl Workspace {
                         .all_serialized_bookmarks(cx)
                 });
 
-                let breakpoints = Default::default();
                 let user_toolchains = self
                     .project
                     .read(cx)
@@ -7249,7 +7248,6 @@ impl Workspace {
                     centered_layout: self.centered_layout,
                     session_id: self.session_id.clone(),
                     bookmarks,
-                    breakpoints,
                     window_id: Some(window.window_handle().window_id().as_u64()),
                     user_toolchains,
                     recent_navigation_history,
