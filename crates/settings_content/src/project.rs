@@ -61,10 +61,6 @@ pub struct ProjectSettingsContent {
 
     pub terminal: Option<ProjectTerminalSettingsContent>,
 
-    /// Configuration for Debugger-related features
-    // #[serde(default)]
-    // pub dap: HashMap<Arc<str>, DapSettingsContent>,
-
     /// Settings for context servers used for AI-related features.
     #[serde(default)]
     pub context_servers: HashMap<Arc<str>, ContextServerSettingsContent>,
@@ -378,15 +374,6 @@ pub enum SemanticTokenFontStyle {
     #[default]
     Normal,
     Italic,
-}
-
-#[with_fallible_options]
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, MergeFrom)]
-#[serde(rename_all = "snake_case")]
-pub struct DapSettingsContent {
-    pub binary: Option<String>,
-    pub args: Option<Vec<String>>,
-    pub env: Option<HashMap<String, String>>,
 }
 
 #[with_fallible_options]

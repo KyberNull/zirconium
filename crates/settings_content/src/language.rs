@@ -718,10 +718,6 @@ pub struct LanguageSettingsContent {
     pub show_completion_documentation: Option<bool>,
     /// Controls how completions are processed for this language.
     pub completions: Option<CompletionSettingsContent>,
-    /// Preferred debuggers for this language.
-    ///
-    /// Default: []
-    pub debuggers: Option<Vec<String>>,
     /// Whether to enable word diff highlighting in the editor.
     ///
     /// When enabled, changed words within modified lines are highlighted

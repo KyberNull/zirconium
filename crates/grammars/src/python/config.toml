@@ -29,7 +29,6 @@ brackets = [
 ]
 
 auto_indent_using_last_non_empty_line = false
-debuggers = ["Debugpy"]
 increase_indent_pattern = "^[^#].*:\\s*(#.*)?$"
 decrease_indent_patterns = [
   { pattern = "^\\s*elif\\b.*:\\s*(#.*)?",    valid_after = ["if", "elif"] },
