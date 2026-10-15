@@ -123,7 +123,6 @@
       "ctrl-alt-shift-n": "project_symbols::Toggle",
       "alt-0": "git_panel::ToggleFocus",
       "alt-1": "project_panel::ToggleFocus",
-      "alt-5": "debug_panel::ToggleFocus",
       "alt-6": "diagnostics::Deploy",
       "alt-7": "outline_panel::ToggleFocus",
     },
@@ -135,7 +134,7 @@
       "alt-2": null, // Bookmarks (left dock)
       "alt-3": null, // Find Panel (bottom dock)
       "alt-4": null, // Run Panel (bottom dock)
-      "alt-5": "debug_panel::ToggleFocus",
+      "alt-5": null,
       "alt-6": "diagnostics::Deploy",
       "alt-7": "outline_panel::ToggleFocus",
       "alt-8": null, // Services (bottom dock)

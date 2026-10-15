@@ -18,8 +18,6 @@ minidump-stackwalk minidump.dmp
 
 Alongside the minidump in your logs directory, you should also see a `<uuid>.json` file with metadata such as the panic message, span, and system specs.
 
-## Using a Debugger
+## Reproducing a crash
 
-If you can reproduce the crash consistently, use a debugger to inspect program state at the crash point.
-
-For setup details, see [Using a debugger](./debuggers.md#debugging-panics-and-crashes).
+If you can reproduce the crash consistently, inspect the panic message and stack in the minidump metadata next to the dump.
