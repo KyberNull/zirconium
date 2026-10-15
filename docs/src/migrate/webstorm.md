@@ -116,7 +116,6 @@ If you chose the JetBrains keymap during onboarding, most of your shortcuts shou
 | File Structure         | `Cmd + F12` | `Cmd + F12` (outline)    |
 | Navigate to Next Error | `F2`        | `F2`                     |
 | Run                    | `Ctrl + R`  | `Ctrl + Alt + R` (tasks) |
-| Debug                  | `Ctrl + D`  | `Alt + Shift + F9`       |
 | Stop                   | `Cmd + F2`  | `Ctrl + F2`              |
 
 ### Unique to Zed
@@ -245,55 +244,11 @@ WebStorm organizes auxiliary views into numbered tool windows. Zed uses a simila
 | Terminal             | Terminal Panel | {#kb:jetbrains terminal_panel::Toggle}     |
 | Structure            | Outline Panel  | {#kb:jetbrains outline_panel::ToggleFocus} |
 | Problems             | Diagnostics    | {#kb:jetbrains diagnostics::Deploy}        |
-| Debug                | Debug Panel    | {#kb:jetbrains debug_panel::ToggleFocus}   |
 
 Zed has three dock positions: left, bottom, and right. Panels can be moved between docks by dragging or through settings.
 
 Note that there's no dedicated npm tool window in Zed. Use the terminal or define tasks for your common npm scripts.
 
-### Debugging
-
-Both WebStorm and Zed offer integrated debugging for JavaScript and TypeScript:
-
-- Zed uses `vscode-js-debug` (the same debug adapter that VS Code uses)
-- Set breakpoints with {#kb:jetbrains editor::ToggleBreakpoint}
-- Start debugging with {#kb:jetbrains debugger::Start}
-- Step through code with {#kb:jetbrains debugger::StepInto} (step into), {#kb:jetbrains debugger::StepOver} (step over), {#kb:jetbrains debugger::StepOut} (step out)
-- Continue execution with {#kb:jetbrains debugger::Continue}
-
-Zed can debug:
-
-- Node.js applications and scripts
-- Chrome/browser JavaScript
-- Jest, Mocha, Vitest, and other test frameworks
-- Next.js (both server and client-side)
-
-For more control, create a `.zed/debug.json` file:
-
-```json
-[
-  {
-    "label": "Debug Current File",
-    "adapter": "JavaScript",
-    "program": "$ZED_FILE",
-    "request": "launch"
-  },
-  {
-    "label": "Debug Node Server",
-    "adapter": "JavaScript",
-    "request": "launch",
-    "program": "${workspaceFolder}/src/server.js"
-  },
-  {
-    "label": "Attach to Chrome",
-    "adapter": "JavaScript",
-    "request": "attach",
-    "port": 9222
-  }
-]
-```
-
-Zed also recognizes `.vscode/launch.json` configurations, so existing VS Code debug setups often work out of the box.
 
 ### Running Tests
 

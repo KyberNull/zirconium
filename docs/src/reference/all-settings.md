@@ -5658,25 +5658,6 @@ Visit [AI Quick Start](../ai/quick-start.md) under the AI section to learn more 
 - `dock`: Where to dock the collaboration panel. Can be `left` or `right`
 - `default_width`: Default width of the collaboration panel
 
-## Debugger
-
-- Description: Configuration for debugger panel and settings
-- Setting: `debugger`
-- Default:
-
-```json [settings]
-{
-  "debugger": {
-    "stepping_granularity": "line",
-    "save_breakpoints": true,
-    "dock": "bottom",
-    "button": true
-  }
-}
-```
-
-See the [debugger page](../debugger.md) for more information about debugging support within Zed.
-
 ## Git Panel
 
 - Description: Setting to customize the behavior of the git panel.

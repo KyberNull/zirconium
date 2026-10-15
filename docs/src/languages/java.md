@@ -53,30 +53,6 @@ Here is a common `settings.json` including the above mentioned configurations:
 }
 ```
 
-## Debugging
-
-Debug support is enabled via our [Fork of Java Debug](https://github.com/zed-industries/java-debug), which the extension will automatically download and start for you. Please refer to the [Debugger Documentation](https://zed.dev/docs/debugger#getting-started) for general information about how debugging works in Zed.
-
-To get started with Java, click the `edit debug.json` button in the Debug menu, and replace the contents of the file with the following:
-
-```jsonc
-[
-  {
-    "adapter": "Java",
-    "request": "launch",
-    "label": "Launch Debugger",
-    // if your project has multiple entry points, specify the one to use:
-    // "mainClass": "com.myorganization.myproject.MyMainClass",
-    //
-    // this effectively sets a breakpoint at your program entry:
-    "stopOnEntry": true,
-    // the working directory for the debug process
-    "cwd": "$ZED_WORKTREE_ROOT",
-  },
-]
-```
-
-You should then be able to start a new Debug Session with the "Launch Debugger" scenario from the debug menu.
 
 ## Launch Scripts (aka Tasks) in Windows
 

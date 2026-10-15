@@ -121,7 +121,6 @@ To disable this behavior use:
   // "git_panel": {"button": false },
 
   // "agent": {"button": false },
-  // "debugger": {"button": false },
   // "diagnostics": {"button": false },
   // "search": {"button": false },
 }
@@ -583,12 +582,6 @@ See [Terminal settings](./reference/all-settings.md#terminal) for additional non
     "scrollbar": {
       "show": null                // Show/hide: (auto, system, always, never)
     }
-  },
-
-  // Debugger Panel
-  "debugger": {
-    "dock": "bottom",             // Where to dock: left, right, bottom
-    "button": true                // Show/hide status bar icon
   },
 
   // Outline Panel

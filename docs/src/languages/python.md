@@ -1,6 +1,6 @@
 ---
 title: Python
-description: "Configure Python language support in Zed, including language servers, formatting, and debugging."
+description: "Configure Python language support in Zed, including language servers and formatting."
 ---
 
 # How to Set Up Python in Zed
@@ -14,7 +14,6 @@ Python support is available natively in Zed.
   - [astral-sh/ty](https://github.com/astral-sh/ty)
   - [microsoft/pyright](https://github.com/microsoft/pyright)
   - [python-lsp/python-lsp-server](https://github.com/python-lsp/python-lsp-server) (PyLSP)
-- Debug Adapter: [debugpy](https://github.com/microsoft/debugpy)
 
 ## Install Python
 
@@ -319,119 +318,6 @@ result = func( #sql
 )
 ```
 
-## Debugging
-
-Zed supports Python debugging through the `debugpy` adapter. You can start with no configuration or define custom launch profiles in `.zed/debug.json`.
-
-### Start Debugging with No Setup
-
-Zed can automatically detect debuggable Python entry points. Press F4 (or run debugger: start from the Command Palette) to see available options for your current project.
-This works for:
-
-- Python scripts
-- Modules
-- pytest tests
-
-Zed uses `debugpy` under the hood, but no manual adapter configuration is required.
-
-### Define Custom Debug Configurations
-
-For reusable setups, create a `.zed/debug.json` file in your project root. This gives you more control over how Zed runs and debugs your code.
-
-- [debugpy configuration documentation](https://github.com/microsoft/debugpy/wiki/Debug-configuration-settings#launchattach-settings)
-
-#### Debug Active File
-
-```json [debug]
-[
-  {
-    "label": "Python Active File",
-    "adapter": "Debugpy",
-    "program": "$ZED_FILE",
-    "request": "launch"
-  }
-]
-```
-
-This runs the file currently open in the editor.
-
-#### Debug a Flask App
-
-For projects using Flask, you can define a full launch configuration:
-
-```
-.venv/
-app/
-  init.py
-  main.py
-  routes.py
-templates/
-  index.html
-static/
-  style.css
-requirements.txt
-```
-
-…the following configuration can be used:
-
-```json [debug]
-[
-  {
-    "label": "Python: Flask",
-    "adapter": "Debugpy",
-    "request": "launch",
-    "module": "app",
-    "cwd": "$ZED_WORKTREE_ROOT",
-    "env": {
-      "FLASK_APP": "app",
-      "FLASK_DEBUG": "1"
-    },
-    "args": [
-      "run",
-      "--reload", // Enables Flask reloader that watches for file changes
-      "--debugger" // Enables Flask debugger
-    ],
-    "autoReload": {
-      "enable": true
-    },
-    "jinja": true,
-    "justMyCode": true
-  }
-]
-```
-
-These can be combined to tailor the experience for web servers, test runners, or custom scripts.
-
-#### Debug a Django App
-
-For projects using Django with a structure similar to the following:
-
-```
-my_django_project/
-  manage.py
-  …
-  my_django_app/
-    migrations/
-    templates/
-    models.py
-    urls.py
-    …
-```
-
-…the following configuration can be used:
-
-```json [debug]
-[
-  {
-    "label": "Python: Django",
-    "adapter": "Debugpy",
-    "request": "launch",
-    "program": "manage.py",
-    "args": ["runserver"],
-    "django": true
-  }
-]
-```
 
 ## Troubleshooting
 

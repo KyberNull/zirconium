@@ -17,7 +17,6 @@ Ruby support is available through the [Ruby extension](https://github.com/zed-ex
   - [Herb](https://herb-tools.dev)
   - [kanayago](https://github.com/S-H-GAMELINKS/kanayago)
   - [fuzzy-ruby-server](https://github.com/doompling/fuzzy_ruby_server)
-- Debug Adapter: [`rdbg`](https://github.com/ruby/debug)
 
 The Ruby extension also provides support for ERB files.
 
@@ -366,43 +365,6 @@ Plain minitest does not support running tests by line number, only by name, so w
 
 Similar task syntax can be used for other test frameworks such as `quickdraw` or `tldr`.
 
-## Debugging
-
-The Ruby extension provides a debug adapter for debugging Ruby code. Zed's name for the adapter (in the UI and `debug.json`) is `rdbg`, and under the hood, it uses the [`debug`](https://github.com/ruby/debug) gem. The extension uses the [same activation logic](#language-server-activation) as the language servers.
-
-### Examples
-
-#### Debug a Ruby script
-
-```json [debug]
-[
-  {
-    "label": "Debug current file",
-    "adapter": "rdbg",
-    "request": "launch",
-    "script": "$ZED_FILE",
-    "cwd": "$ZED_WORKTREE_ROOT"
-  }
-]
-```
-
-#### Debug Rails server
-
-```json [debug]
-[
-  {
-    "label": "Debug Rails server",
-    "adapter": "rdbg",
-    "request": "launch",
-    "command": "./bin/rails",
-    "args": ["server"],
-    "cwd": "$ZED_WORKTREE_ROOT",
-    "env": {
-      "RUBY_DEBUG_OPEN": "true"
-    }
-  }
-]
-```
 
 ## Formatters
 

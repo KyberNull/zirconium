@@ -109,14 +109,3 @@ h_flex()
 - `Upstream client`: The zed client which has shared their workspace
 - `Downstream client`: The zed client joining a shared workspace
 
-## Debugger
-
-- `DapStore`: Is an entity that manages debugger sessions
-- `debugger::Session`: An entity that manages the lifecycle of a debug session and communication with DAPs.
-- `BreakpointStore`: Is an entity that manages breakpoint states in local and remote instances of Zed
-- `DebugSession`: Manages a debug session's UI and running state
-- `RunningState`: Directly manages all the views of a debug session
-- `VariableList`: The variable and watch list view of a debug session
-- `Console`: TODO
-- `Terminal`: TODO
-- `BreakpointList`: TODO

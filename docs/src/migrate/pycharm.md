@@ -116,7 +116,6 @@ If you chose the JetBrains keymap during onboarding, most of your shortcuts shou
 | File Structure         | `Cmd + F12` | `Cmd + F12` (outline)    |
 | Navigate to Next Error | `F2`        | `F2`                     |
 | Run                    | `Ctrl + R`  | `Ctrl + Alt + R` (tasks) |
-| Debug                  | `Ctrl + D`  | `Alt + Shift + F9`       |
 | Stop                   | `Cmd + F2`  | `Ctrl + F2`              |
 
 ### Unique to Zed
@@ -262,48 +261,9 @@ PyCharm organizes auxiliary views into numbered tool windows (Project = 1, Pytho
 | Terminal (Alt+F12)  | Terminal Panel | `Alt + F12`                 |
 | Structure (7)       | Outline Panel  | `Cmd + 7`                   |
 | Problems (6)        | Diagnostics    | `Cmd + 6`                   |
-| Debug (5)           | Debug Panel    | `Cmd + 5`                   |
 
 Zed has three dock positions: left, bottom, and right. Panels can be moved between docks by dragging or through settings.
 
-### Debugging
-
-Both PyCharm and Zed offer integrated debugging, but the experience differs:
-
-- Zed uses `debugpy` (the same debug adapter that VS Code uses)
-- Set breakpoints with `Ctrl+F8`
-- Start debugging with `Alt+Shift+F9` or press `F4` and select a debug target
-- Step through code with `F7` (step into), `F8` (step over), `Shift+F8` (step out)
-- Continue execution with `F9`
-
-Zed can automatically detect debuggable entry points. Press `F4` to see available options, including:
-
-- Python scripts
-- Modules
-- pytest tests
-
-For more control, create a `.zed/debug.json` file:
-
-```json
-[
-  {
-    "label": "Debug Current File",
-    "adapter": "Debugpy",
-    "program": "$ZED_FILE",
-    "request": "launch"
-  },
-  {
-    "label": "Debug Flask App",
-    "adapter": "Debugpy",
-    "request": "launch",
-    "module": "flask",
-    "args": ["run", "--debug"],
-    "env": {
-      "FLASK_APP": "app.py"
-    }
-  }
-]
-```
 
 ### Running Tests
 

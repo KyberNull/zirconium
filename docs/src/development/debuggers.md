@@ -5,14 +5,7 @@ description: "Guide to using a debugger for Zed development."
 
 # Using a debugger
 
-> This page is not about [configuring Zed's debugger](../debugger.md).
-> It covers how to use a debugger while developing Zed itself.
-
-## Using Zed's built-in debugger
-
-While the Zed project is open you can open the `New Process Modal` and select the `Debug` tab. There you can see two debug configurations to debug Zed with, one for GDB and one for LLDB. Select the configuration you want and Zed will build and launch the binary.
-
-GDB is not supported on Apple Silicon Macs.
+This page covers how to use GDB or LLDB while developing Zed itself.
 
 ## Release build profile considerations
 

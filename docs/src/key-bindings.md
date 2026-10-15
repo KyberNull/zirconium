@@ -151,7 +151,7 @@ For example:
 - `"context": "!Editor && !Terminal"` - matches anywhere except where an Editor or Terminal is focused
 - `"context": "os == macos > Editor"` - matches any editor on macOS.
 
-It's worth noting that attributes are only available on the node they are defined on. This means that if you want to (for example) only enable a keybinding when the debugger is stopped in vim normal mode, you need to do `debugger_stopped > vim_mode == normal`.
+It's worth noting that attributes are only available on the node they are defined on. This means that if you want to (for example) only enable a keybinding when Vim is in normal mode inside an editor, you need to do `Editor > vim_mode == normal`.
 
 > Note: Before Zed v0.197.x, the `!` operator only looked at one node at a time, and `>` meant "parent" not "ancestor". This meant that `!Editor` would match the context `Workspace > Pane > Editor`, because (confusingly) the Pane matches `!Editor`, and that `os == macos > Editor` did not match the context `Workspace > Pane > Editor` because of the intermediate `Pane` node.
 

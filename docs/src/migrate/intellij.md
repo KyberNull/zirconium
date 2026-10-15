@@ -116,7 +116,6 @@ If you chose the JetBrains keymap during onboarding, most of your shortcuts shou
 | File Structure         | `Cmd + F12` | `Cmd + F12` (outline)    |
 | Navigate to Next Error | `F2`        | `F2`                     |
 | Run                    | `Ctrl + R`  | `Ctrl + Alt + R` (tasks) |
-| Debug                  | `Ctrl + D`  | `Alt + Shift + F9`       |
 | Stop                   | `Cmd + F2`  | `Ctrl + F2`              |
 
 ### Unique to Zed
@@ -239,23 +238,11 @@ IntelliJ organizes auxiliary views into numbered tool windows (Project = 1, Git 
 | Terminal (Alt+F12)   | Terminal Panel | `Alt + F12`                 |
 | Structure (7)        | Outline Panel  | `Cmd + 7`                   |
 | Problems (6)         | Diagnostics    | `Cmd + 6`                   |
-| Debug (5)            | Debug Panel    | `Cmd + 5`                   |
 
 Zed has three dock positions: left, bottom, and right. Panels can be moved between docks by dragging or through settings.
 
 > **Tip:** IntelliJ has an "Override IDE shortcuts" setting that lets terminal shortcuts like `Ctrl+Left/Right` work normally. In Zed, terminal keybindings are separate—check your keymap if familiar shortcuts aren't working in the terminal panel.
 
-### Debugging
-
-Both IntelliJ and Zed offer integrated debugging, but the experience differs:
-
-- Zed's debugger uses the Debug Adapter Protocol (DAP), supporting multiple languages
-- Set breakpoints with `Ctrl+F8`
-- Start debugging with `Alt+Shift+F9`
-- Step through code with `F7` (step into), `F8` (step over), `Shift+F8` (step out)
-- Continue execution with `F9`
-
-The Debug Panel (`Cmd+5`) shows variables, call stack, and breakpoints—similar to IntelliJ's Debug tool window.
 
 ### Extensions vs. Plugins
 

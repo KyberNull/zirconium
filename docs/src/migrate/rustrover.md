@@ -128,7 +128,6 @@ If you chose the JetBrains keymap during onboarding, most of your shortcuts shou
 | File Structure         | `Cmd + F12` | `Cmd + F12` (outline)    |
 | Navigate to Next Error | `F2`        | `F2`                     |
 | Run                    | `Ctrl + R`  | `Ctrl + Alt + R` (tasks) |
-| Debug                  | `Ctrl + D`  | `Alt + Shift + F9`       |
 | Stop                   | `Cmd + F2`  | `Ctrl + F2`              |
 | Expand Macro           | `Alt+Enter` | `Cmd + Shift + M`        |
 
@@ -176,13 +175,13 @@ Where you might notice differences:
 
 Both editors store per-project configuration in a hidden folder. RustRover uses `.idea` (with XML files), Zed uses `.zed` (with JSON files).
 
-**Run configurations don't transfer.** RustRover stores run/debug configurations in `.idea`. These have no automatic migration path. You'll recreate them as Zed [tasks](../tasks.md) in `.zed/tasks.json` and debug configurations in `.zed/debug.json`.
+**Run configurations don't transfer.** RustRover stores run configurations in `.idea`. These have no automatic migration path. You'll recreate them as Zed [tasks](../tasks.md) in `.zed/tasks.json`.
 
 **No Cargo tool window.** RustRover provides a visual tree of your workspace members, targets, features, and dependencies. Zed doesn't have this. You work with `Cargo.toml` and the Cargo CLI directly.
 
 **Toolchain management is external.** RustRover lets you select and switch toolchains in its settings UI. In Zed, you manage toolchains through `rustup`.
 
-**Configuration is opt-in.** RustRover auto-generates `.idea` when you open a project. Zed doesn't generate anything. You create `.zed/settings.json`, `tasks.json`, and `debug.json` as needed.
+**Configuration is opt-in.** RustRover auto-generates `.idea` when you open a project. Zed doesn't generate anything. You create `.zed/settings.json` and `tasks.json` as needed.
 
 **How to adapt:**
 
@@ -244,58 +243,11 @@ RustRover organizes auxiliary views into numbered tool windows (Project = 1, Car
 | Terminal (Alt+F12)    | Terminal Panel | `Alt + F12`                 |
 | Structure (7)         | Outline Panel  | `Cmd + 7`                   |
 | Problems (6)          | Diagnostics    | `Cmd + 6`                   |
-| Debug (5)             | Debug Panel    | `Cmd + 5`                   |
 
 Zed has three dock positions: left, bottom, and right. Panels can be moved between docks by dragging or through settings.
 
 Note that there's no dedicated Cargo tool window in Zed. Use the terminal or define tasks for your common Cargo commands.
 
-### Debugging
-
-Both RustRover and Zed offer integrated debugging for Rust, but using different backends:
-
-- RustRover uses its own debugger integration
-- Zed uses **CodeLLDB** (the same debug adapter popular in VS Code)
-
-To debug Rust code in Zed:
-
-- Set breakpoints with `Ctrl+F8`
-- Start debugging with `Alt+Shift+F9` or press `F4` and select a debug target
-- Step through code with `F7` (step into), `F8` (step over), `Shift+F8` (step out)
-- Continue execution with `F9`
-
-Zed can automatically detect debuggable targets in your Cargo project. Press `F4` to see available options.
-
-For more control, create a `.zed/debug.json` file:
-
-```json
-[
-  {
-    "label": "Debug Binary",
-    "adapter": "CodeLLDB",
-    "request": "launch",
-    "program": "${workspaceFolder}/target/debug/my_project"
-  },
-  {
-    "label": "Debug Tests",
-    "adapter": "CodeLLDB",
-    "request": "launch",
-    "cargo": {
-      "args": ["test", "--no-run"],
-      "filter": {
-        "kind": "test"
-      }
-    }
-  },
-  {
-    "label": "Debug with Arguments",
-    "adapter": "CodeLLDB",
-    "request": "launch",
-    "program": "${workspaceFolder}/target/debug/my_project",
-    "args": ["--config", "dev.toml"]
-  }
-]
-```
 
 ### Running Tests
 
