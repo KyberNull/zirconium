@@ -11,7 +11,6 @@
       "cmd-k cmd-f": "editor::FormatSelections", // Format Selection
       "shift-alt-i": "editor::SplitSelectionIntoLines", // Insert cursor at end of each line selected
       "alt-z": "editor::ToggleSoftWrap", // Toggle Word Wrap
-      "cmd-shift-space": "editor::ShowSignatureHelp", // Trigger Parameter Hints
       "ctrl-shift-cmd-right": "editor::SelectLargerSyntaxNode", // Expand AST Selection
       "ctrl-shift-cmd-left": "editor::SelectSmallerSyntaxNode", // Shrink AST Selection
       "cmd-k cmd-c": ["editor::ToggleComments", { "advance_downwards": false }], // Add Line Comment (closest analog)

@@ -115,7 +115,6 @@
       "ctrl-;": "editor::ToggleLineNumbers",
       "ctrl-'": "editor::ToggleSelectedDiffHunks",
       "ctrl-\"": "editor::ExpandAllDiffHunks",
-      "ctrl-i": "editor::ShowSignatureHelp",
       "alt-g b": "git::Blame",
       "alt-g m": "git::OpenModifiedFiles",
       "alt-g r": "git::ReviewDiff",
@@ -855,13 +854,6 @@
       "down": "editor::ContextMenuNext",
       "pageup": "editor::ContextMenuFirst",
       "pagedown": "editor::ContextMenuLast",
-    },
-  },
-  {
-    "context": "Editor && showing_signature_help && !showing_completions",
-    "bindings": {
-      "up": "editor::SignatureHelpPrevious",
-      "down": "editor::SignatureHelpNext",
     },
   },
   // Custom bindings

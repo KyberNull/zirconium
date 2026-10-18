@@ -124,7 +124,6 @@ impl Render for QuickActionBar {
         let inline_diagnostics_enabled = editor_value.show_inline_diagnostics();
         let git_blame_inline_enabled = editor_value.git_blame_inline_enabled();
         let show_git_blame_gutter = editor_value.show_git_blame_gutter();
-        let auto_signature_help_enabled = editor_value.auto_signature_help_enabled(cx);
         let show_line_numbers = editor_value.line_numbers_enabled(cx);
         let has_edit_prediction_provider = editor_value.edit_prediction_provider().is_some();
         let show_edit_predictions = editor_value.edit_predictions_enabled();
@@ -522,27 +521,6 @@ impl Render for QuickActionBar {
                                                     window,
                                                     cx,
                                                 )
-                                            })
-                                            .ok();
-                                    }
-                                },
-                            );
-
-                            menu = menu.toggleable_entry(
-                                "Auto Signature Help",
-                                auto_signature_help_enabled,
-                                IconPosition::Start,
-                                Some(editor::actions::ToggleAutoSignatureHelp.boxed_clone()),
-                                {
-                                    let editor = editor.clone();
-                                    move |window, cx| {
-                                        editor
-                                            .update(cx, |editor, cx| {
-                                                editor.toggle_auto_signature_help_menu(
-                                                    &editor::actions::ToggleAutoSignatureHelp,
-                                                    window,
-                                                    cx,
-                                                );
                                             })
                                             .ok();
                                     }

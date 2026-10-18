@@ -132,13 +132,6 @@
       "ctrl-n": "editor::ContextMenuNext",
     },
   },
-  {
-    "context": "Editor && showing_signature_help && !showing_completions",
-    "bindings": {
-      "ctrl-p": "editor::SignatureHelpPrevious",
-      "ctrl-n": "editor::SignatureHelpNext",
-    },
-  },
   // Example setting for using emacs-style tab
   // (i.e. indent the current line / selection or perform symbol completion depending on context)
   // {

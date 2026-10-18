@@ -378,7 +378,6 @@
       "ctrl-r": "vim::PushRegister",
       "insert": "vim::ToggleReplace",
       "ctrl-o": "vim::TemporaryNormal",
-      "ctrl-s": "editor::ShowSignatureHelp",
     },
   },
   {
@@ -593,13 +592,6 @@
     "bindings": {
       "ctrl-p": "editor::ShowWordCompletions",
       "ctrl-n": "editor::ShowWordCompletions",
-    },
-  },
-  {
-    "context": "(vim_mode == insert || vim_mode == normal) && showing_signature_help && !showing_completions",
-    "bindings": {
-      "ctrl-p": "editor::SignatureHelpPrevious",
-      "ctrl-n": "editor::SignatureHelpNext",
     },
   },
   {

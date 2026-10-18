@@ -141,7 +141,6 @@
       "cmd-alt-g b": "git::Blame",
       "cmd-alt-g m": "git::OpenModifiedFiles",
       "cmd-alt-g r": "git::ReviewDiff",
-      "cmd-i": "editor::ShowSignatureHelp",
       "f9": "editor::ToggleBreakpoint",
       "shift-f9": "editor::EditLogBreakpoint",
       "ctrl-f12": "editor::GoToDeclaration",
@@ -904,13 +903,6 @@
       "ctrl-n": "editor::ContextMenuNext",
       "pageup": "editor::ContextMenuFirst",
       "pagedown": "editor::ContextMenuLast",
-    },
-  },
-  {
-    "context": "Editor && showing_signature_help && !showing_completions",
-    "bindings": {
-      "up": "editor::SignatureHelpPrevious",
-      "down": "editor::SignatureHelpNext",
     },
   },
   // Custom bindings
