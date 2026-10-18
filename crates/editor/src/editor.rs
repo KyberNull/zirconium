@@ -40,7 +40,6 @@ mod persistence;
 mod runnables;
 pub mod scroll;
 mod selections_collection;
-pub mod semantic_tokens;
 mod split;
 pub mod split_editor_view;
 
@@ -81,7 +80,7 @@ use diagnostics::{ActiveDiagnostic, GlobalDiagnosticRenderer, InlineDiagnostic};
 pub use diagnostics::{DiagnosticRenderer, set_diagnostic_renderer};
 pub use display_map::{
     ChunkRenderer, ChunkRendererContext, DisplayPoint, FoldPlaceholder, HighlightKey,
-    NavigationOverlayKey, SemanticTokenHighlight,
+    NavigationOverlayKey,
 };
 pub use edit_prediction::make_suggestion_styles;
 pub(crate) use edit_prediction::{
@@ -207,7 +206,7 @@ use project::{
     bookmark_store::BookmarkStore,
     git_store::GitStoreEvent,
     lsp_store::{
-        BufferSemanticTokens, CacheInlayHints, CompletionDocumentation, FormatTrigger,
+        CacheInlayHints, CompletionDocumentation, FormatTrigger,
         LspFormatTarget, OpenLspBufferHandle,
     },
     project_settings::{DiagnosticSeverity, GoToDiagnosticSeverityFilter, ProjectSettings},
@@ -273,7 +272,6 @@ use crate::{
     runnables::{ResolvedTasks, RunnableData, RunnableTaskStatus, RunnableTasks},
     scroll::{ScrollOffset, ScrollPixelOffset},
     selections_collection::resolve_selections_wrapping_blocks,
-    semantic_tokens::SemanticTokenState,
     signature_help::{SignatureHelpHiddenBy, SignatureHelpState},
 };
 
@@ -1144,7 +1142,6 @@ pub struct Editor {
     applicable_language_settings: HashMap<Option<LanguageName>, LanguageSettings>,
     accent_data: Option<AccentData>,
     bracket_fetched_tree_sitter_chunks: HashMap<Range<text::Anchor>, HashSet<Range<BufferRow>>>,
-    semantic_token_state: SemanticTokenState,
     pub(crate) refresh_matching_bracket_highlights_task: Task<()>,
     refresh_document_symbols_task: Shared<Task<()>>,
     lsp_document_links: LspDocumentLinks,
@@ -1207,7 +1204,6 @@ pub struct EditorSnapshot {
     scroll_anchor: SharedScrollAnchor,
     current_line_highlight: CurrentLineHighlight,
     gutter_hovered: bool,
-    semantic_tokens_enabled: bool,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -2006,13 +2002,9 @@ impl Editor {
                             cx,
                         );
                     }
-                    project::Event::RefreshSemanticTokens { .. } => {
-                        editor.refresh_semantic_tokens(None, true, cx);
-                    }
                     project::Event::LanguageServerRemoved(_) => {
                         editor.registered_buffers.clear();
                         editor.register_visible_buffers(cx);
-                        editor.invalidate_semantic_tokens(None);
                         editor.refresh_runnables(None, window, cx);
                         editor.update_lsp_data(None, window, cx);
                         editor.refresh_inlay_hints(InlayHintRefreshReason::ServerRemoved, cx);
@@ -2044,7 +2036,6 @@ impl Editor {
                         if editor.buffer().read(cx).buffer(buffer_id).is_some() {
                             editor.register_buffer(buffer_id, cx);
                             editor.refresh_runnables(Some(buffer_id), window, cx);
-                            editor.invalidate_semantic_tokens(Some(buffer_id));
                             editor.update_lsp_data(Some(buffer_id), window, cx);
                             editor.refresh_inlay_hints(
                                 InlayHintRefreshReason::LanguageServerRegistered,
@@ -2431,7 +2422,6 @@ impl Editor {
             on_local_selections_changed: None,
             suppress_selection_callback: false,
             applicable_language_settings: HashMap::default(),
-            semantic_token_state: SemanticTokenState::new(cx, full_mode),
             accent_data: None,
             bracket_fetched_tree_sitter_chunks: HashMap::default(),
             number_deleted_lines: false,
@@ -2947,7 +2937,6 @@ impl Editor {
             show_line_numbers: self.show_line_numbers,
             number_deleted_lines: self.number_deleted_lines,
             show_git_diff_gutter: self.show_git_diff_gutter,
-            semantic_tokens_enabled: self.semantic_token_state.enabled(),
             show_code_actions: self.show_code_actions,
             show_runnables: self.show_runnables,
             show_bookmarks: self.show_bookmarks,
@@ -8868,7 +8857,6 @@ impl Editor {
                     .retain(|range, _| range.start.buffer_id != buffer_id);
                 self.colorize_brackets(false, cx);
                 self.refresh_selected_text_highlights(&self.display_snapshot(cx), true, window, cx);
-                self.semantic_token_state.invalidate_buffer(&buffer_id);
                 cx.emit(EditorEvent::BufferRangesUpdated {
                     buffer: buffer.clone(),
                     ranges: ranges.clone(),
@@ -8886,11 +8874,9 @@ impl Editor {
                 for buffer_id in removed_buffer_ids {
                     self.registered_buffers.remove(buffer_id);
                     self.clear_runnables(Some(*buffer_id));
-                    self.semantic_token_state.invalidate_buffer(buffer_id);
                     self.lsp_document_symbols.remove(buffer_id);
                     self.lsp_document_links.per_buffer.remove(buffer_id);
                     self.display_map.update(cx, |display_map, cx| {
-                        display_map.invalidate_semantic_highlights(*buffer_id);
                         display_map.clear_lsp_folding_ranges(*buffer_id, cx);
                     });
                 }
@@ -9149,18 +9135,6 @@ impl Editor {
                 )),
                 cx,
             );
-
-            let new_semantic_token_rules = ProjectSettings::get_global(cx)
-                .global_lsp_settings
-                .semantic_token_rules
-                .clone();
-            let semantic_token_rules_changed = self
-                .semantic_token_state
-                .update_rules(new_semantic_token_rules);
-            if language_settings_changed || semantic_token_rules_changed {
-                self.invalidate_semantic_tokens(None);
-                self.refresh_semantic_tokens(None, false, cx);
-            }
         }
 
         cx.notify();
@@ -9177,8 +9151,6 @@ impl Editor {
             self.colorize_brackets(true, cx);
         }
 
-        self.invalidate_semantic_tokens(None);
-        self.refresh_semantic_tokens(None, false, cx);
         self.refresh_outline_symbols_at_cursor(cx);
     }
 
@@ -10073,7 +10045,6 @@ impl Editor {
         if let Some(buffer_id) = for_buffer {
             self.pull_diagnostics(buffer_id, window, cx);
         }
-        self.refresh_semantic_tokens(for_buffer, false, cx);
         self.refresh_document_colors(for_buffer, window, cx);
         self.refresh_document_links(for_buffer, cx);
         self.refresh_folding_ranges(for_buffer, window, cx);
@@ -10485,15 +10456,7 @@ pub trait SemanticsProvider {
         cx: &mut App,
     ) -> Option<HashMap<Range<BufferRow>, Task<Result<CacheInlayHints>>>>;
 
-    fn semantic_tokens(
-        &self,
-        buffer: Entity<Buffer>,
-        cx: &mut App,
-    ) -> Option<Shared<Task<std::result::Result<BufferSemanticTokens, Arc<anyhow::Error>>>>>;
-
     fn supports_inlay_hints(&self, buffer: &Entity<Buffer>, cx: &mut App) -> bool;
-
-    fn supports_semantic_tokens(&self, buffer: &Entity<Buffer>, cx: &mut App) -> bool;
 
     fn document_highlights(
         &self,
@@ -10574,15 +10537,6 @@ impl SemanticsProvider for WeakEntity<Project> {
         .unwrap_or(false)
     }
 
-    fn supports_semantic_tokens(&self, buffer: &Entity<Buffer>, cx: &mut App) -> bool {
-        self.update(cx, |project, cx| {
-            buffer.update(cx, |buffer, cx| {
-                project.any_language_server_supports_semantic_tokens(buffer, cx)
-            })
-        })
-        .unwrap_or(false)
-    }
-
     fn inline_values(
         &self,
         _buffer_handle: Entity<Buffer>,
@@ -10627,18 +10581,6 @@ impl SemanticsProvider for WeakEntity<Project> {
             project.lsp_store().update(cx, |lsp_store, cx| {
                 lsp_store.inlay_hints(invalidate, buffer, ranges, known_chunks, cx)
             })
-        })
-        .ok()
-    }
-
-    fn semantic_tokens(
-        &self,
-        buffer: Entity<Buffer>,
-        cx: &mut App,
-    ) -> Option<Shared<Task<std::result::Result<BufferSemanticTokens, Arc<anyhow::Error>>>>> {
-        self.update(cx, |this, cx| {
-            this.lsp_store()
-                .update(cx, |lsp_store, cx| lsp_store.semantic_tokens(buffer, cx))
         })
         .ok()
     }

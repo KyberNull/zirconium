@@ -602,7 +602,6 @@ mod tests {
     use crate::{
         actions::{
             ToggleCodeLens, ToggleDiagnostics, ToggleInlayHints, ToggleInlineDiagnostics,
-            ToggleSemanticHighlights,
         },
         editor_tests::init_test,
         test::editor_test_context::EditorTestContext,
@@ -758,11 +757,10 @@ mod tests {
     async fn test_actions_gated_by_lsp_data(cx: &mut TestAppContext) {
         init_test(cx, |_| {});
         let mut cx = EditorTestContext::new(cx).await;
-        let lsp_data_actions: [&dyn Action; 4] = [
+        let lsp_data_actions: [&dyn Action; 3] = [
             &ToggleDiagnostics,
             &ToggleInlayHints,
             &ToggleCodeLens,
-            &ToggleSemanticHighlights,
         ];
 
         cx.update_editor(|editor, _, cx| {

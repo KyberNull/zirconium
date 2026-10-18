@@ -1260,7 +1260,6 @@ impl InlaySnapshot {
             buffer_range,
             language_aware,
             highlights.text_highlights,
-            highlights.semantic_token_highlights,
             &self.buffer,
         );
 
@@ -2414,7 +2413,6 @@ mod tests {
         let highlights = crate::display_map::Highlights {
             text_highlights: None,
             inlay_highlights: Some(&inlay_highlights),
-            semantic_token_highlights: None,
             styles: crate::display_map::HighlightStyles::default(),
         };
 
@@ -2533,8 +2531,7 @@ mod tests {
             let highlights = crate::display_map::Highlights {
                 text_highlights: None,
                 inlay_highlights: Some(&inlay_highlights),
-                semantic_token_highlights: None,
-                styles: crate::display_map::HighlightStyles::default(),
+                    styles: crate::display_map::HighlightStyles::default(),
             };
 
             let chunks: Vec<_> = inlay_snapshot

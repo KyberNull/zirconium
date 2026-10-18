@@ -473,7 +473,6 @@ impl EditorElement {
         if editor.read(cx).lsp_data_enabled() {
             register_action(editor, window, Editor::toggle_inlay_hints);
             register_action(editor, window, Editor::toggle_code_lens_action);
-            register_action(editor, window, Editor::toggle_semantic_highlights);
             register_action(editor, window, Editor::toggle_diagnostics);
         }
         if editor.read(cx).inline_diagnostics_enabled() {
@@ -3061,10 +3060,8 @@ impl EditorElement {
                 })
                 .collect()
         } else {
-            let use_tree_sitter = !snapshot.semantic_tokens_enabled
-                || snapshot.use_tree_sitter_for_syntax(rows.start, cx);
             let language_aware = LanguageAwareStyling {
-                tree_sitter: use_tree_sitter,
+                tree_sitter: true,
                 diagnostics: true,
             };
             let chunks = snapshot.highlighted_chunks(rows.clone(), language_aware, style);
@@ -10211,10 +10208,8 @@ pub fn layout_line(
     window: &mut Window,
     cx: &mut App,
 ) -> LineWithInvisibles {
-    let use_tree_sitter =
-        !snapshot.semantic_tokens_enabled || snapshot.use_tree_sitter_for_syntax(row, cx);
     let language_aware = LanguageAwareStyling {
-        tree_sitter: use_tree_sitter,
+        tree_sitter: true,
         diagnostics: true,
     };
     let chunks = snapshot.highlighted_chunks(row..row + DisplayRow(1), language_aware, style);

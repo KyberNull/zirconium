@@ -93,7 +93,7 @@ use invisibles::is_standalone_grapheme;
 pub use invisibles::{is_invisible, replacement};
 pub use wrap_map::{WrapPoint, WrapRow, WrapSnapshot};
 
-use collections::{HashMap, HashSet, IndexSet};
+use collections::{HashMap, HashSet};
 use gpui::{
     App, Context, Entity, EntityId, Font, HighlightStyle, Hsla, LineLayout, Pixels, UnderlineStyle,
     WeakEntity,
@@ -108,7 +108,7 @@ use multi_buffer::{
     MultiBufferPoint, MultiBufferRow, MultiBufferSnapshot, RowInfo, ToOffset, ToPoint,
 };
 use project::project_settings::DiagnosticSeverity;
-use project::{InlayId, lsp_store::LspFoldingRange, lsp_store::TokenType};
+use project::{InlayId, lsp_store::LspFoldingRange};
 use serde::Deserialize;
 use settings::Settings;
 use smallvec::SmallVec;
@@ -127,7 +127,7 @@ use std::{
     fmt::Debug,
     iter,
     num::NonZeroU32,
-    ops::{self, Add, Range, Sub},
+    ops::{Add, Range, Sub},
     sync::Arc,
 };
 
@@ -160,10 +160,7 @@ impl NavigationOverlayKey {
 /// Note the order is important as it determines the priority of the highlights, lower means higher priority
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum HighlightKey {
-    // Note we want semantic tokens > colorized brackets
-    // to allow language server highlights to work over brackets.
     ColorizeBracket(usize),
-    SemanticToken(u32),
     // below is sorted lexicographically, as there is no relevant ordering for these aside from coming after the above
     BufferSearchHighlights,
     ConsoleAnsiHighlight(usize),
@@ -195,8 +192,6 @@ pub trait ToDisplayPoint {
 }
 
 type TextHighlights = Arc<HashMap<HighlightKey, Arc<(HighlightStyle, Vec<Range<Anchor>>)>>>;
-type SemanticTokensHighlights =
-    Arc<HashMap<BufferId, (Arc<[SemanticTokenHighlight]>, Arc<HighlightStyleInterner>)>>;
 type InlayHighlights = TreeMap<HighlightKey, TreeMap<InlayId, (HighlightStyle, InlayHighlight)>>;
 
 #[derive(Debug)]
@@ -230,8 +225,6 @@ pub struct DisplayMap {
     text_highlights: TextHighlights,
     /// Regions of inlays that should be highlighted.
     inlay_highlights: InlayHighlights,
-    /// The semantic tokens from the language server.
-    pub semantic_token_highlights: SemanticTokensHighlights,
     /// A container for explicitly foldable ranges, which supersede indentation based fold range suggestions.
     crease_map: CreaseMap,
     pub(crate) fold_placeholder: FoldPlaceholder,
@@ -331,39 +324,6 @@ impl Companion {
     }
 }
 
-#[derive(Default, Debug)]
-pub struct HighlightStyleInterner {
-    styles: IndexSet<HighlightStyle>,
-}
-
-impl HighlightStyleInterner {
-    pub(crate) fn intern(&mut self, style: HighlightStyle) -> HighlightStyleId {
-        HighlightStyleId(self.styles.insert_full(style).0 as u32)
-    }
-}
-
-impl ops::Index<HighlightStyleId> for HighlightStyleInterner {
-    type Output = HighlightStyle;
-
-    fn index(&self, index: HighlightStyleId) -> &Self::Output {
-        &self.styles[index.0 as usize]
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct HighlightStyleId(u32);
-
-/// A `SemanticToken`, but positioned to an offset in a buffer, and stylized.
-#[derive(Debug, Clone)]
-pub struct SemanticTokenHighlight {
-    pub range: Range<Anchor>,
-    pub style: HighlightStyleId,
-    pub token_type: TokenType,
-    pub token_modifiers: u32,
-    pub server_id: lsp::LanguageServerId,
-    pub precedence: u32,
-}
-
 impl DisplayMap {
     pub fn new(
         buffer: Entity<MultiBuffer>,
@@ -406,7 +366,6 @@ impl DisplayMap {
             diagnostics_max_severity,
             text_highlights: Default::default(),
             inlay_highlights: Default::default(),
-            semantic_token_highlights: Default::default(),
             clip_at_line_ends: false,
             masked: false,
             companion: None,
@@ -660,7 +619,6 @@ impl DisplayMap {
             crease_snapshot: self.crease_map.snapshot(),
             text_highlights: self.text_highlights.clone(),
             inlay_highlights: self.inlay_highlights.clone(),
-            semantic_token_highlights: self.semantic_token_highlights.clone(),
             clip_at_line_ends: self.clip_at_line_ends,
             masked: self.masked,
             use_lsp_folding_ranges: !self.lsp_folding_crease_ids.is_empty(),
@@ -684,7 +642,6 @@ impl DisplayMap {
             crease_snapshot: self.crease_map.snapshot(),
             text_highlights: self.text_highlights.clone(),
             inlay_highlights: self.inlay_highlights.clone(),
-            semantic_token_highlights: self.semantic_token_highlights.clone(),
             clip_at_line_ends: self.clip_at_line_ends,
             masked: self.masked,
             use_lsp_folding_ranges: !self.lsp_folding_crease_ids.is_empty(),
@@ -1204,17 +1161,6 @@ impl DisplayMap {
         self.text_highlights.iter()
     }
 
-    pub fn all_semantic_token_highlights(
-        &self,
-    ) -> impl Iterator<
-        Item = (
-            &BufferId,
-            &(Arc<[SemanticTokenHighlight]>, Arc<HighlightStyleInterner>),
-        ),
-    > {
-        self.semantic_token_highlights.iter()
-    }
-
     pub fn clear_highlights(&mut self, key: HighlightKey) -> bool {
         let mut cleared = Arc::make_mut(&mut self.text_highlights)
             .remove(&key)
@@ -1375,17 +1321,12 @@ impl DisplayMap {
     pub fn is_rewrapping(&self, cx: &gpui::App) -> bool {
         self.wrap_map.read(cx).is_rewrapping()
     }
-
-    pub fn invalidate_semantic_highlights(&mut self, buffer_id: BufferId) {
-        Arc::make_mut(&mut self.semantic_token_highlights).remove(&buffer_id);
-    }
 }
 
 #[derive(Debug, Default)]
 pub(crate) struct Highlights<'a> {
     pub text_highlights: Option<&'a TextHighlights>,
     pub inlay_highlights: Option<&'a InlayHighlights>,
-    pub semantic_token_highlights: Option<&'a SemanticTokensHighlights>,
     pub styles: HighlightStyles,
 }
 
@@ -1499,7 +1440,6 @@ pub struct DisplaySnapshot {
     block_snapshot: BlockSnapshot,
     text_highlights: TextHighlights,
     inlay_highlights: InlayHighlights,
-    semantic_token_highlights: SemanticTokensHighlights,
     clip_at_line_ends: bool,
     masked: bool,
     diagnostics_max_severity: DiagnosticSeverity,
@@ -1584,19 +1524,6 @@ impl DisplaySnapshot {
 
     pub fn is_empty(&self) -> bool {
         self.buffer_snapshot().len() == MultiBufferOffset(0)
-    }
-
-    /// Returns whether tree-sitter syntax highlighting should be used.
-    /// Returns `false` if any buffer with semantic token highlights has the "full" mode setting,
-    /// meaning LSP semantic tokens should replace tree-sitter highlighting.
-    pub fn use_tree_sitter_for_syntax(&self, position: DisplayRow, cx: &App) -> bool {
-        let position = DisplayPoint::new(position, 0);
-        let Some((buffer_snapshot, ..)) = self.point_to_buffer_point(position.to_point(self))
-        else {
-            return false;
-        };
-        let settings = LanguageSettings::for_buffer_snapshot(&buffer_snapshot, None, cx);
-        settings.semantic_tokens.use_tree_sitter()
     }
 
     pub fn row_infos(&self, start_row: DisplayRow) -> impl Iterator<Item = RowInfo> + '_ {
@@ -1836,7 +1763,6 @@ impl DisplaySnapshot {
             Highlights {
                 text_highlights: Some(&self.text_highlights),
                 inlay_highlights: Some(&self.inlay_highlights),
-                semantic_token_highlights: Some(&self.semantic_token_highlights),
                 styles: highlight_styles,
             },
         )
@@ -1943,7 +1869,7 @@ impl DisplaySnapshot {
         })
     }
 
-    /// Returns combined highlight styles (tree-sitter syntax + semantic tokens)
+    /// Returns combined highlight styles (tree-sitter syntax + custom highlights)
     /// for a byte range within the specified buffer.
     /// Returned ranges are 0-based relative to `buffer_range.start`.
     pub(super) fn combined_highlights(
@@ -1960,7 +1886,6 @@ impl DisplaySnapshot {
                 diagnostics: true,
             },
             None,
-            Some(&self.semantic_token_highlights),
             multibuffer,
         );
 
