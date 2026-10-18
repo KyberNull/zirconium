@@ -247,10 +247,6 @@ impl Editor {
                 })
             }
             CodeActionsItem::CodeAction { action, provider } => {
-                if code_lens::try_handle_client_command(&action, self, &workspace, window, cx) {
-                    return Some(Task::ready(Ok(())));
-                }
-
                 let apply_code_action =
                     provider.apply_code_action(buffer, action, true, window, cx);
                 let workspace = workspace.downgrade();
@@ -474,22 +470,13 @@ impl CodeActionProvider for Entity<Project> {
         cx: &mut App,
     ) -> Task<Result<Vec<CodeAction>>> {
         self.update(cx, |project, cx| {
-            let code_lens_actions = if EditorSettings::get_global(cx).code_lens.show_in_menu() {
-                Some(project.code_lens_actions(buffer, range.clone(), cx))
-            } else {
-                None
-            };
             let code_actions = project.code_actions(buffer, range, None, cx);
             cx.background_spawn(async move {
-                let code_lens_actions = match code_lens_actions {
-                    Some(task) => task.await.context("code lens fetch")?.unwrap_or_default(),
-                    None => Vec::new(),
-                };
                 let code_actions = code_actions
                     .await
                     .context("code action fetch")?
                     .unwrap_or_default();
-                Ok(code_lens_actions.into_iter().chain(code_actions).collect())
+                Ok(code_actions)
             })
         })
     }

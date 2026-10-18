@@ -472,7 +472,6 @@ impl EditorElement {
         register_action(editor, window, Editor::toggle_edit_predictions);
         if editor.read(cx).lsp_data_enabled() {
             register_action(editor, window, Editor::toggle_inlay_hints);
-            register_action(editor, window, Editor::toggle_code_lens_action);
             register_action(editor, window, Editor::toggle_diagnostics);
         }
         if editor.read(cx).inline_diagnostics_enabled() {

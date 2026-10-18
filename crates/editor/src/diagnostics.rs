@@ -601,7 +601,7 @@ impl Editor {
 mod tests {
     use crate::{
         actions::{
-            ToggleCodeLens, ToggleDiagnostics, ToggleInlayHints, ToggleInlineDiagnostics,
+            ToggleDiagnostics, ToggleInlayHints, ToggleInlineDiagnostics,
         },
         editor_tests::init_test,
         test::editor_test_context::EditorTestContext,
@@ -757,10 +757,9 @@ mod tests {
     async fn test_actions_gated_by_lsp_data(cx: &mut TestAppContext) {
         init_test(cx, |_| {});
         let mut cx = EditorTestContext::new(cx).await;
-        let lsp_data_actions: [&dyn Action; 3] = [
+        let lsp_data_actions: [&dyn Action; 2] = [
             &ToggleDiagnostics,
             &ToggleInlayHints,
-            &ToggleCodeLens,
         ];
 
         cx.update_editor(|editor, _, cx| {

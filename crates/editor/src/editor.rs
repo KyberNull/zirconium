@@ -15,7 +15,6 @@ pub mod actions;
 pub mod blink_manager;
 mod bracket_colorization;
 pub mod code_context_menus;
-mod code_lens;
 pub mod display_map;
 mod editor_settings;
 mod element;
@@ -132,7 +131,6 @@ use code_context_menus::{
     AvailableCodeAction, CodeActionContents, CodeActionsItem, CodeActionsMenu, CodeContextMenu,
     CompletionsMenu, ContextMenuOrigin,
 };
-use code_lens::CodeLensState;
 use collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use convert_case::{Case, Casing};
 use display_map::*;
@@ -956,7 +954,6 @@ pub struct Editor {
     enable_lsp_data: bool,
     needs_initial_data_update: bool,
     enable_runnables: bool,
-    enable_code_lens: bool,
     enable_mouse_wheel_zoom: bool,
     show_line_numbers: Option<bool>,
     use_relative_line_numbers: Option<bool>,
@@ -1117,9 +1114,7 @@ pub struct Editor {
     number_deleted_lines: bool,
 
     selection_drag_state: SelectionDragState,
-    code_lens: Option<CodeLensState>,
     post_scroll_update: Task<()>,
-    refresh_code_lens_task: Task<()>,
     inlay_hints: Option<LspInlayHintData>,
     folding_newlines: Task<()>,
     select_next_is_case_sensitive: Option<bool>,
@@ -1789,7 +1784,6 @@ impl Editor {
         clone.enable_lsp_data = self.enable_lsp_data;
         clone.needs_initial_data_update = self.enable_lsp_data;
         clone.enable_runnables = self.enable_runnables;
-        clone.enable_code_lens = self.enable_code_lens;
         clone
     }
 
@@ -1964,9 +1958,6 @@ impl Editor {
                 project,
                 window,
                 |editor, _, event, window, cx| match event {
-                    project::Event::RefreshCodeLens { .. } => {
-                        editor.refresh_code_lenses(None, window, cx);
-                    }
                     project::Event::RefreshInlayHints { server_id } => {
                         editor.refresh_inlay_hints(
                             InlayHintRefreshReason::RefreshRequested {
@@ -2225,7 +2216,6 @@ impl Editor {
             enable_lsp_data: full_mode,
             needs_initial_data_update: full_mode,
             enable_runnables: full_mode,
-            enable_code_lens: full_mode,
             enable_mouse_wheel_zoom: full_mode,
             show_git_diff_gutter: None,
             show_code_actions: None,
@@ -2360,8 +2350,6 @@ impl Editor {
                 .unwrap_or_default(),
             runnables: RunnableData::new(),
             pull_diagnostics_task: Task::ready(()),
-            code_lens: None,
-            refresh_code_lens_task: Task::ready(()),
             inlay_hints: None,
             post_scroll_update: Task::ready(()),
             linked_edit_ranges: Default::default(),
@@ -2495,9 +2483,6 @@ impl Editor {
             editor.minimap =
                 editor.create_minimap(EditorSettings::get_global(cx).minimap, window, cx);
             editor.inlay_hints = Some(LspInlayHintData::new(inlay_hint_settings));
-            if editor.enable_code_lens && EditorSettings::get_global(cx).code_lens.inline() {
-                editor.code_lens = Some(CodeLensState::default());
-            }
 
             if let Some(buffer) = multi_buffer.read(cx).as_singleton() {
                 editor.register_buffer(buffer.read(cx).remote_id(), cx);
@@ -9064,13 +9049,6 @@ impl Editor {
                 self.refresh_outline_symbols_at_cursor(cx);
             }
 
-            let code_lens_inline =
-                self.enable_code_lens && EditorSettings::get_global(cx).code_lens.inline();
-            let was_inline = self.code_lens.is_some();
-            if code_lens_inline != was_inline {
-                self.toggle_code_lens(code_lens_inline, window, cx);
-            }
-
             self.refresh_inlay_hints(
                 InlayHintRefreshReason::SettingsChange(inlay_hint_settings(
                     self.selections.newest_anchor().head(),
@@ -9989,7 +9967,6 @@ impl Editor {
         if let Some(buffer_id) = for_buffer {
             self.pull_diagnostics(buffer_id, window, cx);
         }
-        self.refresh_code_lenses(for_buffer, window, cx);
     }
 
     fn register_visible_buffers(&mut self, cx: &mut Context<Self>) {
@@ -10127,11 +10104,6 @@ impl Editor {
         self.enable_runnables = false;
     }
 
-    pub fn disable_code_lens(&mut self, cx: &mut Context<Self>) {
-        self.enable_code_lens = false;
-        self.clear_code_lenses(cx);
-    }
-
     pub fn disable_mouse_wheel_zoom(&mut self) {
         self.enable_mouse_wheel_zoom = false;
     }
@@ -10163,7 +10135,6 @@ impl Editor {
         self.register_visible_buffers(cx);
         self.colorize_brackets(false, cx);
         self.refresh_inlay_hints(InlayHintRefreshReason::NewLinesShown, cx);
-        self.resolve_visible_code_lenses(cx);
 
         if !self.buffer().read(cx).is_singleton() || self.needs_initial_data_update {
             self.needs_initial_data_update = false;

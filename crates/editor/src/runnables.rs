@@ -72,23 +72,6 @@ impl RunnableData {
         self.task_statuses.remove(&(buffer_id, buffer_row));
     }
 
-    pub fn task_key_for_offset(
-        &self,
-        buffer_id: BufferId,
-        offset: BufferOffset,
-    ) -> Option<(BufferId, BufferRow)> {
-        let (_, tasks_by_row) = self.runnables.get(&buffer_id)?;
-        tasks_by_row
-            .iter()
-            .find(|(_, tasks)| tasks.context_range.contains(&offset))
-            .or_else(|| {
-                tasks_by_row
-                    .iter()
-                    .find(|(_, tasks)| tasks.context_range.start >= offset)
-            })
-            .map(|(row, _)| (buffer_id, *row))
-    }
-
     pub fn has_cached(&self, buffer_id: BufferId, version: &Global) -> bool {
         self.runnables
             .get(&buffer_id)
@@ -469,14 +452,6 @@ impl Editor {
             .buffer_snapshot()
             .buffer_line_for_row(multibuffer_row)?;
         Some((buffer_snapshot.remote_id(), range.start.row))
-    }
-
-    pub(crate) fn runnable_task_key_for_offset(
-        &self,
-        buffer_id: BufferId,
-        offset: BufferOffset,
-    ) -> Option<(BufferId, BufferRow)> {
-        self.runnables.task_key_for_offset(buffer_id, offset)
     }
 
     pub fn task_context(&self, window: &mut Window, cx: &mut App) -> Task<Option<TaskContext>> {
