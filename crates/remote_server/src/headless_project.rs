@@ -13,9 +13,10 @@ use http_client::HttpClient;
 use language::{Buffer, BufferEvent, LanguageRegistry, proto::serialize_operation};
 use node_runtime::NodeRuntime;
 use project::{
-    AgentRegistryStore, LspStore, LspStoreEvent, ManifestTree, PrettierStore, ProjectEnvironment,
-    ProjectPath, ToolchainStore, WorktreeId,
+    AgentRegistryStore, FormatStore, LspStore, LspStoreEvent, ManifestTree, PrettierStore,
+    ProjectEnvironment, ProjectPath, ToolchainStore, WorktreeId,
     agent_server_store::AgentServerStore,
+    buffer_languages::BufferLanguages,
     buffer_store::{BufferStore, BufferStoreEvent},
     context_server_store::ContextServerStore,
     git_store::GitStore,
@@ -52,6 +53,8 @@ pub struct HeadlessProject {
     pub worktree_store: Entity<WorktreeStore>,
     pub buffer_store: Entity<BufferStore>,
     pub lsp_store: Entity<LspStore>,
+    pub format_store: Entity<FormatStore>,
+    _buffer_languages: Entity<BufferLanguages>,
     pub task_store: Entity<TaskStore>,
     pub agent_server_store: Entity<AgentServerStore>,
     pub context_server_store: Entity<ContextServerStore>,
@@ -151,9 +154,21 @@ impl HeadlessProject {
                 fs.clone(),
                 languages.clone(),
                 worktree_store.clone(),
+                buffer_store.clone(),
                 cx,
             )
         });
+
+        let format_store = cx.new(|_| {
+            FormatStore::new_local(
+                buffer_store.clone(),
+                worktree_store.clone(),
+                environment.clone(),
+                prettier_store.clone(),
+            )
+        });
+        let buffer_languages =
+            cx.new(|cx| BufferLanguages::new(buffer_store.clone(), languages.clone(), cx));
 
         let task_store = cx.new(|cx| {
             let mut task_store = TaskStore::local(
@@ -236,6 +251,7 @@ impl HeadlessProject {
         session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &buffer_store);
         session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &cx.entity());
         session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &lsp_store);
+        session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &format_store);
         session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &task_store);
         session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &toolchain_store);
         session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &settings_observer);
@@ -274,6 +290,7 @@ impl HeadlessProject {
         WorktreeStore::init(&session);
         SettingsObserver::init(&session);
         LspStore::init(&session);
+        FormatStore::init(&session);
         TaskStore::init(Some(&session));
         ToolchainStore::init(&session);
         GitStore::init(&session);
@@ -288,6 +305,8 @@ impl HeadlessProject {
             worktree_store,
             buffer_store,
             lsp_store,
+            format_store,
+            _buffer_languages: buffer_languages,
             task_store,
             agent_server_store,
             context_server_store,

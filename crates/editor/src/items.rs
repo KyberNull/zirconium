@@ -26,7 +26,7 @@ use language::{
 use lsp::DiagnosticSeverity;
 use multi_buffer::{BufferOffset, MultiBufferOffset, MultiBufferRow, PathKey};
 use project::{
-    File, Project, ProjectItem as _, ProjectPath, git_store::GitStore, lsp_store::FormatTrigger,
+    File, FormatTrigger, Project, ProjectItem as _, ProjectPath, git_store::GitStore,
     project_settings::ProjectSettings, search::SearchQuery,
 };
 use rope::TextSummary;

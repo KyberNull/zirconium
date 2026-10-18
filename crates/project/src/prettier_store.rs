@@ -15,20 +15,23 @@ use futures::{
 };
 use gpui::{AppContext as _, AsyncApp, Context, Entity, EventEmitter, Task, WeakEntity};
 use language::{
-    Buffer, LanguageRegistry, LocalFile, OffsetUtf16,
+    Buffer, BufferEvent, LanguageRegistry, LocalFile, OffsetUtf16,
     language_settings::{Formatter, LanguageSettings},
 };
 use lsp::{LanguageServer, LanguageServerId, LanguageServerName};
 use node_runtime::NodeRuntime;
 use paths::default_prettier_dir;
 use prettier::Prettier;
-use settings::Settings;
+use settings::{Settings, SettingsStore};
 use smol::stream::StreamExt;
 use util::{ResultExt, TryFutureExt, rel_path::RelPath};
 
 use crate::{
-    File, PathChange, ProjectEntryId, Worktree, lsp_store::WorktreeId,
-    project_settings::ProjectSettings, worktree_store::WorktreeStore,
+    File, PathChange, ProjectEntryId, Worktree,
+    buffer_store::{BufferStore, BufferStoreEvent},
+    lsp_store::WorktreeId,
+    project_settings::ProjectSettings,
+    worktree_store::{WorktreeStore, WorktreeStoreEvent},
 };
 
 pub struct PrettierStore {
@@ -59,8 +62,17 @@ impl PrettierStore {
         fs: Arc<dyn Fs>,
         languages: Arc<LanguageRegistry>,
         worktree_store: Entity<WorktreeStore>,
-        _: &mut Context<Self>,
+        buffer_store: Entity<BufferStore>,
+        cx: &mut Context<Self>,
     ) -> Self {
+        cx.subscribe(&worktree_store, Self::on_worktree_store_event)
+            .detach();
+        cx.subscribe(&buffer_store, Self::on_buffer_store_event)
+            .detach();
+        cx.observe_global::<SettingsStore>(move |this, cx| {
+            this.on_global_settings_changed(&buffer_store, cx)
+        })
+        .detach();
         Self {
             node,
             fs,
@@ -71,6 +83,94 @@ impl PrettierStore {
             prettier_ignores_per_worktree: HashMap::default(),
             prettier_instances: HashMap::default(),
         }
+    }
+
+    fn on_worktree_store_event(
+        &mut self,
+        _: Entity<WorktreeStore>,
+        event: &WorktreeStoreEvent,
+        cx: &mut Context<Self>,
+    ) {
+        match event {
+            WorktreeStoreEvent::WorktreeAdded(worktree) => {
+                if !worktree.read(cx).is_local() {
+                    return;
+                }
+                cx.subscribe(worktree, |this, worktree, event, cx| match event {
+                    worktree::Event::UpdatedEntries(changes) => {
+                        if !changes.is_empty() {
+                            this.update_prettier_settings(&worktree, changes, cx);
+                        }
+                    }
+                    worktree::Event::UpdatedGitRepositories(_)
+                    | worktree::Event::DeletedEntry(_)
+                    | worktree::Event::Deleted
+                    | worktree::Event::UpdatedRootRepoCommonDir { .. } => {}
+                })
+                .detach()
+            }
+            WorktreeStoreEvent::WorktreeRemoved(_, id) => self.remove_worktree(*id, cx),
+            _ => {}
+        }
+    }
+
+    fn on_buffer_store_event(
+        &mut self,
+        _: Entity<BufferStore>,
+        event: &BufferStoreEvent,
+        cx: &mut Context<Self>,
+    ) {
+        if let BufferStoreEvent::BufferAdded(buffer) = event {
+            cx.subscribe(buffer, |this, buffer, event, cx| {
+                if matches!(event, BufferEvent::LanguageChanged(_)) {
+                    this.install_default_prettier_for_buffer(&buffer, cx);
+                }
+            })
+            .detach();
+        }
+    }
+
+    fn install_default_prettier_for_buffer(
+        &mut self,
+        buffer_entity: &Entity<Buffer>,
+        cx: &mut Context<Self>,
+    ) {
+        let buffer = buffer_entity.read(cx);
+        let Some(language) = buffer.language() else {
+            return;
+        };
+        let worktree_id = File::from_dyn(buffer.file()).map(|file| file.worktree_id(cx));
+        let settings =
+            LanguageSettings::resolve(Some(buffer), Some(&language.name()), cx).into_owned();
+        if settings.prettier.allowed
+            && let Some(prettier_plugins) = prettier_plugins_for_language(&settings)
+        {
+            self.install_default_prettier(
+                worktree_id,
+                prettier_plugins.iter().map(|s| Arc::from(s.as_str())),
+                cx,
+            )
+        }
+    }
+
+    fn on_global_settings_changed(
+        &mut self,
+        buffer_store: &Entity<BufferStore>,
+        cx: &mut Context<Self>,
+    ) {
+        let mut language_formatters_to_check = Vec::new();
+        for buffer in buffer_store.read(cx).buffers() {
+            let buffer = buffer.read(cx);
+            let settings = LanguageSettings::for_buffer(buffer, cx);
+            if buffer.language().is_some() {
+                let buffer_file = File::from_dyn(buffer.file());
+                language_formatters_to_check.push((
+                    buffer_file.map(|f| f.worktree_id(cx)),
+                    settings.into_owned(),
+                ));
+            }
+        }
+        self.on_settings_changed(language_formatters_to_check, cx);
     }
 
     pub fn remove_worktree(&mut self, id_to_remove: WorktreeId, cx: &mut Context<Self>) {

@@ -3817,9 +3817,6 @@ impl LocalLspStore {
     ) -> Vec<LanguageServerId> {
         self.restricted_worktrees_tasks.remove(&id_to_remove);
         self.diagnostics.remove(&id_to_remove);
-        self.prettier_store.update(cx, |prettier_store, cx| {
-            prettier_store.remove_worktree(id_to_remove, cx);
-        });
 
         let mut servers_to_remove = BTreeSet::default();
         let mut servers_to_preserve = HashSet::default();
@@ -4550,7 +4547,6 @@ impl LspStore {
         client.add_entity_message_handler(Self::handle_update_language_server);
         client.add_entity_message_handler(Self::handle_language_server_log);
         client.add_entity_message_handler(Self::handle_update_diagnostic_summary);
-        client.add_entity_request_handler(Self::handle_format_buffers);
         client.add_entity_request_handler(Self::handle_apply_code_action_kind);
         client.add_entity_request_handler(Self::handle_resolve_completion_documentation);
         client.add_entity_request_handler(Self::handle_apply_code_action);
@@ -4723,7 +4719,7 @@ impl LspStore {
             next_hint_id: Arc::default(),
             active_entry: None,
             _maintain_workspace_config,
-            _maintain_buffer_languages: Self::maintain_buffer_languages(languages, cx),
+            _maintain_buffer_languages: Task::ready(()),
         }
     }
 
@@ -4786,7 +4782,7 @@ impl LspStore {
             active_entry: None,
 
             _maintain_workspace_config,
-            _maintain_buffer_languages: Self::maintain_buffer_languages(languages.clone(), cx),
+            _maintain_buffer_languages: Task::ready(()),
         }
     }
 
@@ -4812,7 +4808,6 @@ impl LspStore {
                     }
                 }
 
-                self.detect_language_for_buffer(buffer, cx);
                 if let Some(local) = self.as_local_mut() {
                     local.initialize_buffer(buffer, cx);
                     if local.registered_buffers.contains_key(&buffer_id) {
@@ -4936,17 +4931,11 @@ impl LspStore {
     }
 
     fn on_buffer_added(&mut self, buffer: &Entity<Buffer>, cx: &mut Context<Self>) -> Result<()> {
-        buffer
-            .read(cx)
-            .set_language_registry(self.languages.clone());
-
         cx.subscribe(buffer, |this, buffer, event, cx| {
             this.on_buffer_event(buffer, event, cx);
         })
         .detach();
 
-        self.parse_modeline(buffer, cx);
-        self.detect_language_for_buffer(buffer, cx);
         if let Some(local) = self.as_local_mut() {
             local.initialize_buffer(buffer, cx);
         }
@@ -4996,10 +4985,6 @@ impl LspStore {
     }
 
     fn on_buffer_reloaded(&mut self, buffer: Entity<Buffer>, cx: &mut Context<Self>) {
-        if self.parse_modeline(&buffer, cx) {
-            self.detect_language_for_buffer(&buffer, cx);
-        }
-
         let buffer_id = buffer.read(cx).remote_id();
         let task = self.pull_diagnostics_for_buffer(buffer, cx);
         self.buffer_reload_tasks.insert(buffer_id, task);
@@ -5398,21 +5383,6 @@ impl LspStore {
             None
         };
 
-        if settings.prettier.allowed
-            && let Some(prettier_plugins) = prettier_store::prettier_plugins_for_language(&settings)
-        {
-            let prettier_store = self.as_local().map(|s| s.prettier_store.clone());
-            if let Some(prettier_store) = prettier_store {
-                prettier_store.update(cx, |prettier_store, cx| {
-                    prettier_store.install_default_prettier(
-                        worktree_id,
-                        prettier_plugins.iter().map(|s| Arc::from(s.as_str())),
-                        cx,
-                    )
-                })
-            }
-        }
-
         cx.emit(LspStoreEvent::LanguageDetected {
             buffer: buffer_entity.clone(),
             new_language: Some(new_language),
@@ -5757,12 +5727,6 @@ impl LspStore {
         }
 
         self.request_workspace_config_refresh();
-
-        if let Some(prettier_store) = self.as_local().map(|s| s.prettier_store.clone()) {
-            prettier_store.update(cx, |prettier_store, cx| {
-                prettier_store.on_settings_changed(language_formatters_to_check, cx)
-            })
-        }
 
         let new_semantic_token_rules = crate::project_settings::ProjectSettings::get_global(cx)
             .global_lsp_settings
@@ -12764,10 +12728,6 @@ impl LspStore {
         let Some(local) = self.as_local_mut() else {
             return;
         };
-
-        local.prettier_store.update(cx, |prettier_store, cx| {
-            prettier_store.update_prettier_settings(worktree_handle, changes, cx)
-        });
 
         let worktree_id = worktree_handle.read(cx).id();
         let mut language_server_ids = local

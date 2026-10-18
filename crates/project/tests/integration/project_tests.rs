@@ -7560,9 +7560,9 @@ async fn assert_line_endings_after_format(
             .update(cx, |project, cx| {
                 project.format(
                     buffers,
-                    project::lsp_store::LspFormatTarget::Buffers,
+                    project::FormatTarget::Buffers,
                     false,
-                    project::lsp_store::FormatTrigger::Save,
+                    project::FormatTrigger::Save,
                     cx,
                 )
             })

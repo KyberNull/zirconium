@@ -22,7 +22,7 @@ use language::{
 };
 use markdown::{Markdown, MarkdownOptions};
 pub use mention::*;
-use project::lsp_store::{FormatTrigger, LspFormatTarget};
+use project::{FormatTarget, FormatTrigger};
 use project::{
     AgentLocation, Project,
     git_store::{GitStoreCheckpoint, GitStoreEvent, RepositoryEvent},
@@ -4365,7 +4365,7 @@ impl AcpThread {
                 let format_task = project.update(cx, |project, cx| {
                     project.format(
                         HashSet::from_iter([buffer.clone()]),
-                        LspFormatTarget::Buffers,
+                        FormatTarget::Buffers,
                         false,
                         FormatTrigger::Save,
                         cx,

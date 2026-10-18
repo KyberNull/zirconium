@@ -1,11 +1,13 @@
 pub mod agent_registry_store;
 pub mod agent_server_store;
 pub mod bookmark_store;
+pub mod buffer_languages;
 pub mod buffer_store;
 pub mod color_extractor;
 pub mod connection_manager;
 pub mod context_server_store;
 pub mod debounced_delay;
+pub mod format_store;
 pub mod git_store;
 pub mod image_store;
 pub mod lsp_command;
@@ -55,6 +57,7 @@ pub use project_search::{Search, SearchResults};
 pub use worktree_store::WorktreePaths;
 
 use anyhow::{Context as _, Result, anyhow};
+use buffer_languages::{BufferLanguages, BufferLanguagesEvent};
 use buffer_store::{BufferStore, BufferStoreEvent};
 use client::{
     Client, Collaborator, PendingEntitySubscription, ProjectId, TypedEnvelope, UserStore, proto,
@@ -92,7 +95,7 @@ use lsp::{
 };
 pub use lsp_command::EditPredictionDefinition;
 use lsp_command::*;
-use lsp_store::{CompletionDocumentation, LspFormatTarget, OpenLspBufferHandle};
+use lsp_store::{CompletionDocumentation, OpenLspBufferHandle};
 pub use manifest_tree::ManifestProvidersStore;
 use node_runtime::NodeRuntime;
 use parking_lot::Mutex;
@@ -154,6 +157,7 @@ pub use task_inventory::{
 };
 
 pub use buffer_store::ProjectTransaction;
+pub use format_store::{FormatStore, FormatTarget, FormatTrigger};
 pub use lsp_store::{
     DiagnosticSummary, InvalidationStrategy, LanguageServerLogType, LanguageServerProgress,
     LanguageServerPromptRequest, LanguageServerStatus, LanguageServerToQuery, LspStore,
@@ -225,6 +229,8 @@ pub struct Project {
     context_server_store: Entity<ContextServerStore>,
     image_store: Entity<ImageStore>,
     lsp_store: Entity<LspStore>,
+    format_store: Entity<FormatStore>,
+    buffer_languages: Entity<BufferLanguages>,
     _subscriptions: Vec<gpui::Subscription>,
     buffers_needing_diff: HashSet<WeakEntity<Buffer>>,
     git_diff_debouncer: DebouncedDelay<Self>,
@@ -919,6 +925,7 @@ enum EntitySubscription {
     GitStore(PendingEntitySubscription<GitStore>),
     WorktreeStore(PendingEntitySubscription<WorktreeStore>),
     LspStore(PendingEntitySubscription<LspStore>),
+    FormatStore(PendingEntitySubscription<FormatStore>),
     SettingsObserver(PendingEntitySubscription<SettingsObserver>),
 }
 
@@ -1169,6 +1176,7 @@ impl Project {
         WorktreeStore::init(&client);
         BufferStore::init(&client);
         LspStore::init(&client);
+        FormatStore::init(&client);
         GitStore::init(&client);
         SettingsObserver::init(&client);
         TaskStore::init(Some(&client));
@@ -1246,6 +1254,7 @@ impl Project {
                     fs.clone(),
                     languages.clone(),
                     worktree_store.clone(),
+                    buffer_store.clone(),
                     cx,
                 )
             });
@@ -1314,6 +1323,19 @@ impl Project {
 
             cx.subscribe(&lsp_store, Self::on_lsp_store_event).detach();
 
+            let format_store = cx.new(|_| {
+                FormatStore::new_local(
+                    buffer_store.clone(),
+                    worktree_store.clone(),
+                    environment.clone(),
+                    prettier_store.clone(),
+                )
+            });
+            let buffer_languages =
+                cx.new(|cx| BufferLanguages::new(buffer_store.clone(), languages.clone(), cx));
+            cx.subscribe(&buffer_languages, Self::on_buffer_languages_event)
+                .detach();
+
             Self {
                 buffer_ordered_messages_tx: tx,
                 collaborators: Default::default(),
@@ -1321,6 +1343,8 @@ impl Project {
                 buffer_store,
                 image_store,
                 lsp_store,
+                format_store,
+                buffer_languages,
                 context_server_store,
                 join_project_response_message_id: 0,
                 client_state: ProjectClientState::Local,
@@ -1468,6 +1492,18 @@ impl Project {
             });
             cx.subscribe(&lsp_store, Self::on_lsp_store_event).detach();
 
+            let format_store = cx.new(|_| {
+                FormatStore::new_remote(
+                    buffer_store.clone(),
+                    remote_proto.clone(),
+                    REMOTE_SERVER_PROJECT_ID,
+                )
+            });
+            let buffer_languages =
+                cx.new(|cx| BufferLanguages::new(buffer_store.clone(), languages.clone(), cx));
+            cx.subscribe(&buffer_languages, Self::on_buffer_languages_event)
+                .detach();
+
             let bookmark_store =
                 cx.new(|_| BookmarkStore::new(worktree_store.clone(), buffer_store.clone()));
 
@@ -1523,6 +1559,8 @@ impl Project {
                 buffer_store,
                 image_store,
                 lsp_store,
+                format_store,
+                buffer_languages,
                 context_server_store,
                 bookmark_store,
                 join_project_response_message_id: 0,
@@ -1582,6 +1620,7 @@ impl Project {
             remote_proto.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &this.buffer_store);
             remote_proto.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &this.worktree_store);
             remote_proto.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &this.lsp_store);
+            remote_proto.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &this.format_store);
             remote_proto.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &this.settings_observer);
             remote_proto.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &this.git_store);
             remote_proto.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &this.agent_server_store);
@@ -1604,6 +1643,7 @@ impl Project {
             BufferStore::init(&remote_proto);
             WorktreeStore::init_remote(&remote_proto);
             LspStore::init(&remote_proto);
+            FormatStore::init(&remote_proto);
             SettingsObserver::init(&remote_proto);
             TaskStore::init(Some(&remote_proto));
             ToolchainStore::init(&remote_proto);
@@ -1632,6 +1672,7 @@ impl Project {
                 client.subscribe_to_entity::<WorktreeStore>(remote_id)?,
             ),
             EntitySubscription::LspStore(client.subscribe_to_entity::<LspStore>(remote_id)?),
+            EntitySubscription::FormatStore(client.subscribe_to_entity::<FormatStore>(remote_id)?),
             EntitySubscription::SettingsObserver(
                 client.subscribe_to_entity::<SettingsObserver>(remote_id)?,
             ),
@@ -1663,7 +1704,7 @@ impl Project {
 
     async fn from_join_project_response(
         response: TypedEnvelope<proto::JoinProjectResponse>,
-        subscriptions: [EntitySubscription; 6],
+        subscriptions: [EntitySubscription; 7],
         client: Arc<Client>,
         run_tasks: bool,
         user_store: Entity<UserStore>,
@@ -1711,6 +1752,10 @@ impl Project {
                 remote_id,
                 cx,
             )
+        });
+
+        let format_store = cx.new(|_| {
+            FormatStore::new_remote(buffer_store.clone(), client.clone().into(), remote_id)
         });
 
         let git_store = cx.new(|cx| {
@@ -1785,6 +1830,11 @@ impl Project {
             cx.subscribe(&buffer_store, Self::on_buffer_store_event)
                 .detach();
             cx.subscribe(&lsp_store, Self::on_lsp_store_event).detach();
+
+            let buffer_languages =
+                cx.new(|cx| BufferLanguages::new(buffer_store.clone(), languages.clone(), cx));
+            cx.subscribe(&buffer_languages, Self::on_buffer_languages_event)
+                .detach();
             cx.subscribe(&settings_observer, Self::on_settings_observer_event)
                 .detach();
 
@@ -1794,6 +1844,8 @@ impl Project {
                 image_store,
                 worktree_store: worktree_store.clone(),
                 lsp_store: lsp_store.clone(),
+                format_store: format_store.clone(),
+                buffer_languages: buffer_languages.clone(),
                 context_server_store,
                 active_entry: None,
                 collaborators: Default::default(),
@@ -1868,6 +1920,9 @@ impl Project {
                 EntitySubscription::Project(subscription) => subscription.set_entity(&project, &cx),
                 EntitySubscription::LspStore(subscription) => {
                     subscription.set_entity(&lsp_store, &cx)
+                }
+                EntitySubscription::FormatStore(subscription) => {
+                    subscription.set_entity(&format_store, &cx)
                 }
             })
             .collect::<Vec<_>>();
@@ -2682,6 +2737,9 @@ impl Project {
             self.collab_client
                 .subscribe_to_entity(project_id)?
                 .set_entity(&self.lsp_store, &cx.to_async()),
+            self.collab_client
+                .subscribe_to_entity(project_id)?
+                .set_entity(&self.format_store, &cx.to_async()),
             self.collab_client
                 .subscribe_to_entity(project_id)?
                 .set_entity(&self.settings_observer, &cx.to_async()),
@@ -3516,6 +3574,19 @@ impl Project {
         }
     }
 
+    fn on_buffer_languages_event(
+        &mut self,
+        _: Entity<BufferLanguages>,
+        event: &BufferLanguagesEvent,
+        cx: &mut Context<Self>,
+    ) {
+        match event {
+            BufferLanguagesEvent::LanguageNotFound(buffer) => {
+                cx.emit(Event::LanguageNotFound(buffer.clone()))
+            }
+        }
+    }
+
     fn on_lsp_store_event(
         &mut self,
         _: Entity<LspStore>,
@@ -3538,15 +3609,7 @@ impl Project {
             LspStoreEvent::LanguageServerLog(server_id, log_type, string) => cx.emit(
                 Event::LanguageServerLog(*server_id, log_type.clone(), string.clone()),
             ),
-            LspStoreEvent::LanguageDetected {
-                buffer,
-                new_language,
-            } => {
-                let Some(_) = new_language else {
-                    cx.emit(Event::LanguageNotFound(buffer.clone()));
-                    return;
-                };
-            }
+            LspStoreEvent::LanguageDetected { .. } => {}
             LspStoreEvent::RefreshInlayHints { server_id } => cx.emit(Event::RefreshInlayHints {
                 server_id: *server_id,
             }),
@@ -3944,8 +4007,8 @@ impl Project {
         new_language: Arc<Language>,
         cx: &mut Context<Self>,
     ) {
-        self.lsp_store.update(cx, |lsp_store, cx| {
-            lsp_store.set_language_for_buffer(buffer, new_language, cx)
+        self.buffer_languages.update(cx, |buffer_languages, cx| {
+            buffer_languages.set_language_for_buffer(buffer, new_language, cx)
         })
     }
 
@@ -4125,11 +4188,11 @@ impl Project {
     }
 
     pub fn last_formatting_failure<'a>(&self, cx: &'a App) -> Option<&'a str> {
-        self.lsp_store.read(cx).last_formatting_failure()
+        self.format_store.read(cx).last_formatting_failure()
     }
 
     pub fn reset_last_formatting_failure(&self, cx: &mut App) {
-        self.lsp_store
+        self.format_store
             .update(cx, |store, _| store.reset_last_formatting_failure());
     }
 
@@ -4156,18 +4219,18 @@ impl Project {
     pub fn format(
         &mut self,
         buffers: HashSet<Entity<Buffer>>,
-        target: LspFormatTarget,
+        target: FormatTarget,
         push_to_history: bool,
-        trigger: lsp_store::FormatTrigger,
+        trigger: FormatTrigger,
         cx: &mut Context<Project>,
     ) -> Task<anyhow::Result<ProjectTransaction>> {
-        self.lsp_store.update(cx, |lsp_store, cx| {
-            lsp_store.format(buffers, target, push_to_history, trigger, cx)
+        self.format_store.update(cx, |format_store, cx| {
+            format_store.format(buffers, target, push_to_history, trigger, cx)
         })
     }
 
     pub fn supports_range_formatting(&self, buffer: &Entity<Buffer>, cx: &App) -> bool {
-        self.lsp_store
+        self.format_store
             .read(cx)
             .supports_range_formatting(buffer, cx)
     }

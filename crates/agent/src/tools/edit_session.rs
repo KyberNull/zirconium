@@ -14,7 +14,7 @@ use gpui::{App, AppContext, AsyncApp, Entity, Task, WeakEntity};
 use language::language_settings::{self, FormatOnSave};
 use language::{Buffer, BufferEditSource, BufferEvent, LanguageRegistry};
 use language_model::LanguageModelToolResultContent;
-use project::lsp_store::{FormatTrigger, LspFormatTarget};
+use project::{FormatTarget, FormatTrigger};
 use project::{AgentLocation, Project, ProjectPath};
 use reindent::{IndentDelta, Reindenter, compute_indent_delta, compute_rest_indent_delta};
 use schemars::JsonSchema;
@@ -194,7 +194,7 @@ impl EditSessionContext {
                 .update(cx, |project, cx| {
                     project.format(
                         HashSet::from_iter([buffer.clone()]),
-                        LspFormatTarget::Buffers,
+                        FormatTarget::Buffers,
                         false,
                         FormatTrigger::Save,
                         cx,

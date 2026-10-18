@@ -180,10 +180,11 @@ use parking_lot::Mutex;
 use persistence::EditorDb;
 use project::{
     Completion, CompletionDisplayOptions, CompletionIntent, CompletionResponse, CompletionSource,
-    DisableAiSettings, InlayId, Location, Project, ProjectItem, ProjectPath, ProjectTransaction,
+    DisableAiSettings, FormatTarget as ProjectFormatTarget, FormatTrigger, InlayId, Location,
+    Project, ProjectItem, ProjectPath, ProjectTransaction,
     bookmark_store::BookmarkStore,
     git_store::GitStoreEvent,
-    lsp_store::{CompletionDocumentation, FormatTrigger, LspFormatTarget},
+    lsp_store::CompletionDocumentation,
     project_settings::{DiagnosticSeverity, ProjectSettings},
 };
 use rand::seq::SliceRandom;
@@ -6754,7 +6755,7 @@ impl Editor {
     ) -> Task<Result<()>> {
         let buffer = self.buffer.clone();
         let (buffers, target) = match target {
-            FormatTarget::Buffers(buffers) => (buffers, LspFormatTarget::Buffers),
+            FormatTarget::Buffers(buffers) => (buffers, ProjectFormatTarget::Buffers),
             FormatTarget::Ranges(selection_ranges) => {
                 let multi_buffer = buffer.read(cx);
                 let snapshot = multi_buffer.read(cx);
@@ -6775,7 +6776,7 @@ impl Editor {
                             .or_insert_with(|| vec![start..end]);
                     }
                 }
-                (buffers, LspFormatTarget::Ranges(buffer_id_to_ranges))
+                (buffers, ProjectFormatTarget::Ranges(buffer_id_to_ranges))
             }
         };
 
