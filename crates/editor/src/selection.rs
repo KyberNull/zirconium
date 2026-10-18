@@ -1615,10 +1615,6 @@ impl Editor {
         }
 
         if local {
-            if let Some((anchor, _)) = buffer.anchor_to_buffer_anchor(new_cursor_position) {
-                self.register_buffer(anchor.buffer_id, cx);
-            }
-
             let mut context_menu = self.context_menu.borrow_mut();
             let completion_menu = match context_menu.as_ref() {
                 Some(CodeContextMenu::Completions(menu)) => Some(menu),

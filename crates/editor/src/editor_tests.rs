@@ -23431,20 +23431,6 @@ async fn test_on_type_formatting_is_applied_after_autoindent(cx: &mut TestAppCon
 }
 
 #[gpui::test]
-async fn test_on_type_formatting_not_scheduled_without_server_support(cx: &mut TestAppContext) {
-    init_test(cx, |_| {});
-
-    let mut cx = EditorLspTestContext::new_rust(lsp::ServerCapabilities::default(), cx).await;
-    cx.set_state("let a = bˇ;\n");
-
-    let task = cx.update_editor(|editor, window, cx| {
-        editor.trigger_on_type_formatting(".".to_owned(), window, cx)
-    });
-
-    assert!(task.is_none());
-}
-
-#[gpui::test]
 async fn test_on_type_formatting_preserves_cursor_position(cx: &mut TestAppContext) {
     init_test(cx, |_| {});
 

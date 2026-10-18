@@ -413,8 +413,6 @@ actions!(
         BlameHover,
         /// Cancels the current operation.
         Cancel,
-        /// Cancels pending language server work.
-        CancelLanguageServerWork,
         /// Confirms completion by inserting at cursor.
         ConfirmCompletionInsert,
         /// Confirms completion by replacing existing text.
@@ -700,8 +698,6 @@ actions!(
         Redo,
         /// Redoes the last selection change.
         RedoSelection,
-        /// Restarts the language server for the current file.
-        RestartLanguageServer,
         /// Reverses the order of selected lines.
         ReverseLines,
         /// Reloads the file from disk.
@@ -792,8 +788,6 @@ actions!(
         SortLinesCaseInsensitive,
         /// Sorts selected lines case-sensitively.
         SortLinesCaseSensitive,
-        /// Stops the language server for the current file.
-        StopLanguageServer,
         /// Inserts a tab character or indents.
         Tab,
         /// Removes a tab character or outdents.

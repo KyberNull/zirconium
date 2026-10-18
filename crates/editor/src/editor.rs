@@ -190,7 +190,6 @@ use project::{
     git_store::GitStoreEvent,
     lsp_store::{
         CompletionDocumentation, FormatTrigger, LspFormatTarget,
-        OpenLspBufferHandle,
     },
     project_settings::{DiagnosticSeverity, GoToDiagnosticSeverityFilter, ProjectSettings},
 };
@@ -323,7 +322,6 @@ pub fn init(cx: &mut App) {
             workspace.register_action(Editor::new_file_split);
             workspace.register_action(Editor::new_file_vertical);
             workspace.register_action(Editor::new_file_horizontal);
-            workspace.register_action(Editor::cancel_language_server_work);
             workspace.register_action(Editor::toggle_focus);
             workspace.register_action(Editor::view_bookmarks);
         },
@@ -1063,7 +1061,6 @@ pub struct Editor {
     focused_block: Option<FocusedBlock>,
     next_scroll_position: NextScrollCursorCenterTopBottom,
     addons: TypeIdHashMap<Box<dyn Addon>>,
-    registered_buffers: HashMap<BufferId, OpenLspBufferHandle>,
     load_diff_task: Option<Shared<Task<()>>>,
     diff_hunk_delegate: Option<Arc<dyn DiffHunkDelegate>>,
     selection_mark_mode: bool,
@@ -1895,8 +1892,6 @@ impl Editor {
                 window,
                 |editor, _, event, window, cx| match event {
                     project::Event::LanguageServerRemoved(_) => {
-                        editor.registered_buffers.clear();
-                        editor.register_visible_buffers(cx);
                         editor.refresh_runnables(None, window, cx);
                         editor.update_lsp_data(None, window, cx);
                     }
@@ -1925,7 +1920,6 @@ impl Editor {
                     project::Event::LanguageServerBufferRegistered { buffer_id, .. } => {
                         let buffer_id = *buffer_id;
                         if editor.buffer().read(cx).buffer(buffer_id).is_some() {
-                            editor.register_buffer(buffer_id, cx);
                             editor.refresh_runnables(Some(buffer_id), window, cx);
                             editor.update_lsp_data(Some(buffer_id), window, cx);
                         }
@@ -2255,7 +2249,6 @@ impl Editor {
             focused_block: None,
             next_scroll_position: NextScrollCursorCenterTopBottom::default(),
             addons: Default::default(),
-            registered_buffers: HashMap::default(),
             _scroll_cursor_center_top_bottom_task: Task::ready(()),
             selection_mark_mode: false,
             toggle_fold_multiple_buffers: Task::ready(()),
@@ -2378,9 +2371,6 @@ impl Editor {
             editor.minimap =
                 editor.create_minimap(EditorSettings::get_global(cx).minimap, window, cx);
 
-            if let Some(buffer) = multi_buffer.read(cx).as_singleton() {
-                editor.register_buffer(buffer.read(cx).remote_id(), cx);
-            }
             editor.report_editor_event(ReportEditorEvent::EditorOpened, None, cx);
         }
 
@@ -6927,63 +6917,6 @@ impl Editor {
         })
     }
 
-    fn restart_language_server(
-        &mut self,
-        _: &RestartLanguageServer,
-        _: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        if let Some(project) = self.project.clone() {
-            self.buffer.update(cx, |multi_buffer, cx| {
-                project.update(cx, |project, cx| {
-                    project.restart_language_servers_for_buffers(
-                        multi_buffer.all_buffers().into_iter().collect(),
-                        HashSet::default(),
-                        true,
-                        cx,
-                    );
-                });
-            })
-        }
-    }
-
-    fn stop_language_server(
-        &mut self,
-        _: &StopLanguageServer,
-        _: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        if let Some(project) = self.project.clone() {
-            self.buffer.update(cx, |multi_buffer, cx| {
-                project.update(cx, |project, cx| {
-                    project.stop_language_servers_for_buffers(
-                        multi_buffer.all_buffers().into_iter().collect(),
-                        HashSet::default(),
-                        cx,
-                    );
-                });
-            });
-        }
-    }
-
-    fn cancel_language_server_work(
-        workspace: &mut Workspace,
-        _: &actions::CancelLanguageServerWork,
-        _: &mut Window,
-        cx: &mut Context<Workspace>,
-    ) {
-        let project = workspace.project();
-        let buffers = workspace
-            .active_item(cx)
-            .and_then(|item| item.act_as::<Editor>(cx))
-            .map_or(HashSet::default(), |editor| {
-                editor.read(cx).buffer.read(cx).all_buffers()
-            });
-        project.update(cx, |project, cx| {
-            project.cancel_language_server_work_for_buffers(buffers, cx);
-        });
-    }
-
     fn show_character_palette(
         &mut self,
         _: &ShowCharacterPalette,
@@ -8172,7 +8105,6 @@ impl Editor {
 
                     if self.project.is_some() {
                         let buffer_id = buffer.read(cx).remote_id();
-                        self.register_buffer(buffer_id, cx);
                         self.update_lsp_data(Some(buffer_id), window, cx);
                     }
                 }
@@ -8204,7 +8136,6 @@ impl Editor {
                     self.update_uncommitted_diff_for_buffer(&project, [buffer.clone()], cx)
                         .detach();
                 }
-                self.register_visible_buffers(cx);
                 self.update_lsp_data(Some(buffer_id), window, cx);
                 self.refresh_runnables(None, window, cx);
                 self.bracket_fetched_tree_sitter_chunks
@@ -8219,7 +8150,6 @@ impl Editor {
             }
             multi_buffer::Event::BuffersRemoved { removed_buffer_ids } => {
                 for buffer_id in removed_buffer_ids {
-                    self.registered_buffers.remove(buffer_id);
                     self.clear_runnables(Some(*buffer_id));
                 }
 
@@ -8253,7 +8183,6 @@ impl Editor {
             }
             multi_buffer::Event::LanguageChanged(buffer_id, is_fresh_language) => {
                 if !is_fresh_language {
-                    self.registered_buffers.remove(&buffer_id);
                 }
                 jsx_tag_auto_close::refresh_enabled_in_any_buffer(self, multibuffer, cx);
                 cx.emit(EditorEvent::Reparsed(*buffer_id));
@@ -9350,41 +9279,6 @@ impl Editor {
         }
     }
 
-    fn register_visible_buffers(&mut self, cx: &mut Context<Self>) {
-        if !self.lsp_data_enabled() {
-            return;
-        }
-        let visible_buffers: Vec<_> = self
-            .visible_buffers(cx)
-            .into_iter()
-            .filter(|buffer| self.is_lsp_relevant(buffer.read(cx).file(), cx))
-            .collect();
-        for visible_buffer in visible_buffers {
-            self.register_buffer(visible_buffer.read(cx).remote_id(), cx);
-        }
-    }
-
-    fn register_buffer(&mut self, buffer_id: BufferId, cx: &mut Context<Self>) {
-        if !self.lsp_data_enabled() {
-            return;
-        }
-
-        if !self.registered_buffers.contains_key(&buffer_id)
-            && let Some(project) = self.project.as_ref()
-        {
-            if let Some(buffer) = self.buffer.read(cx).buffer(buffer_id) {
-                project.update(cx, |project, cx| {
-                    self.registered_buffers.insert(
-                        buffer_id,
-                        project.register_buffer_with_language_servers(&buffer, cx),
-                    );
-                });
-            } else {
-                self.registered_buffers.remove(&buffer_id);
-            }
-        }
-    }
-
     fn create_style(&self, cx: &App) -> EditorStyle {
         let settings = ThemeSettings::get_global(cx);
 
@@ -9513,7 +9407,6 @@ impl Editor {
     }
 
     fn do_update_data_on_scroll(&mut self, window: &mut Window, cx: &mut Context<'_, Self>) {
-        self.register_visible_buffers(cx);
         self.colorize_brackets(false, cx);
 
         if !self.buffer().read(cx).is_singleton() || self.needs_initial_data_update {

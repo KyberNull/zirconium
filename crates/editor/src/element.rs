@@ -469,8 +469,6 @@ impl EditorElement {
         register_action(editor, window, Editor::go_to_next_change);
         register_action(editor, window, Editor::go_to_previous_symbol);
         register_action(editor, window, Editor::go_to_next_symbol);
-        register_action(editor, window, Editor::restart_language_server);
-        register_action(editor, window, Editor::stop_language_server);
         register_action(editor, window, Editor::show_character_palette);
         register_action(editor, window, |editor, action, window, cx| {
             if let Some(task) = editor.compose_completion(action, window, cx) {

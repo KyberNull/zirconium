@@ -79,7 +79,6 @@ impl Editor {
         self.unfold_buffers_with_selections(cx);
 
         let selections = self.selections.all_adjusted(&self.display_snapshot(cx));
-        let mut bracket_inserted = false;
         let mut edits = Vec::new();
         let mut new_selections = Vec::with_capacity(selections.len());
         let mut new_autoclose_regions = Vec::new();
@@ -256,7 +255,6 @@ impl Editor {
                                     selection.range(),
                                     format!("{}{}", text, bracket_pair.end).into(),
                                 ));
-                                bracket_inserted = true;
                                 continue;
                             }
                         }
@@ -303,7 +301,6 @@ impl Editor {
                             selection.end..selection.end,
                             bracket_pair.end.as_str().into(),
                         ));
-                        bracket_inserted = true;
                         new_selections.push((
                             Selection {
                                 id: selection.id,
@@ -452,13 +449,6 @@ impl Editor {
                 cx,
                 |s| s.select(new_selections),
             );
-
-            if !bracket_inserted
-                && let Some(on_type_format_task) =
-                    this.trigger_on_type_formatting(text.to_string(), window, cx)
-            {
-                on_type_format_task.detach_and_log_err(cx);
-            }
 
             let trigger_in_words =
                 this.show_edit_predictions_in_menu() || !had_active_edit_prediction;
@@ -739,9 +729,6 @@ impl Editor {
                 window,
                 cx,
             );
-            if let Some(task) = this.trigger_on_type_formatting("\n".to_owned(), window, cx) {
-                task.detach_and_log_err(cx);
-            }
         });
     }
 
@@ -808,9 +795,6 @@ impl Editor {
                 }
             }
             editor.edit(indent_edits, cx);
-            if let Some(format) = editor.trigger_on_type_formatting("\n".to_owned(), window, cx) {
-                format.detach_and_log_err(cx);
-            }
         });
     }
 
@@ -892,9 +876,6 @@ impl Editor {
                 }
             }
             editor.edit(indent_edits, cx);
-            if let Some(format) = editor.trigger_on_type_formatting("\n".to_owned(), window, cx) {
-                format.detach_and_log_err(cx);
-            }
         });
     }
 
