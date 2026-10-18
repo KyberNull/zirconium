@@ -21,7 +21,6 @@ mod document_symbols;
 mod editor_settings;
 mod element;
 mod fold;
-mod folding_ranges;
 mod git;
 mod highlight_matching_bracket;
 pub mod hover_links;
@@ -1122,8 +1121,6 @@ pub struct Editor {
     code_lens: Option<CodeLensState>,
     post_scroll_update: Task<()>,
     refresh_code_lens_task: Task<()>,
-    use_document_folding_ranges: bool,
-    refresh_folding_ranges_task: Task<()>,
     inlay_hints: Option<LspInlayHintData>,
     folding_newlines: Task<()>,
     select_next_is_case_sensitive: Option<bool>,
@@ -1973,9 +1970,6 @@ impl Editor {
                     project::Event::RefreshCodeLens { .. } => {
                         editor.refresh_code_lenses(None, window, cx);
                     }
-                    project::Event::RefreshFoldingRanges { .. } => {
-                        editor.refresh_folding_ranges(None, window, cx);
-                    }
                     project::Event::RefreshDocumentSymbols { .. } => {
                         editor.refresh_document_symbols(None, cx);
                     }
@@ -2374,8 +2368,6 @@ impl Editor {
             pull_diagnostics_task: Task::ready(()),
             code_lens: None,
             refresh_code_lens_task: Task::ready(()),
-            use_document_folding_ranges: false,
-            refresh_folding_ranges_task: Task::ready(()),
             inlay_hints: None,
             post_scroll_update: Task::ready(()),
             linked_edit_ranges: Default::default(),
@@ -2510,7 +2502,6 @@ impl Editor {
 
             editor.minimap =
                 editor.create_minimap(EditorSettings::get_global(cx).minimap, window, cx);
-            editor.use_document_folding_ranges = true;
             editor.inlay_hints = Some(LspInlayHintData::new(inlay_hint_settings));
             if editor.enable_code_lens && EditorSettings::get_global(cx).code_lens.inline() {
                 editor.code_lens = Some(CodeLensState::default());
@@ -8855,9 +8846,6 @@ impl Editor {
                     self.registered_buffers.remove(buffer_id);
                     self.clear_runnables(Some(*buffer_id));
                     self.lsp_document_symbols.remove(buffer_id);
-                    self.display_map.update(cx, |display_map, cx| {
-                        display_map.clear_lsp_folding_ranges(*buffer_id, cx);
-                    });
                 }
 
                 self.display_map.update(cx, |display_map, cx| {
@@ -9074,7 +9062,6 @@ impl Editor {
             }
 
             if language_settings_changed {
-                self.clear_disabled_lsp_folding_ranges(window, cx);
                 self.refresh_document_symbols(None, cx);
                 self.refresh_outline_symbols_at_cursor(cx);
             }
@@ -10004,7 +9991,6 @@ impl Editor {
         if let Some(buffer_id) = for_buffer {
             self.pull_diagnostics(buffer_id, window, cx);
         }
-        self.refresh_folding_ranges(for_buffer, window, cx);
         self.refresh_code_lenses(for_buffer, window, cx);
         self.refresh_document_symbols(for_buffer, cx);
     }
