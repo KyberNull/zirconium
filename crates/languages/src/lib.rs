@@ -17,20 +17,18 @@ use crate::{
 };
 
 mod bash;
+#[cfg(test)]
 mod c;
+#[cfg(test)]
 mod cpp;
+#[cfg(test)]
 mod css;
-mod eslint;
 mod go;
 mod json;
 mod package_json;
 mod python;
 mod rust;
-mod tailwind;
-mod tailwindcss;
 mod typescript;
-mod vtsls;
-mod yaml;
 
 pub(crate) use package_json::{PackageJson, PackageJsonData};
 
@@ -59,10 +57,6 @@ pub fn init(languages: Arc<LanguageRegistry>, fs: Arc<dyn Fs>, node: NodeRuntime
     #[cfg(feature = "load-grammars")]
     languages.register_native_grammars(grammars::native_grammars());
 
-    let bash_lsp_adapter = Arc::new(bash::BashLspAdapter::new(node.clone()));
-    let c_lsp_adapter = Arc::new(c::CLspAdapter);
-    let css_lsp_adapter = Arc::new(css::CssLspAdapter::new(node.clone()));
-    let eslint_adapter = Arc::new(eslint::EsLintLspAdapter::new(node.clone(), fs.clone()));
     let go_context_provider = Arc::new(go::GoContextProvider);
     let go_lsp_adapter = Arc::new(go::GoLspAdapter);
     let json_context_provider = Arc::new(JsonTaskProvider);
@@ -77,37 +71,28 @@ pub fn init(languages: Arc<LanguageRegistry>, fs: Arc<dyn Fs>, node: NodeRuntime
     let python_toolchain_provider = Arc::new(python::PythonToolchainProvider::new(fs.clone()));
     let rust_context_provider = Arc::new(rust::RustContextProvider);
     let rust_lsp_adapter = Arc::new(rust::RustLspAdapter);
-    let tailwind_adapter = Arc::new(tailwind::TailwindLspAdapter::new(node.clone()));
-    let tailwindcss_adapter = Arc::new(tailwindcss::TailwindCssLspAdapter::new(node.clone()));
     let typescript_context = Arc::new(typescript::TypeScriptContextProvider::new(fs.clone()));
     let typescript_lsp_adapter = Arc::new(typescript::TypeScriptLspAdapter::new(
         node.clone(),
         fs.clone(),
     ));
-    let vtsls_adapter = Arc::new(vtsls::VtslsLspAdapter::new(node.clone(), fs.clone()));
-    let yaml_lsp_adapter = Arc::new(yaml::YamlLspAdapter::new(node));
 
     let built_in_languages = [
         LanguageInfo {
             name: "bash",
             context: Some(Arc::new(bash::bash_task_context())),
-            adapters: vec![bash_lsp_adapter],
             ..Default::default()
         },
         LanguageInfo {
             name: "c",
-            adapters: vec![c_lsp_adapter.clone()],
             ..Default::default()
         },
         LanguageInfo {
             name: "cpp",
-            adapters: vec![c_lsp_adapter],
-            semantic_token_rules: Some(cpp::semantic_token_rules()),
             ..Default::default()
         },
         LanguageInfo {
             name: "css",
-            adapters: vec![css_lsp_adapter],
             ..Default::default()
         },
         LanguageInfo {
@@ -180,25 +165,25 @@ pub fn init(languages: Arc<LanguageRegistry>, fs: Arc<dyn Fs>, node: NodeRuntime
         },
         LanguageInfo {
             name: "tsx",
-            adapters: vec![typescript_lsp_adapter.clone(), vtsls_adapter.clone()],
+            adapters: vec![typescript_lsp_adapter.clone()],
             context: Some(typescript_context.clone()),
             ..Default::default()
         },
         LanguageInfo {
             name: "typescript",
-            adapters: vec![typescript_lsp_adapter.clone(), vtsls_adapter.clone()],
+            adapters: vec![typescript_lsp_adapter.clone()],
             context: Some(typescript_context.clone()),
             ..Default::default()
         },
         LanguageInfo {
             name: "javascript",
-            adapters: vec![typescript_lsp_adapter.clone(), vtsls_adapter.clone()],
+            adapters: vec![typescript_lsp_adapter.clone()],
             context: Some(typescript_context),
             ..Default::default()
         },
         LanguageInfo {
             name: "jsdoc",
-            adapters: vec![typescript_lsp_adapter.clone(), vtsls_adapter.clone()],
+            adapters: vec![typescript_lsp_adapter.clone()],
             ..Default::default()
         },
         LanguageInfo {
@@ -208,7 +193,6 @@ pub fn init(languages: Arc<LanguageRegistry>, fs: Arc<dyn Fs>, node: NodeRuntime
         },
         LanguageInfo {
             name: "yaml",
-            adapters: vec![yaml_lsp_adapter],
             ..Default::default()
         },
         LanguageInfo {
@@ -234,65 +218,10 @@ pub fn init(languages: Arc<LanguageRegistry>, fs: Arc<dyn Fs>, node: NodeRuntime
         );
     }
 
-    // Register globally available language servers.
-    //
-    // This will allow users to add support for a built-in language server (e.g., Tailwind)
-    // for a given language via the `language_servers` setting:
-    //
-    // ```json
-    // {
-    //   "languages": {
-    //     "My Language": {
-    //       "language_servers": ["tailwindcss-language-server", "..."]
-    //     }
-    //   }
-    // }
-    // ```
-    languages.register_available_lsp_adapter(
-        LanguageServerName("tailwindcss-language-server".into()),
-        tailwind_adapter.clone(),
-    );
-    languages.register_available_lsp_adapter(
-        LanguageServerName("tailwindcss-intellisense-css".into()),
-        tailwindcss_adapter,
-    );
-    languages.register_available_lsp_adapter(
-        LanguageServerName("eslint".into()),
-        eslint_adapter.clone(),
-    );
-    languages.register_available_lsp_adapter(LanguageServerName("vtsls".into()), vtsls_adapter);
     languages.register_available_lsp_adapter(
         LanguageServerName("typescript-language-server".into()),
         typescript_lsp_adapter,
     );
-
-    // Register Tailwind for the existing languages that should have it by default.
-    //
-    // This can be driven by the `language_servers` setting once we have a way for
-    // extensions to provide their own default value for that setting.
-    let tailwind_languages = [
-        "Astro",
-        "CSS",
-        "ERB",
-        "HTML+ERB",
-        "HEEx",
-        "HTML",
-        "JavaScript",
-        "TypeScript",
-        "PHP",
-        "Svelte",
-        "TSX",
-        "Vue.js",
-    ];
-
-    for language in tailwind_languages {
-        languages.register_lsp_adapter(language.into(), tailwind_adapter.clone());
-    }
-
-    let eslint_languages = ["TSX", "TypeScript", "JavaScript", "Vue.js", "Svelte"];
-    for language in eslint_languages {
-        languages.register_lsp_adapter(language.into(), eslint_adapter.clone());
-    }
 
     let mut subscription = languages.subscribe();
     let mut prev_language_settings = languages.language_settings();
