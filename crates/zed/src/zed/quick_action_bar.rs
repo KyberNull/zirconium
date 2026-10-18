@@ -3,17 +3,16 @@ mod repl_menu;
 
 use agent_settings::AgentSettings;
 use editor::actions::{
-    AddSelectionAbove, AddSelectionBelow, CodeActionSource, DuplicateLineDown, GoToDiagnostic,
+    AddSelectionAbove, AddSelectionBelow, DuplicateLineDown, GoToDiagnostic,
     GoToHunk, GoToPreviousDiagnostic, GoToPreviousHunk, MoveLineDown, MoveLineUp, SelectAll,
-    SelectLargerSyntaxNode, SelectNext, SelectSmallerSyntaxNode, ToggleCodeActions,
+    SelectLargerSyntaxNode, SelectNext, SelectSmallerSyntaxNode,
     ToggleDiagnostics, ToggleGoToLine, ToggleInlineDiagnostics,
 };
-use editor::code_context_menus::{CodeContextMenu, ContextMenuOrigin};
 use editor::{Editor, EditorSettings};
 use gpui::{
-    Action, Anchor, AnchoredPositionMode, ClickEvent, Context, ElementId, Entity, EventEmitter,
+    Action, Anchor, ClickEvent, Context, ElementId, Entity, EventEmitter,
     FocusHandle, Focusable, InteractiveElement, ParentElement, Render, Styled, Subscription,
-    WeakEntity, Window, anchored, deferred, point,
+    WeakEntity, Window,
 };
 use project::{
     DisableAiSettings,
@@ -32,7 +31,6 @@ use workspace::{
 };
 use zed_actions::{agent::AddSelectionToThread, assistant::InlineAssist, outline::ToggleOutline};
 
-const MAX_CODE_ACTION_MENU_LINES: u32 = 16;
 
 pub struct QuickActionBar {
     _ai_settings_subscription: Subscription,
@@ -105,7 +103,7 @@ impl QuickActionBar {
 }
 
 impl Render for QuickActionBar {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let Some(editor) = self.active_editor() else {
             return div().id("empty quick action bar");
         };
@@ -126,8 +124,6 @@ impl Render for QuickActionBar {
             editor_value.edit_predictions_enabled_at_cursor(cx);
         let supports_minimap = editor_value.supports_minimap(cx);
         let minimap_enabled = supports_minimap && editor_value.minimap().is_some();
-        let has_available_code_actions = editor_value.has_available_code_actions_for_selection();
-        let code_action_enabled = editor_value.code_actions_enabled_for_toolbar(cx);
         let focus_handle = editor_value.focus_handle(cx);
 
         let search_button = (editor.buffer_kind(cx) == ItemBufferKind::Singleton).then(|| {
@@ -160,74 +156,6 @@ impl Render for QuickActionBar {
                 window.dispatch_action(Box::new(InlineAssist::default()), cx);
             },
         );
-
-        let code_actions_dropdown = code_action_enabled.then(|| {
-            let is_deployed = {
-                let menu_ref = editor.read(cx).context_menu().borrow();
-                let code_action_menu = menu_ref
-                    .as_ref()
-                    .filter(|menu| matches!(menu, CodeContextMenu::CodeActions(..)));
-                code_action_menu
-                    .as_ref()
-                    .is_some_and(|menu| matches!(menu.origin(), ContextMenuOrigin::QuickActionBar))
-            };
-            let code_action_element = is_deployed
-                .then(|| {
-                    editor.update(cx, |editor, cx| {
-                        editor.render_context_menu(MAX_CODE_ACTION_MENU_LINES, window, cx)
-                    })
-                })
-                .flatten();
-            v_flex()
-                .child(
-                    IconButton::new("toggle_code_actions_icon", IconName::BoltOutlined)
-                        .icon_size(IconSize::Small)
-                        .style(ButtonStyle::Subtle)
-                        .disabled(!has_available_code_actions)
-                        .toggle_state(is_deployed)
-                        .when(!is_deployed, |this| {
-                            this.when(has_available_code_actions, |this| {
-                                this.tooltip(Tooltip::for_action_title(
-                                    "Code Actions",
-                                    &ToggleCodeActions::default(),
-                                ))
-                            })
-                            .when(
-                                !has_available_code_actions,
-                                |this| {
-                                    this.tooltip(Tooltip::for_action_title(
-                                        "No Code Actions Available",
-                                        &ToggleCodeActions::default(),
-                                    ))
-                                },
-                            )
-                        })
-                        .on_click({
-                            let editor = editor.clone();
-                            move |_, window, cx| {
-                                editor.update(cx, |editor, cx| {
-                                    editor.toggle_code_actions(
-                                        &ToggleCodeActions {
-                                            deployed_from: Some(CodeActionSource::QuickActionBar),
-                                            quick_launch: false,
-                                        },
-                                        window,
-                                        cx,
-                                    );
-                                })
-                            }
-                        }),
-                )
-                .children(code_action_element.map(|menu| {
-                    deferred(
-                        anchored()
-                            .position_mode(AnchoredPositionMode::Local)
-                            .position(point(px(20.), px(20.)))
-                            .anchor(Anchor::TopRight)
-                            .child(menu),
-                    )
-                }))
-        });
 
         let editor_selections_dropdown = selection_menu_enabled.then(|| {
             let has_diff_hunks = editor
@@ -591,7 +519,6 @@ impl Render for QuickActionBar {
                 AgentSettings::get_global(cx).enabled(cx) && AgentSettings::get_global(cx).button,
                 |bar| bar.child(assistant_button),
             )
-            .children(code_actions_dropdown)
             .children(editor_selections_dropdown)
             .child(editor_settings_dropdown)
     }
