@@ -6,9 +6,7 @@ use anyhow::{Context as _, Result, bail};
 use async_compression::futures::bufread::GzipDecoder;
 use async_tar::Archive;
 use async_trait::async_trait;
-use extension::{
-    KeyValueStoreDelegate, ProjectDelegate, WorktreeDelegate,
-};
+use extension::{KeyValueStoreDelegate, ProjectDelegate, WorktreeDelegate};
 use futures::{AsyncReadExt, lock::Mutex};
 use futures::{FutureExt as _, io::BufReader};
 use gpui::BackgroundExecutor;

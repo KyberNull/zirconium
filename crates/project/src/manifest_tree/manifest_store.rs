@@ -1,4 +1,4 @@
-use collections::{HashMap, HashSet};
+use collections::HashMap;
 use gpui::{App, Global, SharedString};
 use parking_lot::RwLock;
 use std::{ops::Deref, sync::Arc};
@@ -44,8 +44,5 @@ impl ManifestProvidersStore {
 
     pub(super) fn get(&self, name: &SharedString) -> Option<Arc<dyn ManifestProvider>> {
         self.0.read().providers.get(name).cloned()
-    }
-    pub(crate) fn manifest_file_names(&self) -> HashSet<ManifestName> {
-        self.0.read().providers.keys().cloned().collect()
     }
 }

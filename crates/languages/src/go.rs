@@ -1,16 +1,14 @@
 use anyhow::Result;
 use collections::HashMap;
 use gpui::{App, Entity, Task};
-pub use language::*;
 use language::LanguageToolchainStore;
+pub use language::*;
 
 use regex::Regex;
 use std::{
     borrow::Cow,
     str,
-    sync::{
-        Arc, LazyLock,
-    },
+    sync::{Arc, LazyLock},
 };
 use task::{TaskTemplate, TaskTemplates, TaskVariables, VariableName};
 
@@ -378,7 +376,7 @@ mod tests {
     use crate::language;
     use gpui::{AppContext, TestAppContext};
     use task::TaskContext;
-    
+
     use unindent::Unindent as _;
 
     fn go_language() -> Arc<Language> {

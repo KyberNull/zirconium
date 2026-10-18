@@ -166,8 +166,7 @@ use language::{
     point_to_lsp, text_diff_with_options,
 };
 use lsp::{
-    CodeActionKind, CompletionItemKind, CompletionTriggerKind, InsertTextFormat, InsertTextMode,
-    LanguageServerId,
+    CompletionItemKind, CompletionTriggerKind, InsertTextFormat, InsertTextMode, LanguageServerId,
 };
 use markdown::Markdown;
 use mouse_context_menu::MouseContextMenu;
@@ -179,12 +178,11 @@ use multi_buffer::{
 use parking_lot::Mutex;
 use persistence::EditorDb;
 use project::{
-    Completion, CompletionDisplayOptions, CompletionIntent, CompletionResponse, CompletionSource,
-    DisableAiSettings, FormatTarget as ProjectFormatTarget, FormatTrigger, InlayId, Location,
-    Project, ProjectItem, ProjectPath, ProjectTransaction,
+    Completion, CompletionDisplayOptions, CompletionDocumentation, CompletionIntent,
+    CompletionResponse, CompletionSource, DisableAiSettings, FormatTarget as ProjectFormatTarget,
+    FormatTrigger, InlayId, Location, Project, ProjectItem, ProjectPath, ProjectTransaction,
     bookmark_store::BookmarkStore,
     git_store::GitStoreEvent,
-    lsp_store::CompletionDocumentation,
     project_settings::{DiagnosticSeverity, ProjectSettings},
 };
 use rand::seq::SliceRandom;
@@ -257,7 +255,6 @@ pub(crate) const CURSORS_VISIBLE_FOR: Duration = Duration::from_millis(2000);
 #[doc(hidden)]
 pub const SELECTION_HIGHLIGHT_DEBOUNCE_TIMEOUT: Duration = Duration::from_millis(100);
 
-pub(crate) const CODE_ACTION_TIMEOUT: Duration = Duration::from_secs(5);
 pub(crate) const FORMAT_TIMEOUT: Duration = Duration::from_secs(5);
 pub(crate) const SCROLL_CENTER_TOP_BOTTOM_DEBOUNCE_TIMEOUT: Duration = Duration::from_secs(1);
 pub const LSP_REQUEST_DEBOUNCE_TIMEOUT: Duration = Duration::from_millis(50);
@@ -1878,38 +1875,6 @@ impl Editor {
                 project,
                 window,
                 |editor, _, event, window, cx| match event {
-                    project::Event::LanguageServerRemoved(_) => {
-                        editor.refresh_runnables(None, window, cx);
-                    }
-                    project::Event::SnippetEdit(id, snippet_edits) => {
-                        // todo(lw): Non singletons
-                        if let Some(buffer) = editor.buffer.read(cx).as_singleton() {
-                            let snapshot = buffer.read(cx).snapshot();
-                            let focus_handle = editor.focus_handle(cx);
-                            if snapshot.remote_id() == *id && focus_handle.is_focused(window) {
-                                for (range, snippet) in snippet_edits {
-                                    let buffer_range =
-                                        language::range_from_lsp(*range).to_offset(&snapshot);
-                                    editor
-                                        .insert_snippet(
-                                            &[MultiBufferOffset(buffer_range.start)
-                                                ..MultiBufferOffset(buffer_range.end)],
-                                            snippet.clone(),
-                                            window,
-                                            cx,
-                                        )
-                                        .ok();
-                                }
-                            }
-                        }
-                    }
-                    project::Event::LanguageServerBufferRegistered { buffer_id, .. } => {
-                        let buffer_id = *buffer_id;
-                        if editor.buffer().read(cx).buffer(buffer_id).is_some() {
-                            editor.refresh_runnables(Some(buffer_id), window, cx);
-                        }
-                    }
-
                     project::Event::EntryRenamed {
                         transaction,
                         new_project_path,
@@ -1945,26 +1910,6 @@ impl Editor {
                                 workspace,
                                 transaction.clone(),
                                 "Rename".to_string(),
-                                window,
-                                cx,
-                            );
-                        }
-                    }
-
-                    project::Event::WorkspaceEditApplied(transaction) => {
-                        let Some(workspace) = editor.workspace() else {
-                            return;
-                        };
-                        let Some(active_editor) = workspace.read(cx).active_item_as::<Self>(cx)
-                        else {
-                            return;
-                        };
-
-                        if active_editor.entity_id() == cx.entity_id() {
-                            Self::open_transaction_for_hidden_buffers(
-                                workspace,
-                                transaction.clone(),
-                                "LSP Edit".to_string(),
                                 window,
                                 cx,
                             );
@@ -6831,61 +6776,6 @@ impl Editor {
                 }
             }
 
-            Ok(())
-        })
-    }
-
-    fn organize_imports(
-        &mut self,
-        _: &OrganizeImports,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> Option<Task<Result<()>>> {
-        if self.read_only(cx) {
-            return None;
-        }
-        let project = match &self.project {
-            Some(project) => project.clone(),
-            None => return None,
-        };
-        Some(self.perform_code_action_kind(
-            project,
-            CodeActionKind::SOURCE_ORGANIZE_IMPORTS,
-            window,
-            cx,
-        ))
-    }
-
-    fn perform_code_action_kind(
-        &mut self,
-        project: Entity<Project>,
-        kind: CodeActionKind,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> Task<Result<()>> {
-        let buffer = self.buffer.clone();
-        let buffers = buffer.read(cx).all_buffers();
-        let mut timeout = cx.background_executor().timer(CODE_ACTION_TIMEOUT).fuse();
-        let apply_action = project.update(cx, |project, cx| {
-            project.apply_code_action_kind(buffers, kind, true, cx)
-        });
-        cx.spawn_in(window, async move |_, cx| {
-            let transaction = futures::select_biased! {
-                () = timeout => {
-                    log::warn!("timed out waiting for executing code action");
-                    None
-                }
-                transaction = apply_action.log_err().fuse() => transaction,
-            };
-            buffer.update(cx, |buffer, cx| {
-                // check if we need this
-                if let Some(transaction) = transaction
-                    && !buffer.is_singleton()
-                {
-                    buffer.push_transaction(&transaction.0, cx);
-                }
-                cx.notify();
-            });
             Ok(())
         })
     }

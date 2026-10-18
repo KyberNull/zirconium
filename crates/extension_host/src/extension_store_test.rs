@@ -1,7 +1,7 @@
 use crate::{
-    ExtensionIndex, ExtensionIndexEntry, ExtensionIndexLanguageEntry,
-    ExtensionIndexThemeEntry, ExtensionManifest, ExtensionStore, GrammarManifestEntry,
-    RELOAD_DEBOUNCE_DURATION, SchemaVersion, load_plugin_queries,
+    ExtensionIndex, ExtensionIndexEntry, ExtensionIndexLanguageEntry, ExtensionIndexThemeEntry,
+    ExtensionManifest, ExtensionStore, GrammarManifestEntry, RELOAD_DEBOUNCE_DURATION,
+    SchemaVersion, load_plugin_queries,
 };
 use collections::BTreeMap;
 use extension::ExtensionHostProxy;

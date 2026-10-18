@@ -35,7 +35,7 @@ use futures::{SinkExt as _, StreamExt as _};
 use gaoya::minhash::{
     MinHashIndex, MinHasher, MinHasher32, calculate_minhash_params, compute_minhash_similarity,
 };
-use gpui::{AppContext as _, BackgroundExecutor, Task};
+use gpui::{AppContext as _, BackgroundExecutor};
 use zeta_prompt::{ContextSource, ZetaFormat};
 
 use reqwest_client::ReqwestClient;
@@ -1462,16 +1462,6 @@ fn main() {
 
                             if let Some(project) = project {
                                 let mut cx = cx.clone();
-
-                                let shutdown_task: Task<()> =
-                                    project.update(&mut cx, |project, cx| {
-                                        let lsp_store = project.lsp_store();
-                                        lsp_store.update(cx, |lsp_store, cx| {
-                                            lsp_store.shutdown_all_language_servers(cx)
-                                        })
-                                    });
-
-                                shutdown_task.await;
 
                                 if let Some(ep_store) =
                                     cx.update(|cx| EditPredictionStore::try_global(cx))

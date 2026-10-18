@@ -8935,18 +8935,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "language_onboarding"
-version = "0.1.0"
-dependencies = [
- "db",
- "editor",
- "gpui",
- "project",
- "ui",
- "workspace",
-]
-
-[[package]]
 name = "language_selector"
 version = "0.1.0"
 dependencies = [
@@ -21248,7 +21236,6 @@ dependencies = [
  "language_extension",
  "language_model",
  "language_models",
- "language_onboarding",
  "language_selector",
  "language_tools",
  "languages",

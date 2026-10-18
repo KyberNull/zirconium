@@ -542,13 +542,11 @@ mod tests {
     use std::num::NonZeroU32;
 
     use super::*;
-    
+
     use gpui::{BorrowAppContext, TestAppContext};
-    
+
     use pretty_assertions::assert_eq;
     use settings::SettingsStore;
-    
-    
 
     #[gpui::test]
     async fn test_rust_autoindent(cx: &mut TestAppContext) {
@@ -682,5 +680,4 @@ mod tests {
         );
         check([], "/project/src/main.rs", "--");
     }
-
 }

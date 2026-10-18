@@ -1,15 +1,13 @@
-use anyhow::Result;
 use anyhow::Context as _;
+use anyhow::Result;
 use async_trait::async_trait;
 use collections::HashMap;
-use futures::future::BoxFuture;
 use futures::AsyncBufReadExt;
+use futures::future::BoxFuture;
 use gpui::{App, Entity, SharedString, Task};
-use language::language_settings::LanguageSettings;
-use language::{
-    Buffer, ContextLocation, LanguageToolchainStore,
-};
 use language::ContextProvider;
+use language::language_settings::LanguageSettings;
+use language::{Buffer, ContextLocation, LanguageToolchainStore};
 use language::{LanguageName, ManifestName, ManifestProvider, ManifestQuery};
 use language::{Toolchain, ToolchainList, ToolchainLister, ToolchainMetadata};
 use pet_core::Configuration;

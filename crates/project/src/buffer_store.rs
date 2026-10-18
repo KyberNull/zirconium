@@ -1,6 +1,5 @@
 use crate::{
     ProjectPath,
-    lsp_store::OpenLspBufferHandle,
     worktree_store::{WorktreeStore, WorktreeStoreEvent},
 };
 use anyhow::{Context as _, Result, anyhow};
@@ -57,7 +56,6 @@ struct RemoteProjectSearchState {
 #[derive(Hash, Eq, PartialEq, Clone)]
 struct SharedBuffer {
     buffer: Entity<Buffer>,
-    lsp_handle: Option<OpenLspBufferHandle>,
 }
 
 enum BufferStoreState {
@@ -1253,21 +1251,6 @@ impl BufferStore {
         })
     }
 
-    pub fn register_shared_lsp_handle(
-        &mut self,
-        peer_id: proto::PeerId,
-        buffer_id: BufferId,
-        handle: OpenLspBufferHandle,
-    ) {
-        if let Some(shared_buffers) = self.shared_buffers.get_mut(&peer_id)
-            && let Some(buffer) = shared_buffers.get_mut(&buffer_id)
-        {
-            buffer.lsp_handle = Some(handle);
-            return;
-        }
-        debug_panic!("tried to register shared lsp handle, but buffer was not shared")
-    }
-
     pub fn handle_synchronize_buffers(
         &mut self,
         envelope: TypedEnvelope<proto::SynchronizeBuffers>,
@@ -1293,7 +1276,6 @@ impl BufferStore {
                     .entry(buffer_id)
                     .or_insert_with(|| SharedBuffer {
                         buffer: buffer.clone(),
-                        lsp_handle: None,
                     });
 
                 let buffer = buffer.read(cx);
@@ -1607,7 +1589,6 @@ impl BufferStore {
             buffer_id,
             SharedBuffer {
                 buffer: buffer.clone(),
-                lsp_handle: None,
             },
         );
 

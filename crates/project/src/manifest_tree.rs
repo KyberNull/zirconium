@@ -5,7 +5,6 @@
 
 mod manifest_store;
 pub mod path_trie;
-mod server_tree;
 
 use std::{borrow::Borrow, collections::hash_map::Entry, ops::ControlFlow, sync::Arc};
 
@@ -22,8 +21,6 @@ use crate::{
     ProjectPath,
     worktree_store::{WorktreeStore, WorktreeStoreEvent},
 };
-
-pub(crate) use server_tree::{LanguageServerTree, LanguageServerTreeNode, LaunchDisposition};
 
 struct WorktreeRoots {
     roots: RootPathTrie<ManifestName>,
@@ -171,23 +168,6 @@ impl ManifestTree {
             }
         }
         marked_path.filter(|_| current_presence.eq(&LabelPresence::Present))
-    }
-
-    pub(crate) fn root_for_path_or_worktree_root(
-        &mut self,
-        project_path: &ProjectPath,
-        manifest_name: Option<&ManifestName>,
-        delegate: &Arc<dyn ManifestDelegate>,
-        cx: &mut App,
-    ) -> ProjectPath {
-        let worktree_id = project_path.worktree_id;
-        // Backwards-compat: Fill in any adapters for which we did not detect the root as having the project root at the root of a worktree.
-        manifest_name
-            .and_then(|manifest_name| self.root_for_path(project_path, manifest_name, delegate, cx))
-            .unwrap_or_else(|| ProjectPath {
-                worktree_id,
-                path: RelPath::empty_arc(),
-            })
     }
 
     fn on_worktree_store_event(

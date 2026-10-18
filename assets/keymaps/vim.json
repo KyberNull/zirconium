@@ -976,8 +976,6 @@
       "z d": "project_panel::CompareMarkedFiles",
       "] c": "project_panel::SelectNextGitEntry",
       "[ c": "project_panel::SelectPrevGitEntry",
-      "] d": "project_panel::SelectNextDiagnostic",
-      "[ d": "project_panel::SelectPrevDiagnostic",
       "}": "project_panel::SelectNextDirectory",
       "{": "project_panel::SelectPrevDirectory",
       "shift-g": "menu::SelectLast",

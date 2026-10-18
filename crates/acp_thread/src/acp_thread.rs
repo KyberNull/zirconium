@@ -22,11 +22,11 @@ use language::{
 };
 use markdown::{Markdown, MarkdownOptions};
 pub use mention::*;
-use project::{FormatTarget, FormatTrigger};
 use project::{
     AgentLocation, Project,
     git_store::{GitStoreCheckpoint, GitStoreEvent, RepositoryEvent},
 };
+use project::{FormatTarget, FormatTrigger};
 use serde::{Deserialize, Serialize};
 use serde_json::to_string_pretty;
 use std::collections::HashMap;

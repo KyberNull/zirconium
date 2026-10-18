@@ -12,7 +12,7 @@ use lsp::{CompletionItemKind, CompletionItemTag};
 use markdown::{CopyButtonVisibility, Markdown, MarkdownElement};
 use multi_buffer::Anchor;
 use ordered_float::OrderedFloat;
-use project::lsp_store::CompletionDocumentation;
+use project::CompletionDocumentation;
 use project::{Completion, CompletionGroup, TaskSourceKind};
 use project::{CompletionDisplayOptions, CompletionSource};
 

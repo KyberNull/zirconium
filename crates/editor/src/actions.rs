@@ -657,8 +657,6 @@ actions!(
         OpenSelectionsInMultibuffer,
         /// Opens the URL at cursor position.
         OpenUrl,
-        /// Organizes import statements.
-        OrganizeImports,
         /// Decreases indentation of selected lines.
         Outdent,
         /// Automatically adjusts indentation based on context.

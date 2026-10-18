@@ -4,9 +4,7 @@ use collections::HashMap;
 use futures::future::join_all;
 use gpui::{App, AppContext, Entity, Task};
 use itertools::Itertools as _;
-use language::{
-    Buffer, ContextLocation, ContextProvider, File, LanguageToolchainStore,
-};
+use language::{Buffer, ContextLocation, ContextProvider, File, LanguageToolchainStore};
 use project::Fs;
 use smol::lock::RwLock;
 use std::{
@@ -15,8 +13,8 @@ use std::{
     sync::{Arc, LazyLock},
 };
 use task::{TaskTemplate, TaskTemplates, VariableName};
-use util::rel_path::RelPath;
 use util::ResultExt;
+use util::rel_path::RelPath;
 
 use crate::{PackageJson, PackageJsonData};
 

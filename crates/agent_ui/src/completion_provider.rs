@@ -18,9 +18,10 @@ use gpui::{
 use language::{Buffer, CodeLabel, CodeLabelBuilder, HighlightId};
 use lsp::CompletionContext;
 use multi_buffer::ToOffset as _;
-use project::lsp_store::CompletionDocumentation;
+use project::CompletionDocumentation;
 use project::{
-    Completion, CompletionDisplayOptions, CompletionGroup, CompletionIntent, CompletionResponse, PathMatchCandidateSet, Project, ProjectPath, WorktreeId,
+    Completion, CompletionDisplayOptions, CompletionGroup, CompletionIntent, CompletionResponse,
+    PathMatchCandidateSet, Project, ProjectPath, WorktreeId,
 };
 
 use rope::Point;
@@ -1167,9 +1168,7 @@ impl<T: PromptCompletionProviderDelegate> PromptCompletionProvider<T> {
         workspace: &Entity<Workspace>,
         cx: &mut App,
     ) -> Vec<PromptContextEntry> {
-        let mut entries = vec![
-            PromptContextEntry::Mode(PromptContextType::File),
-        ];
+        let mut entries = vec![PromptContextEntry::Mode(PromptContextType::File)];
 
         if self.source.supports_context(PromptContextType::Thread, cx) {
             entries.push(PromptContextEntry::Mode(PromptContextType::Thread));

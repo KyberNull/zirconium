@@ -1589,20 +1589,6 @@ impl Workspace {
                     this.dismiss_notification(&NotificationId::named(notification_id.clone()), cx)
                 }
 
-                project::Event::LanguageServerPrompt(request) => {
-                    struct LanguageServerPrompt;
-
-                    this.show_notification(
-                        NotificationId::composite::<LanguageServerPrompt>(request.id),
-                        cx,
-                        |cx| {
-                            cx.new(|cx| {
-                                notifications::LanguageServerPrompt::new(request.clone(), cx)
-                            })
-                        },
-                    );
-                }
-
                 project::Event::AgentLocationChanged => {
                     this.handle_agent_location_changed(window, cx)
                 }

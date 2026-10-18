@@ -5,8 +5,9 @@ use crate::{ExtensionManifest, ExtensionSettings};
 use anyhow::{Context as _, Result, anyhow, bail};
 use async_trait::async_trait;
 use extension::{
-    Command, ContextServerConfiguration, ExtensionCapability, KeyValueStoreDelegate, ProjectDelegate, SlashCommand,
-    SlashCommandArgumentCompletion, SlashCommandOutput, WorktreeDelegate,
+    Command, ContextServerConfiguration, ExtensionCapability, KeyValueStoreDelegate,
+    ProjectDelegate, SlashCommand, SlashCommandArgumentCompletion, SlashCommandOutput,
+    WorktreeDelegate,
 };
 use fs::Fs;
 use futures::future::LocalBoxFuture;
@@ -676,7 +677,7 @@ impl CacheStore for IncrementalCompilationCache {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     use fs::FakeFs;
     use gpui::TestAppContext;
     use http_client::FakeHttpClient;

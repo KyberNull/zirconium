@@ -12,7 +12,7 @@ use language::{
     Anchor, Buffer, BufferSnapshot, CodeLabel, Diagnostic, DiagnosticEntry, DiagnosticSet,
     DiagnosticSeverity, LanguageServerId, Point, ToOffset as _, ToPoint as _,
 };
-use project::lsp_store::CompletionDocumentation;
+use project::CompletionDocumentation;
 use project::{
     Completion, CompletionDisplayOptions, CompletionResponse, CompletionSource, Project,
     ProjectPath,

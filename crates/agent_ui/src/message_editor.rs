@@ -3486,9 +3486,7 @@ mod tests {
         editor.read_with(&cx, |editor, cx| {
             assert_eq!(
                 editor.text(cx),
-                format!(
-                    "Lorem [@one.txt]({url_one})  Ipsum [@eight.txt]({url_eight}) "
-                )
+                format!("Lorem [@one.txt]({url_one})  Ipsum [@eight.txt]({url_eight}) ")
             );
         });
 
@@ -3496,13 +3494,13 @@ mod tests {
         cx.simulate_input("@file x.png");
 
         editor.update(&mut cx, |editor, cx| {
-                    assert_eq!(
-                        editor.text(cx),
-                        format!("Lorem [@one.txt]({url_one})  Ipsum [@eight.txt]({url_eight}) @file x.png")
-                    );
-                    assert!(editor.has_visible_completions_menu());
-                    assert_eq!(current_completion_labels(editor), &["x.png "]);
-                });
+            assert_eq!(
+                editor.text(cx),
+                format!("Lorem [@one.txt]({url_one})  Ipsum [@eight.txt]({url_eight}) @file x.png")
+            );
+            assert!(editor.has_visible_completions_menu());
+            assert_eq!(current_completion_labels(editor), &["x.png "]);
+        });
 
         editor.update_in(&mut cx, |editor, window, cx| {
             editor.confirm_completion(&editor::actions::ConfirmCompletion::default(), window, cx);
@@ -3515,9 +3513,7 @@ mod tests {
         editor.read_with(&cx, |editor, cx| {
             assert_eq!(
                 editor.text(cx),
-                format!(
-                    "Lorem [@one.txt]({url_one})  Ipsum [@eight.txt]({url_eight}) "
-                )
+                format!("Lorem [@one.txt]({url_one})  Ipsum [@eight.txt]({url_eight}) ")
             );
         });
 

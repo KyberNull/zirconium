@@ -8,7 +8,7 @@ use gpui::{
     App, AppContext, AsyncApp, Context, Entity, SharedString, Subscription, Task, WeakEntity,
 };
 use language::{Anchor, Buffer, BufferEvent, Point, ToOffset, ToPoint};
-use project::{Project, ProjectItem, lsp_store::OpenLspBufferHandle};
+use project::{Project, ProjectItem};
 use std::{
     cmp,
     ops::Range,
@@ -152,10 +152,6 @@ impl ActionLog {
             .tracked_buffers
             .entry(buffer.clone())
             .or_insert_with(|| {
-                let open_lsp_handle = self.project.update(cx, |project, cx| {
-                    project.register_buffer_with_language_servers(&buffer, cx)
-                });
-
                 let text_snapshot = buffer.read(cx).text_snapshot();
                 let language = buffer.read(cx).language().cloned();
                 let language_registry = buffer.read(cx).language_registry();
@@ -190,7 +186,6 @@ impl ActionLog {
                     version: buffer.read(cx).version(),
                     diff,
                     diff_update: diff_update_tx,
-                    _open_lsp_handle: open_lsp_handle,
                     _maintain_diff: cx.spawn({
                         let buffer = buffer.clone();
                         async move |this, cx| {
@@ -1268,7 +1263,6 @@ pub struct TrackedBuffer {
     diff: Entity<BufferDiff>,
     snapshot: text::BufferSnapshot,
     diff_update: mpsc::UnboundedSender<(ChangeAuthor, text::BufferSnapshot)>,
-    _open_lsp_handle: OpenLspBufferHandle,
     _maintain_diff: Task<()>,
     _subscription: Subscription,
 }

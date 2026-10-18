@@ -106,15 +106,7 @@ fn wasm_host(cx: &TestAppContext, extensions_dir: &TempTree) -> Arc<WasmHost> {
     let work_dir = extensions_dir.join("work");
     let fs = Arc::new(RealFs::new(None, cx.executor()));
 
-    cx.update(|cx| {
-        WasmHost::new(
-            fs,
-            http_client,
-            NodeRuntime::unavailable(),
-            work_dir,
-            cx,
-        )
-    })
+    cx.update(|cx| WasmHost::new(fs, http_client, NodeRuntime::unavailable(), work_dir, cx))
 }
 
 fn manifest() -> ExtensionManifest {

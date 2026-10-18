@@ -23,9 +23,7 @@ mod web_search_tool;
 mod write_file_tool;
 
 use crate::AgentTool;
-use feature_flags::{
-    CreateThreadToolFeatureFlag, FeatureFlagAppExt as _, 
-};
+use feature_flags::{CreateThreadToolFeatureFlag, FeatureFlagAppExt as _};
 use gpui::App;
 use language_model::{LanguageModelRequestTool, LanguageModelToolSchemaFormat};
 use serde::{

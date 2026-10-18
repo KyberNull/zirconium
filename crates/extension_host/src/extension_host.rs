@@ -15,8 +15,7 @@ pub use extension::ExtensionManifest;
 use extension::extension_builder::{CompileExtensionOptions, ExtensionBuilder};
 use extension::{
     ExtensionContextServerProxy, ExtensionEvents, ExtensionGrammarProxy, ExtensionHostProxy,
-    ExtensionLanguageProxy, ExtensionSnippetProxy,
-    ExtensionThemeProxy,
+    ExtensionLanguageProxy, ExtensionSnippetProxy, ExtensionThemeProxy,
 };
 use fs::{Fs, RemoveOptions, RenameOptions};
 use futures::future::join_all;
@@ -279,20 +278,13 @@ impl ExtensionStore {
             outstanding_operations: Default::default(),
             modified_extensions: Default::default(),
             reload_complete_senders: Vec::new(),
-            wasm_host: WasmHost::new(
-                fs.clone(),
-                http_client.clone(),
-                node_runtime,
-                work_dir,
-                cx,
-            ),
+            wasm_host: WasmHost::new(fs.clone(), http_client.clone(), node_runtime, work_dir, cx),
             wasm_extensions: Vec::new(),
             fs,
             http_client,
             telemetry,
             reload_tx,
             tasks: Vec::new(),
-
         };
 
         // The extensions store maintains an index file, which contains a complete
@@ -1667,7 +1659,6 @@ impl ExtensionStore {
 
         Ok(())
     }
-
 }
 
 async fn load_plugin_language(

@@ -5,13 +5,7 @@ mod utils;
 use anyhow::{Context as _, Result};
 use client::{ErrorCode, ErrorExt};
 use collections::{BTreeSet, HashMap, hash_map};
-use editor::{
-    Editor, EditorEvent, MultiBufferOffset,
-    items::{
-        entry_diagnostic_aware_icon_decoration_and_color,
-        entry_diagnostic_aware_icon_name_and_color, entry_git_aware_label_color,
-    },
-};
+use editor::{Editor, EditorEvent, MultiBufferOffset, items::entry_git_aware_label_color};
 use file_icons::FileIcons;
 use fs::TrashId;
 use git;
@@ -28,7 +22,6 @@ use gpui::{
     div, hsla, linear_color_stop, linear_gradient, point, px, size, transparent_white,
     uniform_list,
 };
-use language::DiagnosticSeverity;
 use markdown_preview::markdown_preview_view::MarkdownPreviewView;
 use menu::{Confirm, SelectFirst, SelectLast, SelectNext, SelectPrevious};
 use notifications::status_toast::StatusToast;
@@ -36,14 +29,13 @@ use project::{
     Entry, EntryKind, Fs, GitEntry, GitEntryRef, GitTraversal, Project, ProjectEntryId,
     ProjectPath, Worktree, WorktreeId,
     git_store::{GitStoreEvent, RepositoryEvent, git_traversal::ChildEntriesGitIter},
-    project_settings::GoToDiagnosticSeverityFilter,
 };
 use project_panel_settings::ProjectPanelSettings;
 use rayon::slice::ParallelSliceMut;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use settings::{
-    DockSide, ProjectPanelEntrySpacing, Settings, SettingsStore, ShowDiagnostics, ShowIndentGuides,
+    DockSide, ProjectPanelEntrySpacing, Settings, SettingsStore, ShowIndentGuides,
     update_settings_file,
 };
 use smallvec::SmallVec;
@@ -60,9 +52,9 @@ use std::{
 };
 use theme_settings::ThemeSettings;
 use ui::{
-    ContextMenu, DecoratedIcon, IconDecoration, IconDecorationKind, IndentGuideColors,
-    IndentGuideLayout, Indicator, KeyBinding, ListItem, ListItemSpacing, ProjectEmptyState,
-    ScrollAxes, ScrollableHandle, Scrollbars, StickyCandidate, Tooltip, WithScrollbar, prelude::*,
+    ContextMenu, IndentGuideColors, IndentGuideLayout, Indicator, KeyBinding, ListItem,
+    ListItemSpacing, ProjectEmptyState, ScrollAxes, ScrollableHandle, Scrollbars, StickyCandidate,
+    Tooltip, WithScrollbar, prelude::*,
 };
 use util::{
     ResultExt, TakeUntilExt, TryFutureExt,
@@ -152,9 +144,6 @@ pub struct ProjectPanel {
     clipboard: Option<ClipboardEntry>,
     _dragged_entry_destination: Option<Arc<Path>>,
     workspace: WeakEntity<Workspace>,
-    diagnostics: HashMap<(WorktreeId, Arc<RelPath>), DiagnosticSeverity>,
-    diagnostic_counts: HashMap<(WorktreeId, Arc<RelPath>), DiagnosticCount>,
-    diagnostic_summary_update: Task<()>,
     // We keep track of the mouse down state on entries so we don't flash the UI
     // in case a user clicks to open a file.
     mouse_down: bool,
@@ -241,30 +230,6 @@ enum ClipboardEntry {
     Cut(BTreeSet<SelectedEntry>),
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
-struct DiagnosticCount {
-    error_count: usize,
-    warning_count: usize,
-}
-
-impl DiagnosticCount {
-    fn capped_error_count(&self) -> String {
-        Self::capped_count(self.error_count)
-    }
-
-    fn capped_warning_count(&self) -> String {
-        Self::capped_count(self.warning_count)
-    }
-
-    fn capped_count(count: usize) -> String {
-        if count > 99 {
-            "99+".to_string()
-        } else {
-            count.to_string()
-        }
-    }
-}
-
 #[derive(Debug, PartialEq, Eq, Clone)]
 struct EntryDetails {
     filename: String,
@@ -281,8 +246,6 @@ struct EntryDetails {
     is_cut: bool,
     sticky: Option<StickyDetails>,
     filename_text_color: Color,
-    diagnostic_severity: Option<DiagnosticSeverity>,
-    diagnostic_count: Option<DiagnosticCount>,
     git_status: GitSummary,
     is_private: bool,
     worktree_id: WorktreeId,
@@ -310,24 +273,6 @@ struct Delete {
 struct Trash {
     #[serde(default)]
     pub skip_prompt: bool,
-}
-
-/// Selects the next entry with diagnostics.
-#[derive(PartialEq, Clone, Default, Debug, Deserialize, JsonSchema, Action)]
-#[action(namespace = project_panel)]
-#[serde(deny_unknown_fields)]
-struct SelectNextDiagnostic {
-    #[serde(default)]
-    pub severity: GoToDiagnosticSeverityFilter,
-}
-
-/// Selects the previous entry with diagnostics.
-#[derive(PartialEq, Clone, Default, Debug, Deserialize, JsonSchema, Action)]
-#[action(namespace = project_panel)]
-#[serde(deny_unknown_fields)]
-struct SelectPrevDiagnostic {
-    #[serde(default)]
-    pub severity: GoToDiagnosticSeverityFilter,
 }
 
 actions!(
@@ -723,23 +668,6 @@ impl ProjectPanel {
                     project::Event::ActivateProjectPanel => {
                         cx.emit(PanelEvent::Activate);
                     }
-                    project::Event::DiskBasedDiagnosticsFinished { .. }
-                    | project::Event::DiagnosticsUpdated { .. } => {
-                        if ProjectPanelSettings::get_global(cx).show_diagnostics
-                            != ShowDiagnostics::Off
-                        {
-                            this.diagnostic_summary_update = cx.spawn(async move |this, cx| {
-                                cx.background_executor()
-                                    .timer(Duration::from_millis(30))
-                                    .await;
-                                this.update(cx, |this, cx| {
-                                    this.update_diagnostics(cx);
-                                    cx.notify();
-                                })
-                                .log_err();
-                            });
-                        }
-                    }
                     project::Event::WorktreeRemoved(id) => {
                         this.state.expanded_dir_ids.remove(id);
                         this.update_visible_entries(None, false, false, window, cx);
@@ -831,7 +759,6 @@ impl ProjectPanel {
                         this.sticky_items_count = 0;
                     }
                     project_panel_settings = new_settings;
-                    this.update_diagnostics(cx);
                     cx.notify();
                 }
             })
@@ -854,9 +781,6 @@ impl ProjectPanel {
                 clipboard: None,
                 _dragged_entry_destination: None,
                 workspace: workspace.weak_handle(),
-                diagnostics: Default::default(),
-                diagnostic_counts: Default::default(),
-                diagnostic_summary_update: Task::ready(()),
                 scroll_handle,
                 mouse_down: false,
                 hover_expand_task: None,
@@ -982,76 +906,6 @@ impl ProjectPanel {
         workspace.update_in(&mut cx, |workspace, window, cx| {
             ProjectPanel::new(workspace, window, cx)
         })
-    }
-
-    fn update_diagnostics(&mut self, cx: &mut Context<Self>) {
-        let mut diagnostics: HashMap<(WorktreeId, Arc<RelPath>), DiagnosticSeverity> =
-            Default::default();
-        let show_diagnostics_setting = ProjectPanelSettings::get_global(cx).show_diagnostics;
-
-        if show_diagnostics_setting != ShowDiagnostics::Off {
-            self.project
-                .read(cx)
-                .diagnostic_summaries(false, cx)
-                .filter_map(|(path, _, diagnostic_summary)| {
-                    if diagnostic_summary.error_count > 0 {
-                        Some((path, DiagnosticSeverity::ERROR))
-                    } else if show_diagnostics_setting == ShowDiagnostics::All
-                        && diagnostic_summary.warning_count > 0
-                    {
-                        Some((path, DiagnosticSeverity::WARNING))
-                    } else {
-                        None
-                    }
-                })
-                .for_each(|(project_path, diagnostic_severity)| {
-                    let ancestors = project_path.path.ancestors().collect::<Vec<_>>();
-                    for path in ancestors.into_iter().rev() {
-                        Self::update_strongest_diagnostic_severity(
-                            &mut diagnostics,
-                            &project_path,
-                            path.into(),
-                            diagnostic_severity,
-                        );
-                    }
-                });
-        }
-        self.diagnostics = diagnostics;
-
-        let diagnostic_badges = ProjectPanelSettings::get_global(cx).diagnostic_badges;
-        self.diagnostic_counts =
-            if diagnostic_badges && show_diagnostics_setting != ShowDiagnostics::Off {
-                self.project.read(cx).diagnostic_summaries(false, cx).fold(
-                    HashMap::default(),
-                    |mut counts, (project_path, _, summary)| {
-                        let entry = counts
-                            .entry((project_path.worktree_id, project_path.path))
-                            .or_default();
-                        entry.error_count += summary.error_count;
-                        if show_diagnostics_setting == ShowDiagnostics::All {
-                            entry.warning_count += summary.warning_count;
-                        }
-                        counts
-                    },
-                )
-            } else {
-                Default::default()
-            };
-    }
-
-    fn update_strongest_diagnostic_severity(
-        diagnostics: &mut HashMap<(WorktreeId, Arc<RelPath>), DiagnosticSeverity>,
-        project_path: &ProjectPath,
-        path_buffer: Arc<RelPath>,
-        diagnostic_severity: DiagnosticSeverity,
-    ) {
-        diagnostics
-            .entry((project_path.worktree_id, path_buffer))
-            .and_modify(|strongest_diagnostic_severity| {
-                *strongest_diagnostic_severity =
-                    cmp::min(*strongest_diagnostic_severity, diagnostic_severity);
-            })
-            .or_insert(diagnostic_severity);
     }
 
     fn focus_in(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -3047,84 +2901,6 @@ impl ProjectPanel {
             }
         } else {
             self.select_first(&SelectFirst {}, window, cx);
-        }
-    }
-
-    fn select_prev_diagnostic(
-        &mut self,
-        action: &SelectPrevDiagnostic,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let selection = self.find_entry(
-            self.selection.as_ref(),
-            true,
-            &|entry: GitEntryRef, worktree_id: WorktreeId| {
-                self.selection.is_none_or(|selection| {
-                    if selection.worktree_id == worktree_id {
-                        selection.entry_id != entry.id
-                    } else {
-                        true
-                    }
-                }) && entry.is_file()
-                    && self
-                        .diagnostics
-                        .get(&(worktree_id, entry.path.clone()))
-                        .is_some_and(|severity| action.severity.matches(*severity))
-            },
-            cx,
-        );
-
-        if let Some(selection) = selection {
-            self.selection = Some(selection);
-            self.expand_entry(selection.worktree_id, selection.entry_id, cx);
-            self.update_visible_entries(
-                Some((selection.worktree_id, selection.entry_id)),
-                false,
-                true,
-                window,
-                cx,
-            );
-            cx.notify();
-        }
-    }
-
-    fn select_next_diagnostic(
-        &mut self,
-        action: &SelectNextDiagnostic,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let selection = self.find_entry(
-            self.selection.as_ref(),
-            false,
-            &|entry: GitEntryRef, worktree_id: WorktreeId| {
-                self.selection.is_none_or(|selection| {
-                    if selection.worktree_id == worktree_id {
-                        selection.entry_id != entry.id
-                    } else {
-                        true
-                    }
-                }) && entry.is_file()
-                    && self
-                        .diagnostics
-                        .get(&(worktree_id, entry.path.clone()))
-                        .is_some_and(|severity| action.severity.matches(*severity))
-            },
-            cx,
-        );
-
-        if let Some(selection) = selection {
-            self.selection = Some(selection);
-            self.expand_entry(selection.worktree_id, selection.entry_id, cx);
-            self.update_visible_entries(
-                Some((selection.worktree_id, selection.entry_id)),
-                false,
-                true,
-                window,
-                cx,
-            );
-            cx.notify();
         }
     }
 
@@ -5702,8 +5478,6 @@ impl ProjectPanel {
         }
 
         let filename_text_color = details.filename_text_color;
-        let diagnostic_severity = details.diagnostic_severity;
-        let diagnostic_count = details.diagnostic_count;
         let item_colors = get_item_color(is_sticky, cx);
 
         let canonical_path = details.canonical_path.clone();
@@ -6158,9 +5932,7 @@ impl ProjectPanel {
                     })
                     .selectable(false)
                     .when(
-                        canonical_path.is_some()
-                            || diagnostic_count.is_some()
-                            || git_indicator.is_some(),
+                        canonical_path.is_some() || git_indicator.is_some(),
                         |this| {
                             let symlink_element = canonical_path.map(|path| {
                                 div()
@@ -6184,25 +5956,6 @@ impl ProjectPanel {
                                     .gap_1()
                                     .flex_none()
                                     .pr_3()
-                                    .when_some(diagnostic_count, |this, count| {
-                                        this.when(count.error_count > 0, |this| {
-                                            this.child(
-                                                Label::new(count.capped_error_count())
-                                                    .size(LabelSize::Small)
-                                                    .color(Color::Error),
-                                            )
-                                        })
-                                        .when(
-                                            count.warning_count > 0,
-                                            |this| {
-                                                this.child(
-                                                    Label::new(count.capped_warning_count())
-                                                        .size(LabelSize::Small)
-                                                        .color(Color::Warning),
-                                                )
-                                            },
-                                        )
-                                    })
                                     .when_some(git_indicator, |this, (label, color)| {
                                         let git_indicator = if kind.is_dir() {
                                             Indicator::dot()
@@ -6223,49 +5976,7 @@ impl ProjectPanel {
                         },
                     )
                     .child(if let Some(icon) = &icon {
-                        if let Some((_, decoration_color)) =
-                            entry_diagnostic_aware_icon_decoration_and_color(diagnostic_severity)
-                        {
-                            let is_warning = diagnostic_severity
-                                .map(|severity| matches!(severity, DiagnosticSeverity::WARNING))
-                                .unwrap_or(false);
-                            div().child(
-                                DecoratedIcon::new(
-                                    Icon::from_path(icon.clone()).color(Color::Muted),
-                                    Some(
-                                        IconDecoration::new(
-                                            if kind.is_file() {
-                                                if is_warning {
-                                                    IconDecorationKind::Triangle
-                                                } else {
-                                                    IconDecorationKind::X
-                                                }
-                                            } else {
-                                                IconDecorationKind::Dot
-                                            },
-                                            bg_color,
-                                            cx,
-                                        )
-                                        .group_name(Some(GROUP_NAME.into()))
-                                        .knockout_hover_color(bg_hover_color)
-                                        .color(decoration_color.color(cx))
-                                        .position(Point {
-                                            x: px(-2.),
-                                            y: px(-2.),
-                                        }),
-                                    ),
-                                )
-                                .into_any_element(),
-                            )
-                        } else {
-                            h_flex().child(Icon::from_path(icon.to_string()).color(Color::Muted))
-                        }
-                    } else if let Some((icon_name, color)) =
-                        entry_diagnostic_aware_icon_name_and_color(diagnostic_severity)
-                    {
-                        h_flex()
-                            .size(IconSize::default().rems())
-                            .child(Icon::new(icon_name).color(color).size(IconSize::Small))
+                        h_flex().child(Icon::from_path(icon.to_string()).color(Color::Muted))
                     } else {
                         h_flex()
                             .size(IconSize::default().rems())
@@ -6622,16 +6333,6 @@ impl ProjectPanel {
         let is_marked = self.marked_entries.contains(&selection);
         let is_selected = self.selection == Some(selection);
 
-        let diagnostic_severity = self
-            .diagnostics
-            .get(&(worktree_id, entry.path.clone()))
-            .cloned();
-
-        let diagnostic_count = self
-            .diagnostic_counts
-            .get(&(worktree_id, entry.path.clone()))
-            .copied();
-
         let filename_text_color =
             entry_git_aware_label_color(git_status, entry.is_ignored, is_marked);
 
@@ -6655,8 +6356,6 @@ impl ProjectPanel {
             is_cut,
             sticky,
             filename_text_color,
-            diagnostic_severity,
-            diagnostic_count,
             git_status,
             is_private: entry.is_private,
             worktree_id,
@@ -7082,8 +6781,6 @@ impl Render for ProjectPanel {
                 .on_action(cx.listener(Self::select_parent))
                 .on_action(cx.listener(Self::select_next_git_entry))
                 .on_action(cx.listener(Self::select_prev_git_entry))
-                .on_action(cx.listener(Self::select_next_diagnostic))
-                .on_action(cx.listener(Self::select_prev_diagnostic))
                 .on_action(cx.listener(Self::select_next_directory))
                 .on_action(cx.listener(Self::select_prev_directory))
                 .on_action(cx.listener(Self::expand_selected_entry))

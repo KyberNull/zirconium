@@ -4,7 +4,10 @@ use std::sync::Arc;
 use extension::{ExtensionGrammarProxy, ExtensionHostProxy, ExtensionLanguageProxy};
 use language::{LanguageLoader, LanguageMatcher, LanguageName, LanguageRegistry};
 
-pub fn init(extension_host_proxy: Arc<ExtensionHostProxy>, language_registry: Arc<LanguageRegistry>) {
+pub fn init(
+    extension_host_proxy: Arc<ExtensionHostProxy>,
+    language_registry: Arc<LanguageRegistry>,
+) {
     let language_registry_proxy = LanguageRegistryProxy { language_registry };
     extension_host_proxy.register_grammar_proxy(language_registry_proxy.clone());
     extension_host_proxy.register_language_proxy(language_registry_proxy);

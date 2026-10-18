@@ -33,7 +33,6 @@
       "shift-alt-up": "editor::MoveLineUp",
       "shift-alt-down": "editor::MoveLineDown",
       "ctrl-alt-l": "editor::Format",
-      "ctrl-alt-o": "editor::OrganizeImports",
       "ctrl-alt-left": "pane::GoBack",
       "ctrl-alt-right": "pane::GoForward",
       "ctrl-alt-shift-down": "editor::GoToHunk",
