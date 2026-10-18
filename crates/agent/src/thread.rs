@@ -1,11 +1,9 @@
 use crate::{
-    ApplyCodeActionTool, AskUserTool, CodeActionStore, ContextServerRegistry, CopyPathTool,
-    CreateDirectoryTool, CreateThreadTool, DbLanguageModel, DbThread, DeletePathTool,
-    DiagnosticsTool, EditFileTool, FetchTool, FindPathTool, FindReferencesTool, GetCodeActionsTool,
-    GoToDefinitionTool, GrepTool, ListAgentsAndModelsTool, ListDirectoryTool, MovePathTool,
-    ProjectSnapshot, ReadFileTool, RenameTool, SandboxedTerminalTool, SpawnAgentTool,
-    SystemPromptTemplate, Template, Templates, TerminalTool, ToolPermissionDecision, WebSearchTool,
-    WriteFileTool, decide_permission_from_settings,
+    AskUserTool, ContextServerRegistry, CopyPathTool, CreateDirectoryTool, CreateThreadTool,
+    DbLanguageModel, DbThread, DeletePathTool, EditFileTool, FetchTool, FindPathTool, GrepTool,
+    ListAgentsAndModelsTool, ListDirectoryTool, MovePathTool, ProjectSnapshot, ReadFileTool,
+    SandboxedTerminalTool, SpawnAgentTool, SystemPromptTemplate, Template, Templates, TerminalTool,
+    ToolPermissionDecision, WebSearchTool, WriteFileTool, decide_permission_from_settings,
 };
 use acp_thread::{ClientUserMessageId, MentionUri};
 use action_log::ActionLog;
@@ -2166,21 +2164,6 @@ impl Thread {
         self.add_tool(WebSearchTool);
 
         self.add_tool(AskUserTool);
-
-        self.add_tool(DiagnosticsTool::new(self.project.clone()));
-
-        let code_action_store: CodeActionStore = cx.new(|_cx| None);
-        self.add_tool(FindReferencesTool::new(self.project.clone()));
-        self.add_tool(GetCodeActionsTool::new(
-            self.project.clone(),
-            code_action_store.clone(),
-        ));
-        self.add_tool(ApplyCodeActionTool::new(
-            self.project.clone(),
-            code_action_store,
-        ));
-        self.add_tool(GoToDefinitionTool::new(self.project.clone()));
-        self.add_tool(RenameTool::new(self.project.clone()));
 
         if self.depth() < MAX_SUBAGENT_DEPTH {
             self.add_tool(SpawnAgentTool::new(environment.clone()));

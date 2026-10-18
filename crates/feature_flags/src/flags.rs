@@ -54,30 +54,6 @@ impl FeatureFlag for CreateThreadToolFeatureFlag {
 }
 register_feature_flag!(CreateThreadToolFeatureFlag);
 
-pub struct LspToolFeatureFlag;
-
-impl FeatureFlag for LspToolFeatureFlag {
-    const NAME: &'static str = "lsp-tool";
-    type Value = PresenceFlag;
-
-    fn enabled_for_staff() -> bool {
-        false
-    }
-}
-register_feature_flag!(LspToolFeatureFlag);
-
-pub struct RenameToolFeatureFlag;
-
-impl FeatureFlag for RenameToolFeatureFlag {
-    const NAME: &'static str = "rename-tool";
-    type Value = PresenceFlag;
-
-    fn enabled_for_staff() -> bool {
-        true
-    }
-}
-register_feature_flag!(RenameToolFeatureFlag);
-
 /// Controls how agent thread worktree chips are labeled in the sidebar.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, EnumFeatureFlag)]
 pub enum AgentThreadWorktreeLabel {
