@@ -27,7 +27,6 @@ mod indent_guides;
 mod inlays;
 pub mod items;
 mod jsx_tag_auto_close;
-mod linked_editing_ranges;
 mod lsp_ext;
 mod mouse_context_menu;
 pub mod movement;
@@ -108,7 +107,6 @@ pub(crate) use git::{DisplayDiffHunk, PhantomDiffReviewIndicator};
 pub use hover_popover::hover_markdown_style;
 pub use inlays::Inlay;
 pub use items::MAX_TAB_TITLE_LEN;
-pub use linked_editing_ranges::LinkedEdits;
 pub use lsp::CompletionContext;
 pub use lsp_ext::lsp_tasks;
 pub use multi_buffer::{
@@ -174,7 +172,6 @@ use language::{
     },
     point_from_lsp, point_to_lsp, text_diff_with_options,
 };
-use linked_editing_ranges::refresh_linked_ranges;
 use lsp::{
     CodeActionKind, CompletionItemKind, CompletionTriggerKind, InsertTextFormat, InsertTextMode,
     LanguageServerId,
@@ -988,8 +985,6 @@ pub struct Editor {
     debounced_selection_highlight_complete: bool,
     last_selection_from_search: bool,
     document_highlights_task: Option<Task<()>>,
-    linked_editing_range_task: Option<Task<Option<()>>>,
-    linked_edit_ranges: linked_editing_ranges::LinkedEditingRanges,
     pending_rename: Option<RenameState>,
     searchable: bool,
     cursor_shape: CursorShape,
@@ -2001,7 +1996,6 @@ impl Editor {
                                 InlayHintRefreshReason::LanguageServerRegistered,
                                 cx,
                             );
-                            refresh_linked_ranges(editor, window, cx);
                             editor.refresh_code_actions_for_selection(window, cx);
                             editor.refresh_document_highlights(cx);
                         }
@@ -2248,7 +2242,6 @@ impl Editor {
             debounced_selection_highlight_complete: false,
             last_selection_from_search: false,
             document_highlights_task: None,
-            linked_editing_range_task: None,
             pending_rename: None,
             searchable: !is_minimap,
             cursor_shape: EditorSettings::get_global(cx)
@@ -2346,7 +2339,6 @@ impl Editor {
             pull_diagnostics_task: Task::ready(()),
             inlay_hints: None,
             post_scroll_update: Task::ready(()),
-            linked_edit_ranges: Default::default(),
             in_project_search: false,
             previous_search_ranges: None,
             breadcrumb_header: None,
@@ -4410,8 +4402,6 @@ impl Editor {
         self.transact(window, cx, |this, window, cx| {
             this.select_autoclose_pair(window, cx);
 
-            let linked_edits = this.linked_edits_for_selections(Arc::from(""), cx);
-
             let display_map = this.display_map.update(cx, |map, cx| map.snapshot(cx));
             let mut selections = this.selections.all::<MultiBufferPoint>(&display_map);
             for selection in &mut selections {
@@ -4449,7 +4439,6 @@ impl Editor {
 
             this.change_selections(Default::default(), window, cx, |s| s.select(selections));
             this.insert("", window, cx);
-            linked_edits.apply_with_left_expansion(cx);
             this.refresh_edit_prediction(
                 true,
                 false,
@@ -4457,7 +4446,6 @@ impl Editor {
                 window,
                 cx,
             );
-            refresh_linked_ranges(this, window, cx);
         });
     }
 
@@ -4476,9 +4464,7 @@ impl Editor {
                     }
                 })
             });
-            let linked_edits = this.linked_edits_for_selections(Arc::from(""), cx);
             this.insert("", window, cx);
-            linked_edits.apply(cx);
             this.refresh_edit_prediction(
                 true,
                 false,
@@ -4486,7 +4472,6 @@ impl Editor {
                 window,
                 cx,
             );
-            refresh_linked_ranges(this, window, cx);
         });
     }
 

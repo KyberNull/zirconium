@@ -926,9 +926,7 @@ impl Editor {
             .all::<MultiBufferOffset>(&self.display_snapshot(cx));
         let mut ranges = Vec::new();
         let mut all_commit_ranges = Vec::new();
-        let mut linked_edits = LinkedEdits::new();
 
-        let text: Arc<str> = new_text.clone().into();
         for selection in &selections {
             let range = if selection.id == newest_selection.id {
                 replace_range_multibuffer.clone()
@@ -961,9 +959,6 @@ impl Editor {
                 && buffer_snapshot_2.remote_id() == buffer_snapshot.remote_id()
             {
                 all_commit_ranges.push(anchor_range.clone());
-                if !self.linked_edit_ranges.is_empty() {
-                    linked_edits.push(&self, anchor_range, text.clone(), cx);
-                }
             }
         }
 
@@ -999,7 +994,6 @@ impl Editor {
                     multi_buffer.edit(edits, auto_indent, cx);
                 });
             }
-            linked_edits.apply(cx);
             editor.refresh_edit_prediction(
                 true,
                 false,

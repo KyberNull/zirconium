@@ -550,7 +550,7 @@ impl Editor {
                                 text: text_to_insert.clone().into(),
                             });
 
-                            self.replace_selections(&text_to_insert, None, window, cx, false);
+                            self.replace_selections(&text_to_insert, None, window, cx);
                             self.refresh_edit_prediction(
                                 true,
                                 true,
