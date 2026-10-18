@@ -437,14 +437,6 @@ pub fn languages_dir() -> &'static PathBuf {
     LANGUAGES_DIR.get_or_init(|| data_dir().join("languages"))
 }
 
-/// Returns the path to the debug adapters directory
-///
-/// This is where debug adapters are downloaded to for DAPs that are built-in to Zed.
-pub fn debug_adapters_dir() -> &'static PathBuf {
-    static DEBUG_ADAPTERS_DIR: OnceLock<PathBuf> = OnceLock::new();
-    DEBUG_ADAPTERS_DIR.get_or_init(|| data_dir().join("debug_adapters"))
-}
-
 /// Returns the path to the external agents directory
 ///
 /// This is where agent servers are downloaded to
@@ -511,8 +503,6 @@ pub fn local_vscode_tasks_file_relative_path() -> &'static RelPath {
 pub fn task_file_name() -> &'static str {
     "tasks.json"
 }
-
-
 
 pub fn user_ssh_config_file() -> PathBuf {
     home_dir().join(".ssh/config")

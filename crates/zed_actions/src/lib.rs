@@ -96,7 +96,6 @@ pub enum ExtensionCategoryFilter {
     LanguageServers,
     ContextServers,
     Snippets,
-    DebugAdapters,
 }
 
 /// Opens the extensions management interface.

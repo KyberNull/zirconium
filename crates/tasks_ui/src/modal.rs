@@ -177,7 +177,7 @@ impl TasksModal {
         };
         let mut new_candidates = used_tasks;
         new_candidates.extend(lsp_tasks);
-        // todo(debugger): We're always adding lsp tasks here even if prefer_lsp is false
+        // TODO: We're always adding lsp tasks here even if prefer_lsp is false
         // We should move the filter to new_candidates instead of on current
         // and add a test for this
         new_candidates.extend(current_resolved_tasks.into_iter().filter(|(task_kind, _)| {
@@ -313,7 +313,7 @@ impl PickerDelegate for TasksModalDelegate {
                                             .map(move |(_, task)| (kind.clone(), task))
                                     },
                                 ));
-                                // todo(debugger): We're always adding lsp tasks here even if prefer_lsp is false
+                                // TODO: We're always adding lsp tasks here even if prefer_lsp is false
                                 // We should move the filter to new_candidates instead of on current
                                 // and add a test for this
                                 new_candidates.extend(current.into_iter().filter(

@@ -129,7 +129,6 @@ pub fn init(cx: &mut App) {
                             ExtensionProvides::ContextServers
                         }
                         ExtensionCategoryFilter::Snippets => ExtensionProvides::Snippets,
-                        ExtensionCategoryFilter::DebugAdapters => ExtensionProvides::DebugAdapters,
                     });
 
                     let existing = workspace
@@ -1484,6 +1483,7 @@ impl Render for ExtensionsPage {
                         ExtensionProvides::iter()
                             .filter(|provides| match provides {
                                 ExtensionProvides::AgentServers
+                                | ExtensionProvides::DebugAdapters
                                 | ExtensionProvides::Grammars // grammars do not add anything of value to users currently
                                 | ExtensionProvides::IndexedDocsProviders
                                 | ExtensionProvides::SlashCommands => false,

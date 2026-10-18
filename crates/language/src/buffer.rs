@@ -4,8 +4,8 @@ pub mod row_chunk;
 pub use bracket_ranges::BracketMatch;
 
 use crate::{
-    ByteContent, DebuggerTextObject, LanguageScope, ModelineSettings, Outline, OutlineConfig,
-    PLAIN_TEXT, RunnableTag, TextObject, TreeSitterOptions, analyze_byte_content,
+    ByteContent, LanguageScope, ModelineSettings, Outline, OutlineConfig, PLAIN_TEXT, RunnableTag,
+    TextObject, TreeSitterOptions, analyze_byte_content,
     diagnostic_set::{DiagnosticEntry, DiagnosticEntryRef, DiagnosticGroup},
     language_settings::{AutoIndentMode, LanguageSettings},
     outline::OutlineItem,
@@ -4820,73 +4820,6 @@ impl BufferSnapshot {
         query: fn(&Grammar) -> Option<&tree_sitter::Query>,
     ) -> SyntaxMapMatches<'_> {
         self.syntax.matches(range, self, query)
-    }
-
-    pub fn debug_variables_query<T: ToOffset>(
-        &self,
-        range: Range<T>,
-    ) -> impl Iterator<Item = (Range<usize>, DebuggerTextObject)> + '_ {
-        let range = range.start.to_previous_offset(self)..range.end.to_next_offset(self);
-
-        let mut matches = self.syntax.matches_with_options(
-            range.clone(),
-            &self.text,
-            TreeSitterOptions::default(),
-            |grammar| grammar.debug_variables_config.as_ref().map(|c| &c.query),
-        );
-
-        let configs = matches
-            .grammars()
-            .iter()
-            .map(|grammar| grammar.debug_variables_config.as_ref())
-            .collect::<Vec<_>>();
-
-        let mut captures = Vec::<(Range<usize>, DebuggerTextObject)>::new();
-
-        iter::from_fn(move || {
-            loop {
-                while let Some(capture) = captures.pop() {
-                    if capture.0.overlaps(&range) {
-                        return Some(capture);
-                    }
-                }
-
-                let mat = matches.peek()?;
-
-                let Some(config) = configs[mat.grammar_index].as_ref() else {
-                    matches.advance();
-                    continue;
-                };
-
-                for capture in mat.captures {
-                    let Some(ix) = config
-                        .objects_by_capture_ix
-                        .binary_search_by_key(&capture.index, |e| e.0)
-                        .ok()
-                    else {
-                        continue;
-                    };
-                    let text_object = config.objects_by_capture_ix[ix].1;
-                    let byte_range = capture.node.byte_range();
-
-                    let mut found = false;
-                    for (range, existing) in captures.iter_mut() {
-                        if existing == &text_object {
-                            range.start = range.start.min(byte_range.start);
-                            range.end = range.end.max(byte_range.end);
-                            found = true;
-                            break;
-                        }
-                    }
-
-                    if !found {
-                        captures.push((byte_range, text_object));
-                    }
-                }
-
-                matches.advance();
-            }
-        })
     }
 
     pub fn text_object_ranges<T: ToOffset>(

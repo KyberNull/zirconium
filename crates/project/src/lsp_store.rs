@@ -13008,7 +13008,6 @@ impl LspStore {
                         resolved: completion.resolved,
                     }
                 }
-                Some(proto::completion::Source::Dap) => CompletionSource::Custom,
                 _ => anyhow::bail!("Unexpected completion source {}", completion.source),
             },
         })

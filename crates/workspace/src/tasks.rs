@@ -2,8 +2,7 @@ use std::process::ExitStatus;
 
 use anyhow::Result;
 use collections::HashSet;
-use gpui::{AppContext, AsyncWindowContext, Context, Entity, Task, TaskExt, WeakEntity};
-use language::Buffer;
+use gpui::{AppContext, AsyncWindowContext, Context, Task, TaskExt, WeakEntity};
 use project::{TaskSourceKind, WorktreeId};
 use remote::ConnectionState;
 use task::{
@@ -321,7 +320,7 @@ mod tests {
         item::test::{TestItem, TestProjectItem},
         register_serializable_item,
     };
-    use gpui::{App, TestAppContext};
+    use gpui::{App, Entity, TestAppContext};
     use parking_lot::Mutex;
     use project::{FakeFs, Project, TaskSourceKind};
     use serde_json::json;

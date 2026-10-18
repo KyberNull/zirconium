@@ -8,16 +8,16 @@ mod since_v0_4_0;
 mod since_v0_5_0;
 mod since_v0_6_0;
 mod since_v0_8_0;
+use super::{WasmState, wasm_engine};
+use anyhow::{Context as _, Result};
 use extension::{KeyValueStoreDelegate, WorktreeDelegate};
 use gpui::BackgroundExecutor;
 use language::LanguageName;
 use lsp::LanguageServerName;
 use release_channel::ReleaseChannel;
-use super::{WasmState, wasm_engine};
-use anyhow::{Context as _, Result, anyhow};
 use semver::Version;
 use since_v0_8_0 as latest;
-use std::{ops::RangeInclusive, path::PathBuf, sync::Arc};
+use std::{ops::RangeInclusive, sync::Arc};
 use wasmtime::{
     Store,
     component::{Component, Linker, Resource},
@@ -1042,7 +1042,6 @@ impl Extension {
             }
         }
     }
-
 }
 
 trait ToWasmtimeResult<T> {

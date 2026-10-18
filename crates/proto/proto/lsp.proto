@@ -317,7 +317,7 @@ message Completion {
     Lsp = 0;
     Custom = 1;
     BufferWord = 2;
-    Dap = 3;
+    reserved 3;
   }
 }
 

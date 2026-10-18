@@ -432,10 +432,6 @@ pub fn theme_colors_refinement(
             .icon_accent
             .as_ref()
             .and_then(|color| try_parse_color(color).ok()),
-        debugger_accent: this
-            .debugger_accent
-            .as_ref()
-            .and_then(|color| try_parse_color(color).ok()),
         status_bar_background: this
             .status_bar_background
             .as_ref()
@@ -559,10 +555,6 @@ pub fn theme_colors_refinement(
             .and_then(|color| try_parse_color(color).ok()),
         editor_highlighted_line_background: this
             .editor_highlighted_line_background
-            .as_ref()
-            .and_then(|color| try_parse_color(color).ok()),
-        editor_debugger_active_line_background: this
-            .editor_debugger_active_line_background
             .as_ref()
             .and_then(|color| try_parse_color(color).ok()),
         editor_line_number: this

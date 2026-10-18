@@ -12,15 +12,13 @@ use extension::{
 };
 use futures::{AsyncReadExt, lock::Mutex};
 use futures::{FutureExt as _, io::BufReader};
-use gpui::{BackgroundExecutor, SharedString};
+use gpui::BackgroundExecutor;
 use language::{BinaryStatus, LanguageName, language_settings::AllLanguageSettings};
 use project::project_settings::ProjectSettings;
 use semver::Version;
 use std::{
     env,
-    net::{IpAddr, Ipv4Addr, Ipv6Addr},
     path::{Path, PathBuf},
-    str::FromStr,
     sync::{Arc, OnceLock},
 };
 use url::Url;

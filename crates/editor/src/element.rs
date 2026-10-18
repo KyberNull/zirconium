@@ -97,12 +97,9 @@ use workspace::{
 #[derive(Clone, Copy, Default)]
 struct LineHighlightSpec {
     selection: bool,
-    breakpoint: bool,
-    _active_stack_frame: bool,
 }
 
 enum LineNumberStyle {
-    Breakpoint,
     DiffAdded,
     DiffDeleted,
     Active,
@@ -110,23 +107,17 @@ enum LineNumberStyle {
 }
 
 impl LineNumberStyle {
-    fn new(is_active: bool, is_breakpoint: bool, diff_status: Option<DiffHunkStatus>) -> Self {
-        match (
-            is_active,
-            is_breakpoint,
-            diff_status.map(|status| status.kind),
-        ) {
-            (_, true, _) => Self::Breakpoint,
-            (true, _, _) => Self::Active,
-            (_, _, Some(DiffHunkStatusKind::Added)) => Self::DiffAdded,
-            (_, _, Some(DiffHunkStatusKind::Deleted)) => Self::DiffDeleted,
-            (_, _, _) => Self::Inactive,
+    fn new(is_active: bool, diff_status: Option<DiffHunkStatus>) -> Self {
+        match (is_active, diff_status.map(|status| status.kind)) {
+            (true, _) => Self::Active,
+            (_, Some(DiffHunkStatusKind::Added)) => Self::DiffAdded,
+            (_, Some(DiffHunkStatusKind::Deleted)) => Self::DiffDeleted,
+            (_, _) => Self::Inactive,
         }
     }
 
     fn color(self, colors: &theme::ThemeColors) -> Hsla {
         match self {
-            Self::Breakpoint => colors.debugger_accent,
             Self::DiffAdded => colors.version_control_added,
             Self::DiffDeleted => colors.version_control_deleted,
             Self::Active => colors.editor_active_line_number,
@@ -2757,12 +2748,8 @@ impl EditorElement {
                 write!(&mut line_number, "{number}").unwrap();
 
                 let spec = active_rows.get(&display_row);
-                let color = LineNumberStyle::new(
-                    spec.is_some(),
-                    false,
-                    row_info.diff_status,
-                )
-                .color(cx.theme().colors());
+                let color = LineNumberStyle::new(spec.is_some(), row_info.diff_status)
+                    .color(cx.theme().colors());
 
                 let shaped_line =
                     self.shape_line_number(SharedString::from(&line_number), color, window);
@@ -8397,17 +8384,16 @@ impl Element for EditorElement {
                         })
                         .unwrap_or_else(|| (Vec::new(), Vec::new(), HashMap::default()));
 
-                    let (selections, active_rows, newest_selection_head) = self
-                        .layout_selections(
-                            start_anchor,
-                            end_anchor,
-                            &local_selections,
-                            &snapshot,
-                            start_row,
-                            end_row,
-                            window,
-                            cx,
-                        );
+                    let (selections, active_rows, newest_selection_head) = self.layout_selections(
+                        start_anchor,
+                        end_anchor,
+                        &local_selections,
+                        &snapshot,
+                        start_row,
+                        end_row,
+                        window,
+                        cx,
+                    );
 
                     // relative rows are based on newest selection, even outside the visible area
                     let current_selection_head = self.editor.update(cx, |editor, cx| {

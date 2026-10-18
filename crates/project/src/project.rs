@@ -61,7 +61,6 @@ use client::{
 };
 use clock::ReplicaId;
 
-
 use collections::{BTreeSet, HashMap, HashSet, IndexSet};
 use debounced_delay::DebouncedDelay;
 
@@ -476,7 +475,6 @@ pub enum PrepareRenameResponse {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum InlayId {
     EditPrediction(usize),
-    DebuggerValue(usize),
     // LSP
     Hint(usize),
     Color(usize),
@@ -487,7 +485,6 @@ impl InlayId {
     pub fn id(&self) -> usize {
         match self {
             Self::EditPrediction(id) => *id,
-            Self::DebuggerValue(id) => *id,
             Self::Hint(id) => *id,
             Self::Color(id) => *id,
             Self::ReplResult(id) => *id,
@@ -596,10 +593,6 @@ pub enum CompletionSource {
         /// Whether this completion has been resolved, to ensure it happens once per completion.
         resolved: bool,
     },
-    // Dap {
-    //     /// The sort text for this completion.
-    //     sort_text: String,
-    // },
     Custom,
     BufferWord {
         word_range: Range<Anchor>,
@@ -926,7 +919,7 @@ enum EntitySubscription {
     GitStore(PendingEntitySubscription<GitStore>),
     WorktreeStore(PendingEntitySubscription<WorktreeStore>),
     LspStore(PendingEntitySubscription<LspStore>),
-    SettingsObserver(PendingEntitySubscription<SettingsObserver>)
+    SettingsObserver(PendingEntitySubscription<SettingsObserver>),
 }
 
 #[derive(Debug, Clone)]
@@ -1242,7 +1235,6 @@ impl Project {
 
             let bookmark_store =
                 cx.new(|_| BookmarkStore::new(worktree_store.clone(), buffer_store.clone()));
-
 
             let image_store = cx.new(|cx| ImageStore::local(worktree_store.clone(), cx));
             cx.subscribe(&image_store, Self::on_image_store_event)
@@ -3523,7 +3515,6 @@ impl Project {
             }
         }
     }
-
 
     fn on_lsp_store_event(
         &mut self,

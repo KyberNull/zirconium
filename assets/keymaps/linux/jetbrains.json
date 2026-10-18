@@ -182,7 +182,6 @@
   },
   { "context": "GitPanel", "bindings": { "alt-0": "workspace::CloseActiveDock" } },
   { "context": "ProjectPanel", "bindings": { "alt-1": "workspace::CloseActiveDock" } },
-  { "context": "DebugPanel", "bindings": { "alt-5": "workspace::CloseActiveDock" } },
   { "context": "Diagnostics > Editor", "bindings": { "alt-6": "pane::CloseActiveItem" } },
   { "context": "OutlinePanel", "bindings": { "alt-7": "workspace::CloseActiveDock" } },
   {

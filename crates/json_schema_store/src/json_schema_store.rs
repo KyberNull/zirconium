@@ -48,8 +48,7 @@ static ACTION_SCHEMA_CACHE: LazyLock<RwLock<HashMap<String, String>>> =
 // Runtime cache for dynamic schemas that depend on runtime state:
 // - "settings": depends on installed fonts, themes, languages, LSP adapters (extensions can add these)
 // - "settings/lsp/*": depends on LSP adapter initialization options
-// - "debug_tasks": depends on DAP adapters (extensions can add these)
-// Cache is invalidated via notify_schema_changed() when extensions or DAP registry change.
+// Cache is invalidated via notify_schema_changed() when extensions change.
 static DYNAMIC_SCHEMA_CACHE: LazyLock<RwLock<HashMap<String, String>>> =
     LazyLock::new(|| RwLock::new(HashMap::default()));
 
@@ -79,7 +78,6 @@ pub fn init(cx: &mut App) {
         })
         .detach();
     }
-
 }
 
 #[derive(Default)]

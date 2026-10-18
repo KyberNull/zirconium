@@ -23,8 +23,6 @@ pub enum QueryFile {
     Redactions,
     #[strum(serialize = "runnables.scm")]
     Runnables,
-    #[strum(serialize = "debugger.scm")]
-    Debugger,
     #[strum(serialize = "textobjects.scm")]
     TextObjects,
 }
@@ -46,7 +44,6 @@ bitflags::bitflags! {
         const OVERRIDES = 1 << 5;
         const REDACTIONS = 1 << 6;
         const RUNNABLES = 1 << 7;
-        const DEBUGGER = 1 << 8;
         const TEXT_OBJECTS = 1 << 9;
     }
 }
@@ -68,7 +65,6 @@ impl From<QueryFile> for QueryFiles {
             QueryFile::Overrides => Self::OVERRIDES,
             QueryFile::Redactions => Self::REDACTIONS,
             QueryFile::Runnables => Self::RUNNABLES,
-            QueryFile::Debugger => Self::DEBUGGER,
             QueryFile::TextObjects => Self::TEXT_OBJECTS,
         }
     }
@@ -127,7 +123,6 @@ pub struct LanguageQueries {
     pub redactions: Option<Cow<'static, str>>,
     pub runnables: Option<Cow<'static, str>>,
     pub text_objects: Option<Cow<'static, str>>,
-    pub debugger: Option<Cow<'static, str>>,
 }
 
 impl LanguageQueries {
@@ -147,7 +142,6 @@ impl LanguageQueries {
                 QueryFile::Overrides => &mut queries.overrides,
                 QueryFile::Redactions => &mut queries.redactions,
                 QueryFile::Runnables => &mut queries.runnables,
-                QueryFile::Debugger => &mut queries.debugger,
                 QueryFile::TextObjects => &mut queries.text_objects,
             };
             *field = Some(contents);
@@ -174,7 +168,6 @@ mod tests {
         assert_eq!(queries.overrides.as_deref(), Some("overrides.scm"));
         assert_eq!(queries.redactions.as_deref(), Some("redactions.scm"));
         assert_eq!(queries.runnables.as_deref(), Some("runnables.scm"));
-        assert_eq!(queries.debugger.as_deref(), Some("debugger.scm"));
         assert_eq!(queries.text_objects.as_deref(), Some("textobjects.scm"));
 
         for query_file in QueryFile::iter() {
