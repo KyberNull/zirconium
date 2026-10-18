@@ -10218,13 +10218,6 @@ impl CollaborationHub for Entity<Project> {
 }
 
 pub trait SemanticsProvider {
-    fn hover(
-        &self,
-        buffer: &Entity<Buffer>,
-        position: text::Anchor,
-        cx: &mut App,
-    ) -> Option<Task<Option<Vec<project::Hover>>>>;
-
     fn inline_values(
         &self,
         buffer_handle: Entity<Buffer>,
@@ -10284,16 +10277,6 @@ pub trait SemanticsProvider {
 }
 
 impl SemanticsProvider for WeakEntity<Project> {
-    fn hover(
-        &self,
-        buffer: &Entity<Buffer>,
-        position: text::Anchor,
-        cx: &mut App,
-    ) -> Option<Task<Option<Vec<project::Hover>>>> {
-        self.update(cx, |project, cx| project.hover(buffer, position, cx))
-            .ok()
-    }
-
     fn document_highlights(
         &self,
         buffer: &Entity<Buffer>,

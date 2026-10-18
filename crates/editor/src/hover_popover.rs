@@ -1,9 +1,9 @@
 use crate::{
     Anchor, AnchorRangeExt, DisplayPoint, DisplayRow, Editor, EditorSettings, EditorSnapshot,
     GlobalDiagnosticRenderer, HighlightKey, Hover,
-    display_map::{InlayOffset, ToDisplayPoint, is_invisible},
+    display_map::{ToDisplayPoint, is_invisible},
     editor_settings::EditorSettingsScrollbarProxy,
-    hover_links::{InlayHighlight, RangeInEditor},
+    hover_links::RangeInEditor,
     movement::TextLayoutDetails,
     scroll::ScrollAmount,
 };
@@ -19,7 +19,7 @@ use language::{DiagnosticEntry, Language, LanguageRegistry};
 use lsp::DiagnosticSeverity;
 use markdown::{CopyButtonVisibility, Markdown, MarkdownElement, MarkdownStyle};
 use multi_buffer::{MultiBufferOffset, ToOffset, ToPoint};
-use project::{HoverBlock, HoverBlockKind, InlayHintLabelPart};
+use project::{HoverBlock, HoverBlockKind};
 use settings::Settings;
 use std::{
     borrow::Cow,
@@ -130,120 +130,6 @@ pub fn show_keyboard_hover(
     false
 }
 
-pub struct InlayHover {
-    pub(crate) range: InlayHighlight,
-    pub tooltip: HoverBlock,
-}
-
-pub fn find_hovered_hint_part(
-    label_parts: Vec<InlayHintLabelPart>,
-    hint_start: InlayOffset,
-    hovered_offset: InlayOffset,
-) -> Option<(InlayHintLabelPart, Range<InlayOffset>)> {
-    if hovered_offset >= hint_start {
-        let mut offset_in_hint = hovered_offset - hint_start;
-        let mut part_start = hint_start;
-        for part in label_parts {
-            let part_len = part.value.len();
-            if offset_in_hint >= part_len {
-                offset_in_hint -= part_len;
-                part_start.0 += part_len;
-            } else {
-                let part_end = InlayOffset(part_start.0 + part_len);
-                return Some((part, part_start..part_end));
-            }
-        }
-    }
-    None
-}
-
-pub fn hover_at_inlay(
-    editor: &mut Editor,
-    inlay_hover: InlayHover,
-    window: &mut Window,
-    cx: &mut Context<Editor>,
-) {
-    if EditorSettings::get_global(cx).hover_popover_enabled {
-        if editor.pending_rename.is_some() {
-            return;
-        }
-
-        let Some(project) = editor.project.clone() else {
-            return;
-        };
-
-        if editor
-            .hover_state
-            .info_popovers
-            .iter()
-            .any(|InfoPopover { symbol_range, .. }| {
-                if let RangeInEditor::Inlay(range) = symbol_range
-                    && range == &inlay_hover.range
-                {
-                    // Hover triggered from same location as last time. Don't show again.
-                    return true;
-                }
-                false
-            })
-        {
-            return;
-        }
-
-        let hover_popover_delay = EditorSettings::get_global(cx).hover_popover_delay.0;
-
-        editor.hover_state.hiding_delay_task = None;
-        editor.hover_state.closest_mouse_distance = None;
-
-        let task = cx.spawn_in(window, async move |this, cx| {
-            async move {
-                cx.background_executor()
-                    .timer(Duration::from_millis(hover_popover_delay))
-                    .await;
-                this.update(cx, |this, _| {
-                    this.hover_state.diagnostic_popover = None;
-                })?;
-
-                let language_registry = project.read_with(cx, |p, _| p.languages().clone());
-                let blocks = vec![inlay_hover.tooltip];
-                let parsed_content = parse_blocks(&blocks, Some(&language_registry), None, cx);
-
-                let scroll_handle = ScrollHandle::new();
-
-                let subscription = this
-                    .update(cx, |_, cx| {
-                        parsed_content.as_ref().map(|parsed_content| {
-                            cx.observe(parsed_content, |_, _, cx| cx.notify())
-                        })
-                    })
-                    .ok()
-                    .flatten();
-
-                let hover_popover = InfoPopover {
-                    symbol_range: RangeInEditor::Inlay(inlay_hover.range.clone()),
-                    parsed_content,
-                    scroll_handle,
-                    keyboard_grace: Rc::new(RefCell::new(false)),
-                    anchor: None,
-                    last_bounds: Rc::new(Cell::new(None)),
-                    _subscription: subscription,
-                };
-
-                this.update(cx, |this, cx| {
-                    // TODO: no background highlights happen for inlays currently
-                    this.hover_state.info_popovers = vec![hover_popover];
-                    cx.notify();
-                })?;
-
-                anyhow::Ok(())
-            }
-            .log_err()
-            .await
-        });
-
-        editor.hover_state.info_task = Some(task);
-    }
-}
-
 /// Hides the type information popup.
 /// Triggered by the `Hover` action when the cursor is not over a symbol or when the
 /// selections changed.
@@ -265,8 +151,8 @@ pub fn hide_hover(editor: &mut Editor, cx: &mut Context<Editor>) -> bool {
     did_hide
 }
 
-/// Queries the LSP and shows type info and documentation
-/// about the symbol the mouse is currently hovering over.
+/// Shows diagnostics and character info about the position the mouse is
+/// currently hovering over.
 /// Triggered by the `Hover` action when the cursor may be over a symbol.
 fn show_hover(
     editor: &mut Editor,
@@ -281,18 +167,9 @@ fn show_hover(
 
     let snapshot = editor.snapshot(window, cx);
 
-    let (buffer_position, _) = editor
-        .buffer
-        .read(cx)
-        .snapshot(cx)
-        .anchor_to_buffer_anchor(anchor)?;
-    let buffer = editor.buffer.read(cx).buffer(buffer_position.buffer_id)?;
-
     let language_registry = editor
         .project()
         .map(|project| project.read(cx).languages().clone());
-    let provider = editor.semantics_provider.clone()?;
-
     editor.hover_state.hiding_delay_task = None;
     editor.hover_state.closest_mouse_distance = None;
 
@@ -315,29 +192,10 @@ fn show_hover(
     let renderer = GlobalDiagnosticRenderer::global(cx);
     let task = cx.spawn_in(window, async move |this, cx| {
         async move {
-            // If we need to delay, delay a set amount initially before making the lsp request
-            let delay = if ignore_timeout {
-                None
-            } else {
-                let lsp_request_early = hover_popover_delay / 2;
+            if !ignore_timeout {
                 cx.background_executor()
-                    .timer(Duration::from_millis(
-                        hover_popover_delay - lsp_request_early,
-                    ))
+                    .timer(Duration::from_millis(hover_popover_delay))
                     .await;
-
-                // Construct delay task to wait for later
-                let total_delay = Some(
-                    cx.background_executor()
-                        .timer(Duration::from_millis(lsp_request_early)),
-                );
-                total_delay
-            };
-
-            let hover_request = cx.update(|_, cx| provider.hover(&buffer, buffer_position, cx))?;
-
-            if let Some(delay) = delay {
-                delay.await;
             }
             let offset = anchor.to_offset(&snapshot.buffer_snapshot());
             let local_diagnostic = if all_diagnostics_active {
@@ -463,16 +321,7 @@ fn show_hover(
                 None
             };
 
-            let hovers_response = if let Some(hover_request) = hover_request {
-                hover_request.await.unwrap_or_default()
-            } else {
-                Vec::new()
-            };
-            let snapshot = this.update_in(cx, |this, window, cx| this.snapshot(window, cx))?;
-            let mut hover_highlights = Vec::with_capacity(hovers_response.len());
-            let mut info_popovers = Vec::with_capacity(
-                hovers_response.len() + if invisible_char.is_some() { 1 } else { 0 },
-            );
+            let mut info_popovers = Vec::with_capacity(if invisible_char.is_some() { 1 } else { 0 });
 
             if let Some((invisible, range)) = invisible_char {
                 let blocks = vec![HoverBlock {
@@ -500,60 +349,8 @@ fn show_hover(
                 })
             }
 
-            for hover_result in hovers_response {
-                // Create symbol range of anchors for highlighting and filtering of future requests.
-                let range = hover_result
-                    .range
-                    .and_then(|range| {
-                        let range = snapshot
-                            .buffer_snapshot()
-                            .buffer_anchor_range_to_anchor_range(range)?;
-                        Some(range)
-                    })
-                    .or_else(|| {
-                        let snapshot = &snapshot.buffer_snapshot();
-                        let range = snapshot.syntax_ancestor(anchor..anchor)?.1;
-                        Some(snapshot.anchor_before(range.start)..snapshot.anchor_after(range.end))
-                    })
-                    .unwrap_or_else(|| anchor..anchor);
-
-                let blocks = hover_result.contents;
-                let language = hover_result.language;
-                let parsed_content =
-                    parse_blocks(&blocks, language_registry.as_ref(), language, cx);
-                let scroll_handle = ScrollHandle::new();
-                hover_highlights.push(range.clone());
-                let subscription = this
-                    .update(cx, |_, cx| {
-                        parsed_content.as_ref().map(|parsed_content| {
-                            cx.observe(parsed_content, |_, _, cx| cx.notify())
-                        })
-                    })
-                    .ok()
-                    .flatten();
-                info_popovers.push(InfoPopover {
-                    symbol_range: RangeInEditor::Text(range),
-                    parsed_content,
-                    scroll_handle,
-                    keyboard_grace: Rc::new(RefCell::new(ignore_timeout)),
-                    anchor: Some(anchor),
-                    last_bounds: Rc::new(Cell::new(None)),
-                    _subscription: subscription,
-                });
-            }
-
             this.update_in(cx, |editor, window, cx| {
-                if hover_highlights.is_empty() {
-                    editor.clear_background_highlights(HighlightKey::HoverState, cx);
-                } else {
-                    // Highlight the selected symbol using a background highlight
-                    editor.highlight_background(
-                        HighlightKey::HoverState,
-                        &hover_highlights,
-                        |_, theme| theme.colors().element_hover, // todo update theme
-                        cx,
-                    );
-                }
+                editor.clear_background_highlights(HighlightKey::HoverState, cx);
 
                 editor.hover_state.info_popovers = info_popovers;
                 cx.notify();
@@ -1876,100 +1673,6 @@ mod tests {
 
             assert!(content.contains("Function to read a file"));
         });
-    }
-
-    #[test]
-    fn test_find_hovered_hint_part_with_multibyte_characters() {
-        use crate::display_map::InlayOffset;
-        use multi_buffer::MultiBufferOffset;
-        use project::InlayHintLabelPart;
-
-        // Test with multi-byte UTF-8 character "→" (3 bytes, 1 character)
-        let label = "→ app/Livewire/UserProfile.php";
-        let label_parts = vec![InlayHintLabelPart {
-            value: label.to_string(),
-            tooltip: None,
-            location: None,
-        }];
-
-        let hint_start = InlayOffset(MultiBufferOffset(100));
-
-        // Verify the label has more bytes than characters (due to "→")
-        assert_eq!(label.len(), 32); // bytes
-        assert_eq!(label.chars().count(), 30); // characters
-
-        // Test hovering at the last byte (should find the part)
-        let last_byte_offset = InlayOffset(MultiBufferOffset(100 + label.len() - 1));
-        let result = find_hovered_hint_part(label_parts.clone(), hint_start, last_byte_offset);
-        assert!(
-            result.is_some(),
-            "Should find part when hovering at last byte"
-        );
-        let (part, range) = result.unwrap();
-        assert_eq!(part.value, label);
-        assert_eq!(range.start, hint_start);
-        assert_eq!(range.end, InlayOffset(MultiBufferOffset(100 + label.len())));
-
-        // Test hovering at the first byte of "→" (byte 0)
-        let first_byte_offset = InlayOffset(MultiBufferOffset(100));
-        let result = find_hovered_hint_part(label_parts.clone(), hint_start, first_byte_offset);
-        assert!(
-            result.is_some(),
-            "Should find part when hovering at first byte"
-        );
-
-        // Test hovering in the middle of "→" (byte 1, still part of the arrow character)
-        let mid_arrow_offset = InlayOffset(MultiBufferOffset(101));
-        let result = find_hovered_hint_part(label_parts, hint_start, mid_arrow_offset);
-        assert!(
-            result.is_some(),
-            "Should find part when hovering in middle of multi-byte char"
-        );
-
-        // Test with multiple parts containing multi-byte characters
-        // Part ranges are [start, end) - start inclusive, end exclusive
-        // "→ " occupies bytes [0, 4), "path" occupies bytes [4, 8)
-        let parts = vec![
-            InlayHintLabelPart {
-                value: "→ ".to_string(), // 4 bytes (3 + 1)
-                tooltip: None,
-                location: None,
-            },
-            InlayHintLabelPart {
-                value: "path".to_string(), // 4 bytes
-                tooltip: None,
-                location: None,
-            },
-        ];
-
-        // Hover at byte 3 (last byte of "→ ", the space character)
-        let arrow_last_byte = InlayOffset(MultiBufferOffset(100 + 3));
-        let result = find_hovered_hint_part(parts.clone(), hint_start, arrow_last_byte);
-        assert!(result.is_some(), "Should find first part at its last byte");
-        let (part, range) = result.unwrap();
-        assert_eq!(part.value, "→ ");
-        assert_eq!(
-            range,
-            InlayOffset(MultiBufferOffset(100))..InlayOffset(MultiBufferOffset(104))
-        );
-
-        // Hover at byte 4 (first byte of "path", at the boundary)
-        let path_start_offset = InlayOffset(MultiBufferOffset(100 + 4));
-        let result = find_hovered_hint_part(parts.clone(), hint_start, path_start_offset);
-        assert!(result.is_some(), "Should find second part at boundary");
-        let (part, _) = result.unwrap();
-        assert_eq!(part.value, "path");
-
-        // Hover at byte 7 (last byte of "path")
-        let path_end_offset = InlayOffset(MultiBufferOffset(100 + 7));
-        let result = find_hovered_hint_part(parts, hint_start, path_end_offset);
-        assert!(result.is_some(), "Should find second part at last byte");
-        let (part, range) = result.unwrap();
-        assert_eq!(part.value, "path");
-        assert_eq!(
-            range,
-            InlayOffset(MultiBufferOffset(104))..InlayOffset(MultiBufferOffset(108))
-        );
     }
 
     #[gpui::test]
