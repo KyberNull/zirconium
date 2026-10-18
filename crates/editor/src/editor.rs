@@ -17,7 +17,6 @@ mod bracket_colorization;
 pub mod code_context_menus;
 mod code_lens;
 pub mod display_map;
-mod document_colors;
 mod document_links;
 mod document_symbols;
 mod editor_settings;
@@ -95,7 +94,7 @@ pub use edit_prediction_types::Direction;
 pub use edit_prediction_types::EditPredictionRequestTrigger;
 pub use editor_settings::{
     CompletionDetailAlignment, CompletionMenuItemKind, CurrentLineHighlight, DiffViewStyle,
-    DocumentColorsRenderMode, EditorSettings, EditorSettingsScrollbarProxy, OpenResultsIn,
+    EditorSettings, EditorSettingsScrollbarProxy, OpenResultsIn,
     ScrollBeyondLastLine, ScrollbarAxes, SearchSettings, ShowMinimap,
     ui_scrollbar_settings_from_raw,
 };
@@ -141,7 +140,6 @@ use code_lens::CodeLensState;
 use collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use convert_case::{Case, Casing};
 use display_map::*;
-use document_colors::LspColorData;
 use document_links::LspDocumentLinks;
 use edit_prediction_types::{
     EditPredictionDelegate, EditPredictionDelegateHandle, EditPredictionDiscardReason,
@@ -169,7 +167,7 @@ use gpui::{
 use hover_links::{HoverLink, HoveredLinkState, find_file};
 use hover_popover::{HoverState, hide_hover};
 use indent_guides::ActiveIndentGuidesState;
-use inlays::{InlaySplice, inlay_hints::InlayHintRefreshReason};
+use inlays::inlay_hints::InlayHintRefreshReason;
 use itertools::{Either, Itertools};
 use language::{
     AutoindentMode, BlockCommentConfig, BracketMatch, BracketPair, Buffer, BufferRow,
@@ -1041,7 +1039,6 @@ pub struct Editor {
     edit_prediction_preview: EditPredictionPreview,
     in_leading_whitespace: bool,
     next_inlay_id: usize,
-    next_color_inlay_id: usize,
     _subscriptions: Vec<Subscription>,
     pixel_position_of_newest_cursor: Option<gpui::Point<Pixels>>,
     gutter_dimensions: GutterDimensions,
@@ -1125,10 +1122,8 @@ pub struct Editor {
     number_deleted_lines: bool,
 
     selection_drag_state: SelectionDragState,
-    colors: Option<LspColorData>,
     code_lens: Option<CodeLensState>,
     post_scroll_update: Task<()>,
-    refresh_colors_task: Task<()>,
     refresh_code_lens_task: Task<()>,
     use_document_folding_ranges: bool,
     refresh_folding_ranges_task: Task<()>,
@@ -1982,9 +1977,6 @@ impl Editor {
                     project::Event::RefreshCodeLens { .. } => {
                         editor.refresh_code_lenses(None, window, cx);
                     }
-                    project::Event::RefreshDocumentColors { .. } => {
-                        editor.refresh_document_colors(None, window, cx);
-                    }
                     project::Event::RefreshDocumentLinks { .. } => {
                         editor.refresh_document_links(None, cx);
                     }
@@ -2387,14 +2379,11 @@ impl Editor {
                 .unwrap_or_default(),
             runnables: RunnableData::new(),
             pull_diagnostics_task: Task::ready(()),
-            colors: None,
             code_lens: None,
-            refresh_colors_task: Task::ready(()),
             refresh_code_lens_task: Task::ready(()),
             use_document_folding_ranges: false,
             refresh_folding_ranges_task: Task::ready(()),
             inlay_hints: None,
-            next_color_inlay_id: 0,
             post_scroll_update: Task::ready(()),
             linked_edit_ranges: Default::default(),
             in_project_search: false,
@@ -2529,7 +2518,6 @@ impl Editor {
 
             editor.minimap =
                 editor.create_minimap(EditorSettings::get_global(cx).minimap, window, cx);
-            editor.colors = Some(LspColorData::new(cx));
             editor.use_document_folding_ranges = true;
             editor.inlay_hints = Some(LspInlayHintData::new(inlay_hint_settings));
             if editor.enable_code_lens && EditorSettings::get_global(cx).code_lens.inline() {
@@ -9100,15 +9088,6 @@ impl Editor {
                 self.refresh_outline_symbols_at_cursor(cx);
             }
 
-            if let Some(inlay_splice) = self.colors.as_mut().and_then(|colors| {
-                colors.render_mode_updated(EditorSettings::get_global(cx).lsp_document_colors)
-            }) {
-                if !inlay_splice.is_empty() {
-                    self.splice_inlays(&inlay_splice.to_remove, inlay_splice.to_insert, cx);
-                }
-                self.refresh_document_colors(None, window, cx);
-            }
-
             let code_lens_inline =
                 self.enable_code_lens && EditorSettings::get_global(cx).code_lens.inline();
             let was_inline = self.code_lens.is_some();
@@ -10045,7 +10024,6 @@ impl Editor {
         if let Some(buffer_id) = for_buffer {
             self.pull_diagnostics(buffer_id, window, cx);
         }
-        self.refresh_document_colors(for_buffer, window, cx);
         self.refresh_document_links(for_buffer, cx);
         self.refresh_folding_ranges(for_buffer, window, cx);
         self.refresh_code_lenses(for_buffer, window, cx);

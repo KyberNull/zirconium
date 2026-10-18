@@ -22,7 +22,7 @@ use crate::{
         HighlightKey, HighlightedChunk, ToDisplayPoint,
     },
     editor_settings::{
-        CurrentLineHighlight, DocumentColorsRenderMode, GitGutterWidth, Minimap, MinimapThumb,
+        CurrentLineHighlight, GitGutterWidth, Minimap, MinimapThumb,
         MinimapThumbBorder, ScrollBeyondLastLine, ScrollbarAxes, ScrollbarDiagnostics, ShowMinimap,
     },
     git::blame::{BlameRenderer, GitBlame, GlobalBlameRenderer},
@@ -5517,7 +5517,6 @@ impl EditorElement {
 
                 self.paint_lines_background(layout, window, cx);
                 let invisible_display_ranges = self.paint_highlights(layout, window, cx);
-                self.paint_document_colors(layout, window);
                 self.paint_lines(&invisible_display_ranges, layout, window, cx);
                 self.paint_redactions(layout, window);
                 self.paint_navigation_overlays(layout, window, cx);
@@ -5665,48 +5664,6 @@ impl EditorElement {
                 label.element.paint(window, cx);
             }
         });
-    }
-
-    fn paint_document_colors(&self, layout: &mut EditorLayout, window: &mut Window) {
-        let Some((colors_render_mode, image_colors)) = &layout.document_colors else {
-            return;
-        };
-        if image_colors.is_empty()
-            || colors_render_mode == &DocumentColorsRenderMode::None
-            || colors_render_mode == &DocumentColorsRenderMode::Inlay
-        {
-            return;
-        }
-
-        let line_end_overshoot = layout.line_end_overshoot();
-
-        for (range, color) in image_colors {
-            match colors_render_mode {
-                DocumentColorsRenderMode::Inlay | DocumentColorsRenderMode::None => return,
-                DocumentColorsRenderMode::Background => {
-                    self.paint_highlighted_range(
-                        range.clone(),
-                        true,
-                        *color,
-                        Pixels::ZERO,
-                        line_end_overshoot,
-                        layout,
-                        window,
-                    );
-                }
-                DocumentColorsRenderMode::Border => {
-                    self.paint_highlighted_range(
-                        range.clone(),
-                        false,
-                        *color,
-                        Pixels::ZERO,
-                        line_end_overshoot,
-                        layout,
-                        window,
-                    );
-                }
-            }
-        }
     }
 
     fn paint_cursors(&mut self, layout: &mut EditorLayout, window: &mut Window, cx: &mut App) {
@@ -8280,12 +8237,6 @@ impl Element for EditorElement {
                             cx,
                         );
 
-                    let document_colors = self
-                        .editor
-                        .read(cx)
-                        .colors
-                        .as_ref()
-                        .map(|colors| colors.editor_display_highlights(&snapshot));
                     let redacted_ranges = self.editor.read(cx).redacted_ranges(
                         start_anchor..end_anchor,
                         &snapshot.display_snapshot,
@@ -8491,11 +8442,7 @@ impl Element for EditorElement {
                     let bg_segments_per_row = Self::bg_segments_per_row(
                         start_row..end_row,
                         &selections,
-                        highlighted_ranges.iter().cloned().chain(
-                            document_colors
-                                .iter()
-                                .flat_map(|(_, colors)| colors.iter().cloned()),
-                        ),
+                        highlighted_ranges.iter().cloned(),
                         self.style.background,
                     );
 
@@ -9346,7 +9293,6 @@ impl Element for EditorElement {
                         highlighted_ranges,
                         highlighted_gutter_ranges,
                         redacted_ranges,
-                        document_colors,
                         line_elements,
                         line_numbers,
                         blamed_display_rows,
@@ -9591,7 +9537,6 @@ pub struct EditorLayout {
     space_invisible: ShapedLine,
     sticky_buffer_header: Option<AnyElement>,
     sticky_headers: Option<header::StickyHeaders>,
-    document_colors: Option<(DocumentColorsRenderMode, Vec<(Range<DisplayPoint>, Hsla)>)>,
     text_align: TextAlign,
     content_width: Pixels,
 }
