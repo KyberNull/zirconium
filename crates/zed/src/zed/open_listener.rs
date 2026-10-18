@@ -67,9 +67,6 @@ pub enum OpenRequestKind {
     DockMenuAction {
         index: usize,
     },
-    BuiltinJsonSchema {
-        schema_path: String,
-    },
     Setting {
         /// `None` opens settings without navigating to a specific path.
         setting_path: Option<String>,
@@ -104,10 +101,6 @@ impl std::fmt::Debug for OpenRequestKind {
             Self::DockMenuAction { index } => f
                 .debug_struct("DockMenuAction")
                 .field("index", index)
-                .finish(),
-            Self::BuiltinJsonSchema { schema_path } => f
-                .debug_struct("BuiltinJsonSchema")
-                .field("schema_path", schema_path)
                 .finish(),
             Self::Setting { setting_path } => f
                 .debug_struct("Setting")
@@ -178,10 +171,6 @@ impl OpenRequest {
                 this.parse_agent_url(agent_path)
             } else if url == "zed://" || url == "zed://open" || url == "zed://open/" {
                 this.kind = Some(OpenRequestKind::FocusApp);
-            } else if let Some(schema_path) = url.strip_prefix("zed://schemas/") {
-                this.kind = Some(OpenRequestKind::BuiltinJsonSchema {
-                    schema_path: schema_path.to_string(),
-                });
             } else if url == "zed://settings" || url == "zed://settings/" {
                 this.kind = Some(OpenRequestKind::Setting { setting_path: None });
             } else if let Some(setting_path) = url.strip_prefix("zed://settings/") {

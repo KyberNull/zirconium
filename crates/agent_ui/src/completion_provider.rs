@@ -18,11 +18,9 @@ use gpui::{
 use language::{Buffer, CodeLabel, CodeLabelBuilder, HighlightId};
 use lsp::CompletionContext;
 use multi_buffer::ToOffset as _;
-use ordered_float::OrderedFloat;
-use project::lsp_store::{CompletionDocumentation, SymbolLocation};
+use project::lsp_store::CompletionDocumentation;
 use project::{
-    Completion, CompletionDisplayOptions, CompletionGroup, CompletionIntent, CompletionResponse,
-    DiagnosticSummary, PathMatchCandidateSet, Project, ProjectPath, Symbol, WorktreeId,
+    Completion, CompletionDisplayOptions, CompletionGroup, CompletionIntent, CompletionResponse, PathMatchCandidateSet, Project, ProjectPath, WorktreeId,
 };
 
 use rope::Point;
@@ -32,7 +30,6 @@ use terminal_view::{TerminalView, terminal_panel::TerminalPanel};
 use text::{Anchor, ToOffset as _, ToPoint as _};
 use ui::IconName;
 use ui::prelude::*;
-use util::ResultExt as _;
 use util::paths::PathStyle;
 use util::rel_path::RelPath;
 use util::truncate_and_remove_front;
@@ -2132,10 +2129,6 @@ pub(crate) fn search_skills(
             .map(|mat| skills[mat.candidate_id].clone())
             .collect()
     })
-}
-
-pub struct SymbolMatch {
-    pub symbol: Symbol,
 }
 
 pub struct FileMatch {

@@ -8504,28 +8504,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "json_schema_store"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "collections",
- "extension",
- "feature_flags",
- "gpui",
- "language",
- "parking_lot",
- "paths",
- "project",
- "schemars 1.0.4",
- "serde_json",
- "settings",
- "snippet_provider",
- "task",
- "theme",
- "util",
-]
-
-[[package]]
 name = "jsonschema"
 version = "0.37.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8618,7 +8596,6 @@ dependencies = [
  "fuzzy",
  "gpui",
  "itertools 0.14.0",
- "json_schema_store",
  "language",
  "log",
  "menu",
@@ -14036,7 +14013,6 @@ dependencies = [
  "gpui_tokio",
  "http_client",
  "image",
- "json_schema_store",
  "language",
  "language_extension",
  "language_model",
@@ -21288,7 +21264,6 @@ dependencies = [
  "install_cli",
  "itertools 0.14.0",
  "journal",
- "json_schema_store",
  "keymap_editor",
  "language",
  "language_extension",

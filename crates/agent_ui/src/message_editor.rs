@@ -2247,7 +2247,7 @@ mod tests {
     };
 
     use fs::FakeFs;
-    use futures::{FutureExt as _, StreamExt as _};
+    use futures::FutureExt as _;
     use gpui::{
         AppContext, ClipboardEntry, ClipboardItem, Entity, EventEmitter, ExternalPaths,
         FocusHandle, Focusable, Task, TestAppContext, VisualTestContext,
