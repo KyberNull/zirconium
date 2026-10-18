@@ -93,13 +93,12 @@ impl SessionCapabilities {
     }
 
     fn supported_modes(&self, has_thread_store: bool) -> Vec<PromptContextType> {
-        let mut supported = vec![PromptContextType::File, PromptContextType::Symbol];
+        let mut supported = vec![PromptContextType::File];
         if self.prompt_capabilities.embedded_context {
             if has_thread_store {
                 supported.push(PromptContextType::Thread);
             }
             supported.extend(&[
-                PromptContextType::Diagnostics,
                 PromptContextType::Fetch,
                 PromptContextType::Skill,
                 PromptContextType::BranchDiff,
@@ -3277,8 +3276,7 @@ mod tests {
                     format!("seven.txt b{slash}"),
                     format!("six.txt b{slash}"),
                     format!("five.txt b{slash}"),
-                    "Files & Directories".into(),
-                    "Symbols".into()
+                    "Files & Directories".into()
                 ]
             );
             editor.set_text("", window, cx);
@@ -3313,7 +3311,6 @@ mod tests {
                     format!("six.txt b{slash}"),
                     format!("five.txt b{slash}"),
                     "Files & Directories".into(),
-                    "Symbols".into(),
                     "Threads".into(),
                     "Fetch".into()
                 ]
@@ -3457,131 +3454,13 @@ mod tests {
             assert_eq!(fold_ranges(editor, cx).len(), 2);
         });
 
-        let plain_text_language = Arc::new(language::Language::new(
-            language::LanguageConfig {
-                name: "Plain Text".into(),
-                matcher: (language::LanguageMatcher {
-                    path_suffixes: vec!["txt".to_string()],
-                    ..Default::default()
-                })
-                .into(),
-                ..Default::default()
-            },
-            None,
-        ));
-
-        // Register the language and fake LSP
-        let language_registry = project.read_with(&cx, |project, _| project.languages().clone());
-        language_registry.add(plain_text_language);
-
-        let mut fake_language_servers = language_registry.register_fake_lsp(
-            "Plain Text",
-            language::FakeLspAdapter {
-                capabilities: lsp::ServerCapabilities {
-                    workspace_symbol_provider: Some(lsp::OneOf::Left(true)),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-        );
-
-        // Open the buffer to trigger LSP initialization
-        let buffer = project
-            .update(&mut cx, |project, cx| {
-                project.open_local_buffer(path!("/dir/a/one.txt"), cx)
-            })
-            .await
-            .unwrap();
-
-        // Register the buffer with language servers
-        let _handle = project.update(&mut cx, |project, cx| {
-            project.register_buffer_with_language_servers(&buffer, cx)
-        });
-
-        cx.run_until_parked();
-
-        let fake_language_server = fake_language_servers.next().await.unwrap();
-        fake_language_server.set_request_handler::<lsp::WorkspaceSymbolRequest, _, _>(
-            move |_, _| async move {
-                Ok(Some(lsp::WorkspaceSymbolResponse::Flat(vec![
-                    #[allow(deprecated)]
-                    lsp::SymbolInformation {
-                        name: "MySymbol".into(),
-                        location: lsp::Location {
-                            uri: lsp::Uri::from_file_path(path!("/dir/a/one.txt")).unwrap(),
-                            range: lsp::Range::new(
-                                lsp::Position::new(0, 0),
-                                lsp::Position::new(0, 1),
-                            ),
-                        },
-                        kind: lsp::SymbolKind::CONSTANT,
-                        tags: None,
-                        container_name: None,
-                        deprecated: None,
-                    },
-                ])))
-            },
-        );
-
-        cx.simulate_input("@symbol ");
-
-        editor.update(&mut cx, |editor, cx| {
-            assert_eq!(
-                editor.text(cx),
-                format!("Lorem [@one.txt]({url_one})  Ipsum [@eight.txt]({url_eight}) @symbol ")
-            );
-            assert!(editor.has_visible_completions_menu());
-            assert_eq!(current_completion_labels(editor), &["MySymbol one.txt L1"]);
-        });
-
-        editor.update_in(&mut cx, |editor, window, cx| {
-            editor.confirm_completion(&editor::actions::ConfirmCompletion::default(), window, cx);
-        });
-
-        let symbol = MentionUri::Symbol {
-            abs_path: path!("/dir/a/one.txt").into(),
-            name: "MySymbol".into(),
-            line_range: 0..=0,
-        };
-
-        let contents = message_editor
-            .update(&mut cx, |message_editor, cx| {
-                message_editor
-                    .mention_set()
-                    .update(cx, |mention_set, cx| mention_set.contents(false, cx))
-            })
-            .await
-            .unwrap()
-            .into_values()
-            .collect::<Vec<_>>();
-
-        {
-            let [_, _, (uri, Mention::Text { content, .. })] = contents.as_slice() else {
-                panic!("Unexpected mentions");
-            };
-            pretty_assertions::assert_eq!(content, "1");
-            pretty_assertions::assert_eq!(uri, &symbol);
-        }
-
-        cx.run_until_parked();
-
-        editor.read_with(&cx, |editor, cx| {
-            assert_eq!(
-                editor.text(cx),
-                format!(
-                    "Lorem [@one.txt]({url_one})  Ipsum [@eight.txt]({url_eight}) [@MySymbol]({}) ",
-                    symbol.to_uri(),
-                )
-            );
-        });
-
         // Try to mention an "image" file that will fail to load
         cx.simulate_input("@file x.png");
 
         editor.update(&mut cx, |editor, cx| {
             assert_eq!(
                 editor.text(cx),
-                format!("Lorem [@one.txt]({url_one})  Ipsum [@eight.txt]({url_eight}) [@MySymbol]({}) @file x.png", symbol.to_uri())
+                format!("Lorem [@one.txt]({url_one})  Ipsum [@eight.txt]({url_eight}) @file x.png")
             );
             assert!(editor.has_visible_completions_menu());
             assert_eq!(current_completion_labels(editor), &["x.png "]);
@@ -3608,8 +3487,7 @@ mod tests {
             assert_eq!(
                 editor.text(cx),
                 format!(
-                    "Lorem [@one.txt]({url_one})  Ipsum [@eight.txt]({url_eight}) [@MySymbol]({}) ",
-                    symbol.to_uri()
+                    "Lorem [@one.txt]({url_one})  Ipsum [@eight.txt]({url_eight}) "
                 )
             );
         });
@@ -3620,7 +3498,7 @@ mod tests {
         editor.update(&mut cx, |editor, cx| {
                     assert_eq!(
                         editor.text(cx),
-                        format!("Lorem [@one.txt]({url_one})  Ipsum [@eight.txt]({url_eight}) [@MySymbol]({}) @file x.png", symbol.to_uri())
+                        format!("Lorem [@one.txt]({url_one})  Ipsum [@eight.txt]({url_eight}) @file x.png")
                     );
                     assert!(editor.has_visible_completions_menu());
                     assert_eq!(current_completion_labels(editor), &["x.png "]);
@@ -3638,8 +3516,7 @@ mod tests {
             assert_eq!(
                 editor.text(cx),
                 format!(
-                    "Lorem [@one.txt]({url_one})  Ipsum [@eight.txt]({url_eight}) [@MySymbol]({}) ",
-                    symbol.to_uri()
+                    "Lorem [@one.txt]({url_one})  Ipsum [@eight.txt]({url_eight}) "
                 )
             );
         });
@@ -3653,7 +3530,7 @@ mod tests {
             })
             .await
             .unwrap();
-        assert_eq!(contents.len(), 3);
+        assert_eq!(contents.len(), 2);
     }
 
     fn fold_ranges(editor: &Editor, cx: &mut App) -> Vec<Range<Point>> {

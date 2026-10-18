@@ -1,4 +1,3 @@
-use crate::diagnostics::{DiagnosticsOptions, codeblock_fence_for_path, collect_diagnostics};
 use acp_thread::{MentionUri, selection_name};
 use agent::{ThreadStore, outline};
 use agent_client_protocol::schema::v1 as acp;
@@ -19,7 +18,7 @@ use http_client::{AsyncBody, HttpClientWithUrl};
 use itertools::Either;
 use language::Buffer;
 use language_model::{LanguageModelImage, LanguageModelImageExt};
-use multi_buffer::MultiBufferRow;
+use multi_buffer::{MultiBuffer, MultiBufferRow};
 use postage::stream::Stream as _;
 use project::{Project, ProjectItem, ProjectPath, Worktree};
 use rope::Point;
@@ -149,10 +148,9 @@ impl MentionSet {
             MentionUri::Skill {
                 skill_file_path, ..
             } => self.confirm_mention_for_skill(skill_file_path, cx),
-            MentionUri::Diagnostics {
-                include_errors,
-                include_warnings,
-            } => self.confirm_mention_for_diagnostics(include_errors, include_warnings, cx),
+            MentionUri::Diagnostics { .. } => {
+                Task::ready(Err(anyhow!("Diagnostics mentions are no longer supported")))
+            }
             MentionUri::GitDiff { base_ref } => {
                 self.confirm_mention_for_git_diff(base_ref.into(), cx)
             }
@@ -323,10 +321,9 @@ impl MentionSet {
             MentionUri::Skill {
                 skill_file_path, ..
             } => self.confirm_mention_for_skill(skill_file_path, cx),
-            MentionUri::Diagnostics {
-                include_errors,
-                include_warnings,
-            } => self.confirm_mention_for_diagnostics(include_errors, include_warnings, cx),
+            MentionUri::Diagnostics { .. } => {
+                Task::ready(Err(anyhow!("Diagnostics mentions are no longer supported")))
+            }
             MentionUri::PastedImage { .. } => {
                 debug_panic!("pasted image URI should not be included in completions");
                 Task::ready(Err(anyhow!(
@@ -637,36 +634,6 @@ impl MentionSet {
                 .await?;
             Ok(Mention::Text {
                 content: summary.to_string(),
-                tracked_buffers: Vec::new(),
-            })
-        })
-    }
-
-    fn confirm_mention_for_diagnostics(
-        &self,
-        include_errors: bool,
-        include_warnings: bool,
-        cx: &mut Context<Self>,
-    ) -> Task<Result<Mention>> {
-        let Some(project) = self.project.upgrade() else {
-            return Task::ready(Err(anyhow!("project not found")));
-        };
-
-        let diagnostics_task = collect_diagnostics(
-            project,
-            DiagnosticsOptions {
-                include_errors,
-                include_warnings,
-                path_matcher: None,
-            },
-            cx,
-        );
-        cx.spawn(async move |_, _| {
-            let content = diagnostics_task
-                .await?
-                .unwrap_or_else(|| "No diagnostics found.".into());
-            Ok(Mention::Text {
-                content,
                 tracked_buffers: Vec::new(),
             })
         })
@@ -1518,4 +1485,29 @@ async fn fetch_url_content(http_client: Arc<HttpClientWithUrl>, url: String) -> 
             ))
         }
     }
+}
+
+pub fn codeblock_fence_for_path(
+    path: Option<&str>,
+    row_range: Option<RangeInclusive<u32>>,
+) -> String {
+    let mut text = String::new();
+    write!(text, "```").unwrap();
+
+    if let Some(path) = path {
+        if let Some(extension) = Path::new(path).extension().and_then(|ext| ext.to_str()) {
+            write!(text, "{} ", extension).unwrap();
+        }
+
+        write!(text, "{path}").unwrap();
+    } else {
+        write!(text, "{}", MultiBuffer::DEFAULT_TITLE).unwrap();
+    }
+
+    if let Some(row_range) = row_range {
+        write!(text, ":{}-{}", row_range.start() + 1, row_range.end() + 1).unwrap();
+    }
+
+    text.push('\n');
+    text
 }
