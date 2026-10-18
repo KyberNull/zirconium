@@ -15,7 +15,6 @@ use ordered_float::OrderedFloat;
 use project::lsp_store::CompletionDocumentation;
 use project::{Completion, CompletionGroup, TaskSourceKind};
 use project::{CompletionDisplayOptions, CompletionSource};
-use task::TaskContext;
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -1836,14 +1835,12 @@ fn exact_case_match_count(query: &str, string_match: &StringMatch) -> usize {
 #[derive(Clone)]
 pub struct CodeActionContents {
     tasks: Option<Rc<ResolvedTasks>>,
-    pub(crate) context: TaskContext,
 }
 
 impl CodeActionContents {
-    pub(crate) fn new(tasks: Option<ResolvedTasks>, context: TaskContext) -> Self {
+    pub(crate) fn new(tasks: Option<ResolvedTasks>) -> Self {
         Self {
             tasks: tasks.map(Rc::new),
-            context,
         }
     }
 

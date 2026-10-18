@@ -86,11 +86,11 @@ impl Editor {
                             tasks.column,
                         )),
                     });
-            anyhow::Ok((resolved_tasks, task_context))
+            anyhow::Ok(resolved_tasks)
         });
 
         let toggle_task = cx.spawn_in(window, async move |editor, cx| {
-            let (resolved_tasks, task_context) = runnable_task.await?;
+            let resolved_tasks = runnable_task.await?;
 
             editor.update_in(cx, |editor, window, cx| {
                 let spawn_straight_away = quick_launch
@@ -99,8 +99,7 @@ impl Editor {
                         .is_some_and(|tasks| tasks.templates.len() == 1);
 
                 crate::hover_popover::hide_hover(editor, cx);
-                let actions =
-                    CodeActionContents::new(resolved_tasks, task_context.unwrap_or_default());
+                let actions = CodeActionContents::new(resolved_tasks);
 
                 // Don't show the menu if there are no actions available
                 if actions.is_empty() {

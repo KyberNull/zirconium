@@ -1198,29 +1198,6 @@ impl Editor {
         }
     }
 
-    pub(super) fn go_to_line<T: 'static>(
-        &mut self,
-        position: Anchor,
-        highlight_color: fn(&App) -> Hsla,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let snapshot = self.snapshot(window, cx).display_snapshot;
-        let position = position.to_point(&snapshot.buffer_snapshot());
-        let start = snapshot
-            .buffer_snapshot()
-            .clip_point(Point::new(position.row, 0), Bias::Left);
-        let end = start + Point::new(1, 0);
-        let start = snapshot.buffer_snapshot().anchor_before(start);
-        let end = snapshot.buffer_snapshot().anchor_before(end);
-
-        self.highlight_rows::<T>(start..end, highlight_color, Default::default(), cx);
-
-        if self.buffer.read(cx).is_singleton() {
-            self.request_autoscroll(Autoscroll::center().for_anchor(start), cx);
-        }
-    }
-
     pub fn navigate_to_hover_links(
         &mut self,
         links: Vec<HoverLink>,
