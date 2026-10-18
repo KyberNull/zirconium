@@ -562,16 +562,10 @@ actions!(
         /// edits outside the selected ranges are discarded. External command formatters do not
         /// support range formatting and are skipped.
         FormatSelections,
-        /// Goes to declaration in a split pane.
-        GoToDeclarationSplit,
-        /// Goes to definition in a split pane.
-        GoToDefinitionSplit,
         /// Goes to the next diff hunk.
         GoToHunk,
         /// Goes to the previous diff hunk.
         GoToPreviousHunk,
-        /// Goes to implementation in a split pane.
-        GoToImplementationSplit,
         /// Goes to the next bookmark in the file.
         GoToNextBookmark,
         /// Goes to the next change in the file.
@@ -584,12 +578,6 @@ actions!(
         GoToNextSymbol,
         /// Goes to the previous symbol.
         GoToPreviousSymbol,
-        /// Goes to the next reference to the symbol under the cursor.
-        GoToNextReference,
-        /// Goes to the previous reference to the symbol under the cursor.
-        GoToPreviousReference,
-        /// Goes to type definition in a split pane.
-        GoToTypeDefinitionSplit,
         /// Scrolls down by half a page.
         HalfPageDown,
         /// Scrolls up by half a page.
@@ -902,72 +890,6 @@ actions!(
         ToggleBreadcrumb,
     ]
 );
-
-/// Goes to the definition of the symbol at cursor.
-#[derive(PartialEq, Clone, Default, Deserialize, JsonSchema, Action)]
-#[action(namespace = editor)]
-#[serde(deny_unknown_fields)]
-pub struct GoToDefinition {
-    /// Where to show the definitions. Falls back to the `lsp_results_location`
-    /// setting when omitted. A single result is always opened directly.
-    #[serde(default)]
-    pub open_results_in: Option<OpenResultsIn>,
-}
-
-/// Goes to the declaration of the symbol at cursor.
-#[derive(PartialEq, Clone, Default, Deserialize, JsonSchema, Action)]
-#[action(namespace = editor)]
-#[serde(deny_unknown_fields)]
-pub struct GoToDeclaration {
-    /// Where to show the declarations. Falls back to the `lsp_results_location`
-    /// setting when omitted. A single result is always opened directly.
-    #[serde(default)]
-    pub open_results_in: Option<OpenResultsIn>,
-}
-
-/// Goes to the implementation of the symbol at cursor.
-#[derive(PartialEq, Clone, Default, Deserialize, JsonSchema, Action)]
-#[action(namespace = editor)]
-#[serde(deny_unknown_fields)]
-pub struct GoToImplementation {
-    /// Where to show the implementations. Falls back to the `lsp_results_location`
-    /// setting when omitted. A single result is always opened directly.
-    #[serde(default)]
-    pub open_results_in: Option<OpenResultsIn>,
-}
-
-/// Goes to the type definition of the symbol at cursor.
-#[derive(PartialEq, Clone, Default, Deserialize, JsonSchema, Action)]
-#[action(namespace = editor)]
-#[serde(deny_unknown_fields)]
-pub struct GoToTypeDefinition {
-    /// Where to show the definitions. Falls back to the `lsp_results_location`
-    /// setting when omitted. A single result is always opened directly.
-    #[serde(default)]
-    pub open_results_in: Option<OpenResultsIn>,
-}
-
-/// Finds all references to the symbol at cursor.
-#[derive(PartialEq, Clone, Deserialize, JsonSchema, Action)]
-#[action(namespace = editor)]
-#[serde(deny_unknown_fields)]
-pub struct FindAllReferences {
-    #[serde(default = "default_true")]
-    pub always_open_multibuffer: bool,
-    /// Where to show the references. Falls back to the `lsp_results_location`
-    /// setting when omitted. A single result is always opened directly.
-    #[serde(default)]
-    pub open_results_in: Option<OpenResultsIn>,
-}
-
-impl Default for FindAllReferences {
-    fn default() -> Self {
-        Self {
-            always_open_multibuffer: true,
-            open_results_in: None,
-        }
-    }
-}
 
 /// Edits a stored review comment inline.
 #[derive(PartialEq, Clone, Deserialize, JsonSchema, Action)]

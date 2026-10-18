@@ -1,18 +1,15 @@
 use crate::{
-    Anchor, Editor, EditorSettings, EditorSnapshot, FindAllReferences, GoToDefinitionSplit,
-    GoToTypeDefinition, GoToTypeDefinitionSplit, GotoDefinitionKind, HighlightKey, Navigated,
-    PointForPosition, SelectPhase, editor_settings::GoToDefinitionFallback, scroll::ScrollAmount,
+    Anchor, Editor, EditorSnapshot, HighlightKey, Navigated, PointForPosition, SelectPhase,
+    scroll::ScrollAmount,
 };
 use gpui::{
-    App, AsyncWindowContext, Context, Entity, Focusable, HighlightStyle, Modifiers, Pixels, Task,
+    AsyncWindowContext, Context, Entity, HighlightStyle, Modifiers, Pixels, Task,
     UnderlineStyle, Window, px,
 };
 use language::{Bias, ToOffset};
 use linkify::{LinkFinder, LinkKind};
-use lsp::LanguageServerId;
-use project::{InlayId, LocationLink, Project, ResolvedPath};
+use project::{Project, ResolvedPath};
 use regex::Regex;
-use settings::Settings;
 use std::{ops::Range, sync::LazyLock};
 use text::OffsetRangeExt;
 use theme::ActiveTheme as _;
@@ -21,7 +18,6 @@ use util::{ResultExt, TryFutureExt as _, paths::PathWithPosition};
 #[derive(Debug)]
 pub struct HoveredLinkState {
     pub last_trigger_point: TriggerPoint,
-    pub preferred_kind: GotoDefinitionKind,
     pub symbol_range: Option<RangeInEditor>,
     pub links: Vec<HoverLink>,
     pub task: Option<Task<Option<()>>>,
@@ -30,14 +26,12 @@ pub struct HoveredLinkState {
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum RangeInEditor {
     Text(Range<Anchor>),
-    Inlay(InlayHighlight),
 }
 
 impl RangeInEditor {
     pub fn as_text_range(&self) -> Option<Range<Anchor>> {
         match self {
             Self::Text(range) => Some(range.clone()),
-            Self::Inlay(_) => None,
         }
     }
 
@@ -59,13 +53,6 @@ impl RangeInEditor {
                 let point_after_end = range.end.cmp(point, &buffer_snapshot).is_ge();
                 point_after_start && point_after_end
             }
-            (Self::Inlay(highlight), TriggerPoint::InlayHint(point, _, _)) => {
-                highlight.inlay == point.inlay
-                    && highlight.range.contains(&point.range.start)
-                    && highlight.range.contains(&point.range.end)
-            }
-            (Self::Inlay(_), TriggerPoint::Text(_))
-            | (Self::Text(_), TriggerPoint::InlayHint(_, _, _)) => false,
         }
     }
 }
@@ -74,52 +61,19 @@ impl RangeInEditor {
 pub enum HoverLink {
     Url(String),
     File(ResolvedFileTarget),
-    Text(LocationLink),
-    /// Navigate to an LSP-given location whose buffer may not be loaded yet.
-    /// Used by inlay-hint hover, code-lens references, and document-link
-    /// targets that point inside a workspace file (e.g. `file:///foo#9,16`).
-    LspLocation(lsp::Location, LanguageServerId),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct InlayHighlight {
-    pub inlay: InlayId,
-    pub inlay_position: Anchor,
-    pub range: Range<usize>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TriggerPoint {
     Text(Anchor),
-    InlayHint(InlayHighlight, lsp::Location, LanguageServerId),
 }
 
 impl TriggerPoint {
     fn anchor(&self) -> &Anchor {
         match self {
             TriggerPoint::Text(anchor) => anchor,
-            TriggerPoint::InlayHint(inlay_range, _, _) => &inlay_range.inlay_position,
         }
     }
-}
-
-pub fn exclude_link_to_position(
-    buffer: &Entity<language::Buffer>,
-    current_position: &text::Anchor,
-    location: &LocationLink,
-    cx: &App,
-) -> bool {
-    // Exclude definition links that points back to cursor position.
-    // (i.e., currently cursor upon definition).
-    let snapshot = buffer.read(cx).snapshot();
-    !(buffer == &location.target.buffer
-        && current_position
-            .bias_right(&snapshot)
-            .cmp(&location.target.range.start, &snapshot)
-            .is_ge()
-        && current_position
-            .cmp(&location.target.range.end, &snapshot)
-            .is_le())
 }
 
 impl Editor {
@@ -151,7 +105,7 @@ impl Editor {
                         .anchor_before(point.to_offset(&snapshot.display_snapshot, Bias::Left)),
                 );
 
-                show_link_definition(modifiers.shift, self, trigger_point, snapshot, window, cx);
+                show_link_definition(self, trigger_point, snapshot, window, cx);
             }
             None => {
                 self.hide_hovered_link(cx);
@@ -168,26 +122,12 @@ impl Editor {
     pub(crate) fn handle_click_hovered_link(
         &mut self,
         point: PointForPosition,
-        modifiers: Modifiers,
         window: &mut Window,
         cx: &mut Context<Editor>,
     ) {
-        let focus_handle = self.focus_handle(cx);
-        let reveal_task = self.cmd_click_reveal_task(point, modifiers, window, cx);
-        cx.spawn_in(window, async move |_, cx| {
-            let definition_revealed = reveal_task.await.log_err().unwrap_or(Navigated::No);
-            if definition_revealed == Navigated::Yes {
-                return;
-            }
-            cx.update(|window, cx| {
-                match EditorSettings::get_global(cx).go_to_definition_fallback {
-                    GoToDefinitionFallback::None => {}
-                    GoToDefinitionFallback::FindAllReferences => {
-                        focus_handle.dispatch_action(&FindAllReferences::default(), window, cx);
-                    }
-                }
-            })
-            .ok();
+        let reveal_task = self.cmd_click_reveal_task(point, window, cx);
+        cx.spawn_in(window, async move |_, _| {
+            reveal_task.await.log_err();
         })
         .detach();
     }
@@ -219,58 +159,22 @@ impl Editor {
     fn cmd_click_reveal_task(
         &mut self,
         point: PointForPosition,
-        modifiers: Modifiers,
         window: &mut Window,
         cx: &mut Context<Editor>,
     ) -> Task<anyhow::Result<Navigated>> {
-        if let Some(hovered_link_state) = self.hovered_link_state.take() {
+        let navigate_task = if let Some(hovered_link_state) = self.hovered_link_state.take() {
             self.hide_hovered_link(cx);
-            if !hovered_link_state.links.is_empty() {
+            if hovered_link_state.links.is_empty() {
+                Task::ready(Ok(Navigated::No))
+            } else {
                 if !self.focus_handle.is_focused(window) {
                     window.focus(&self.focus_handle, cx);
                 }
-
-                // exclude links pointing back to the current anchor
-                let current_position = point
-                    .next_valid
-                    .to_point(&self.snapshot(window, cx).display_snapshot);
-                let Some((buffer, anchor)) = self
-                    .buffer()
-                    .read(cx)
-                    .text_anchor_for_position(current_position, cx)
-                else {
-                    return Task::ready(Ok(Navigated::No));
-                };
-                let Some(multi_buffer_anchor) = self
-                    .buffer()
-                    .read(cx)
-                    .snapshot(cx)
-                    .anchor_in_excerpt(anchor)
-                else {
-                    return Task::ready(Ok(Navigated::No));
-                };
-                let links = hovered_link_state
-                    .links
-                    .into_iter()
-                    .filter(|link| {
-                        if let HoverLink::Text(location) = link {
-                            exclude_link_to_position(&buffer, &anchor, location, cx)
-                        } else {
-                            true
-                        }
-                    })
-                    .collect();
-                let nav_entry = self.navigation_entry(multi_buffer_anchor, cx);
-                let split = Self::is_alt_pressed(&modifiers, cx);
-                let navigate_task =
-                    self.navigate_to_hover_links(None, links, nav_entry, split, window, cx);
-                self.select(SelectPhase::End, window, cx);
-                return navigate_task;
+                self.navigate_to_hover_links(hovered_link_state.links, window, cx)
             }
-        }
-
-        // We don't have the correct kind of link cached, set the selection on
-        // click and immediately trigger GoToDefinition.
+        } else {
+            Task::ready(Ok(Navigated::No))
+        };
         self.select(
             SelectPhase::Begin {
                 position: point.next_valid,
@@ -280,42 +184,18 @@ impl Editor {
             window,
             cx,
         );
-
-        let navigate_task = if point.as_valid().is_some() {
-            let split = Self::is_alt_pressed(&modifiers, cx);
-            match (modifiers.shift, split) {
-                (true, true) => {
-                    self.go_to_type_definition_split(&GoToTypeDefinitionSplit, window, cx)
-                }
-                (true, false) => {
-                    self.go_to_type_definition(&GoToTypeDefinition::default(), window, cx)
-                }
-                (false, true) => self.go_to_definition_split(&GoToDefinitionSplit, window, cx),
-                (false, false) => {
-                    self.go_to_definition_of_kind(GotoDefinitionKind::Symbol, false, window, cx)
-                }
-            }
-        } else {
-            Task::ready(Ok(Navigated::No))
-        };
         self.select(SelectPhase::End, window, cx);
         navigate_task
     }
 }
 
 pub fn show_link_definition(
-    shift_held: bool,
     editor: &mut Editor,
     trigger_point: TriggerPoint,
     snapshot: &EditorSnapshot,
     window: &mut Window,
     cx: &mut Context<Editor>,
 ) {
-    let preferred_kind = match trigger_point {
-        TriggerPoint::Text(_) if !shift_held => GotoDefinitionKind::Symbol,
-        _ => GotoDefinitionKind::Type,
-    };
-
     let (mut hovered_link_state, is_cached) =
         if let Some(existing) = editor.hovered_link_state.take() {
             (existing, true)
@@ -324,17 +204,12 @@ pub fn show_link_definition(
                 HoveredLinkState {
                     last_trigger_point: trigger_point.clone(),
                     symbol_range: None,
-                    preferred_kind,
                     links: vec![],
                     task: None,
                 },
                 false,
             )
         };
-
-    if editor.pending_rename.is_some() {
-        return;
-    }
 
     let anchor = trigger_point.anchor().bias_left(snapshot.buffer_snapshot());
     let Some((anchor, _)) = snapshot.buffer_snapshot().anchor_to_buffer_anchor(anchor) else {
@@ -343,176 +218,74 @@ pub fn show_link_definition(
     let Some(buffer) = editor.buffer.read(cx).buffer(anchor.buffer_id) else {
         return;
     };
-    let same_kind = hovered_link_state.preferred_kind == preferred_kind
-        || hovered_link_state
-            .links
-            .first()
-            .is_some_and(|d| matches!(d, HoverLink::Url(_) | HoverLink::LspLocation(_, _)));
 
-    if same_kind {
-        if is_cached && (hovered_link_state.last_trigger_point == trigger_point)
-            || hovered_link_state
-                .symbol_range
-                .as_ref()
-                .is_some_and(|symbol_range| {
-                    symbol_range.point_within_range(&trigger_point, snapshot)
-                })
-        {
-            editor.hovered_link_state = Some(hovered_link_state);
-            return;
-        }
-    } else {
-        editor.hide_hovered_link(cx)
+    if is_cached && (hovered_link_state.last_trigger_point == trigger_point)
+        || hovered_link_state
+            .symbol_range
+            .as_ref()
+            .is_some_and(|symbol_range| symbol_range.point_within_range(&trigger_point, snapshot))
+    {
+        editor.hovered_link_state = Some(hovered_link_state);
+        return;
     }
     let project = editor.project.clone();
-    let provider = editor.semantics_provider.clone();
 
-    // Record the requested position so a mouse move on the same point short-circuits
-    // instead of re-querying, even when the server returns no `originSelectionRange`
-    // (which would otherwise leave `symbol_range` empty).
     hovered_link_state.last_trigger_point = trigger_point.clone();
 
     hovered_link_state.task = Some(cx.spawn_in(window, async move |this, cx| {
         async move {
-            let result = match &trigger_point {
-                TriggerPoint::Text(_) => {
-                    let mut links = Vec::new();
-                    let mut symbol_range = None;
+            let mut links = Vec::new();
+            let mut symbol_range = None;
 
-                    if let Some((url_range, url)) = find_url(&buffer, anchor, cx) {
-                        let snapshot =
-                            this.read_with(cx, |editor, cx| editor.buffer.read(cx).snapshot(cx))?;
-                        if let Some(range) = snapshot.buffer_anchor_range_to_anchor_range(url_range)
-                        {
-                            symbol_range = Some(RangeInEditor::Text(range));
-                        }
-                        links.push(HoverLink::Url(url));
-                    } else if let Some((filename_range, file_target)) =
-                        find_file(&buffer, project.clone(), anchor, cx).await
-                    {
-                        let snapshot =
-                            this.read_with(cx, |editor, cx| editor.buffer.read(cx).snapshot(cx))?;
-                        if let Some(range) =
-                            snapshot.buffer_anchor_range_to_anchor_range(filename_range)
-                        {
-                            symbol_range = Some(RangeInEditor::Text(range));
-                        }
-                        links.push(HoverLink::File(file_target));
-                    }
-
-                    // Always also collect LSP definitions so that cmd-click
-                    // reveals every applicable target.
-                    if let Some(provider) = provider {
-                        let task = cx.update(|_, cx| {
-                            provider.definitions(&buffer, anchor, preferred_kind, cx)
-                        })?;
-                        if let Some(task) = task
-                            && let Some(definition_result) = task.await.ok().flatten()
-                        {
-                            if symbol_range.is_none() {
-                                let snapshot = this.read_with(cx, |editor, cx| {
-                                    editor.buffer.read(cx).snapshot(cx)
-                                })?;
-                                symbol_range = definition_result.iter().find_map(|link| {
-                                    link.origin.as_ref().and_then(|origin| {
-                                        let range = snapshot.buffer_anchor_range_to_anchor_range(
-                                            origin.range.clone(),
-                                        )?;
-                                        Some(RangeInEditor::Text(range))
-                                    })
-                                });
-                            }
-                            links.extend(definition_result.into_iter().map(HoverLink::Text));
-                        }
-                    }
-
-                    if links.is_empty() {
-                        None
-                    } else {
-                        Some((symbol_range, links))
-                    }
+            if let Some((url_range, url)) = find_url(&buffer, anchor, cx) {
+                let snapshot =
+                    this.read_with(cx, |editor, cx| editor.buffer.read(cx).snapshot(cx))?;
+                if let Some(range) = snapshot.buffer_anchor_range_to_anchor_range(url_range) {
+                    symbol_range = Some(RangeInEditor::Text(range));
                 }
-                TriggerPoint::InlayHint(highlight, lsp_location, server_id) => Some((
-                    Some(RangeInEditor::Inlay(highlight.clone())),
-                    vec![HoverLink::LspLocation(lsp_location.clone(), *server_id)],
-                )),
-            };
+                links.push(HoverLink::Url(url));
+            } else if let Some((filename_range, file_target)) =
+                find_file(&buffer, project.clone(), anchor, cx).await
+            {
+                let snapshot =
+                    this.read_with(cx, |editor, cx| editor.buffer.read(cx).snapshot(cx))?;
+                if let Some(range) = snapshot.buffer_anchor_range_to_anchor_range(filename_range) {
+                    symbol_range = Some(RangeInEditor::Text(range));
+                }
+                links.push(HoverLink::File(file_target));
+            }
 
             this.update(cx, |editor, cx| {
-                // Clear any existing highlights
                 editor.clear_highlights(HighlightKey::HoveredLinkState, cx);
                 let Some(hovered_link_state) = editor.hovered_link_state.as_mut() else {
                     editor.hide_hovered_link(cx);
                     return;
                 };
-                hovered_link_state.preferred_kind = preferred_kind;
-                hovered_link_state.symbol_range = result
-                    .as_ref()
-                    .and_then(|(symbol_range, _)| symbol_range.clone());
+                hovered_link_state.symbol_range = symbol_range.clone();
 
-                if let Some((symbol_range, definitions)) = result {
-                    hovered_link_state.links = definitions;
-
-                    let underline_hovered_link = !hovered_link_state.links.is_empty()
-                        || hovered_link_state.symbol_range.is_some();
-
-                    if underline_hovered_link {
-                        let style = HighlightStyle {
-                            underline: Some(UnderlineStyle {
-                                thickness: px(1.),
-                                ..UnderlineStyle::default()
-                            }),
-                            color: Some(cx.theme().colors().link_text_hover),
-                            ..HighlightStyle::default()
-                        };
-                        let highlight_range =
-                            symbol_range.unwrap_or_else(|| match &trigger_point {
-                                TriggerPoint::Text(trigger_anchor) => {
-                                    let snapshot = editor.buffer.read(cx).snapshot(cx);
-                                    // If no symbol range returned from language server, use the surrounding word.
-                                    let (offset_range, _) =
-                                        snapshot.surrounding_word(*trigger_anchor, None);
-                                    RangeInEditor::Text(
-                                        snapshot.anchor_before(offset_range.start)
-                                            ..snapshot.anchor_after(offset_range.end),
-                                    )
-                                }
-                                TriggerPoint::InlayHint(highlight, _, _) => {
-                                    RangeInEditor::Inlay(highlight.clone())
-                                }
-                            });
-
-                        // When the server reports no `originSelectionRange`, fall back
-                        // to the highlighted word as the symbol range so that hovering
-                        // elsewhere within the same symbol reuses this result instead
-                        // of issuing another request.
-                        if let Some(hovered_link_state) = editor.hovered_link_state.as_mut()
-                            && hovered_link_state.symbol_range.is_none()
-                        {
-                            hovered_link_state.symbol_range = Some(highlight_range.clone());
-                        }
-
-                        match highlight_range {
-                            RangeInEditor::Text(text_range) => editor.highlight_text(
-                                HighlightKey::HoveredLinkState,
-                                vec![text_range],
-                                style,
-                                cx,
-                            ),
-                            RangeInEditor::Inlay(highlight) => editor.highlight_inlays(
-                                HighlightKey::HoveredLinkState,
-                                vec![highlight],
-                                style,
-                                cx,
-                            ),
-                        }
-                    }
-                } else {
-                    // When no links are found, we don't want to completely
-                    // throw away the `HoveredLinkState`, we'll want to at least
-                    // keep the `trigger_point` around in order to avoid sending
-                    // multiple requests for the same point.
+                if links.is_empty() {
+                    // Keep the `trigger_point` around in order to avoid searching
+                    // again for the same point.
                     hovered_link_state.links.clear();
+                    return;
+                }
+                hovered_link_state.links = links;
+
+                if let Some(RangeInEditor::Text(text_range)) = symbol_range {
+                    let style = HighlightStyle {
+                        underline: Some(UnderlineStyle {
+                            thickness: px(1.),
+                            ..UnderlineStyle::default()
+                        }),
+                        color: Some(cx.theme().colors().link_text_hover),
+                        ..HighlightStyle::default()
+                    };
+                    editor.highlight_text(
+                        HighlightKey::HoveredLinkState,
+                        vec![text_range],
+                        style,
+                        cx,
+                    );
                 }
             })?;
 

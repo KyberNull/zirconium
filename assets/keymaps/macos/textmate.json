@@ -10,7 +10,6 @@
     "bindings": {
       "cmd-l": "go_to_line::Toggle",
       "ctrl-shift-d": "editor::DuplicateLineDown",
-      "cmd-b": "editor::GoToDefinition",
       "cmd-j": "editor::ScrollCursorCenter",
       "cmd-enter": "editor::NewlineBelow",
       "cmd-alt-enter": "editor::NewlineAbove",

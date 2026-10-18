@@ -66,7 +66,6 @@
       ",": "vim::RepeatFindReversed",
       "ctrl-o": "pane::GoBack",
       "ctrl-i": "pane::GoForward",
-      "ctrl-]": "editor::GoToDefinition",
       "ctrl-t": "pane::GoToOlderTag",
       "escape": "vim::SwitchToNormalMode",
       "ctrl-[": "vim::SwitchToNormalMode",
@@ -90,16 +89,10 @@
       // "g" commands
       "g shift-r": "vim::PushReplaceWithRegister",
       "g r n": "editor::Rename",
-      "g r r": "editor::FindAllReferences",
-      "g r i": "editor::GoToImplementation",
       "g r a": "editor::ToggleCodeActions",
       "g g": "vim::StartOfDocument",
       "g h": "editor::Hover",
       "g B": "editor::BlameHover",
-      "g d": "editor::GoToDefinition",
-      "g shift-d": "editor::GoToDeclaration",
-      "g y": "editor::GoToTypeDefinition",
-      "g shift-i": "editor::GoToImplementation",
       "g x": "editor::OpenUrl",
       "g f": "editor::OpenSelectedFilename",
       "g n": "vim::SelectNextMatch",
@@ -112,7 +105,6 @@
       "g s": "outline::Toggle",
       "g shift-o": "outline::Toggle",
       "g .": "editor::ToggleCodeActions", // zed specific
-      "g shift-a": "editor::FindAllReferences", // zed specific
       "g space": "editor::OpenExcerpts", // zed specific
       "g *": ["vim::MoveToNext", { "partial_word": true }],
       "g #": ["vim::MoveToPrevious", { "partial_word": true }],
@@ -172,12 +164,6 @@
       "7": ["vim::Number", 7],
       "8": ["vim::Number", 8],
       "9": ["vim::Number", 9],
-      "ctrl-w d": "editor::GoToDefinitionSplit",
-      "ctrl-w g d": "editor::GoToDefinitionSplit",
-      "ctrl-w ]": "editor::GoToDefinitionSplit",
-      "ctrl-w ctrl-]": "editor::GoToDefinitionSplit",
-      "ctrl-w shift-d": "editor::GoToTypeDefinitionSplit",
-      "ctrl-w g shift-d": "editor::GoToTypeDefinitionSplit",
       "ctrl-w space": "editor::OpenExcerptsSplit",
       "ctrl-w g space": "editor::OpenExcerptsSplit",
       "ctrl-^": "pane::AlternateFile",
@@ -219,8 +205,6 @@
       "[ {": ["vim::UnmatchedBackward", { "char": "{" }],
       "] )": ["vim::UnmatchedForward", { "char": ")" }],
       "[ (": ["vim::UnmatchedBackward", { "char": "(" }],
-      "[ r": "vim::GoToPreviousReference",
-      "] r": "vim::GoToNextReference",
       // tree-sitter related commands
       "[ x": "vim::SelectLargerSyntaxNode",
       "] x": "vim::SelectSmallerSyntaxNode",
@@ -524,8 +508,6 @@
       "g t": "vim::WindowTop",
       "g c": "vim::WindowMiddle",
       "g b": "vim::WindowBottom",
-      "g r": "editor::FindAllReferences",
-      "g i": "editor::GoToImplementation",
       "g a": "pane::AlternateFile",
       "g n": "pane::ActivateNextItem",
       "shift-l": "pane::ActivateNextItem", // not a helix default

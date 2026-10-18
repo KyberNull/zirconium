@@ -945,7 +945,7 @@ impl EditorElement {
             )
         {
             let point = position_map.point_for_position(mouse_position);
-            editor.handle_click_hovered_link(point, event.modifiers(), window, cx);
+            editor.handle_click_hovered_link(point, window, cx);
             editor.selection_drag_state = SelectionDragState::None;
 
             cx.stop_propagation();
@@ -968,7 +968,7 @@ impl EditorElement {
 
         if force_click_possible && text_hitbox.is_hovered(window) {
             let point = position_map.point_for_position(event.position);
-            editor.handle_click_hovered_link(point, event.modifiers, window, cx);
+            editor.handle_click_hovered_link(point, window, cx);
             editor.selection_drag_state = SelectionDragState::None;
             cx.stop_propagation();
         }

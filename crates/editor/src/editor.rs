@@ -135,7 +135,7 @@ use edit_prediction_types::{
     EditPredictionDelegate, EditPredictionDelegateHandle, EditPredictionDiscardReason,
     EditPredictionGranularity, SuggestionDisplayType,
 };
-use editor_settings::{GoToDefinitionFallback, Minimap as MinimapSettings};
+use editor_settings::Minimap as MinimapSettings;
 use element::{LineWithInvisibles, PositionMap, layout_line};
 use futures::{
     FutureExt,
@@ -168,8 +168,7 @@ use language::{
     language_settings::{
         self, AllLanguageSettings, LanguageSettings, LspInsertMode, RewrapBehavior,
         WordsCompletionMode, all_language_settings,
-    },
-    point_from_lsp, point_to_lsp, text_diff_with_options,
+    }, point_to_lsp, text_diff_with_options,
 };
 use lsp::{
     CodeActionKind, CompletionItemKind, CompletionTriggerKind, InsertTextFormat, InsertTextMode,
@@ -186,13 +185,12 @@ use parking_lot::Mutex;
 use persistence::EditorDb;
 use project::{
     CodeAction, Completion, CompletionDisplayOptions, CompletionIntent, CompletionResponse,
-    CompletionSource, DisableAiSettings, InlayHint, InlayId,
-    InvalidationStrategy, Location, LocationLink, LspAction, PrepareRenameResponse, Project,
+    CompletionSource, DisableAiSettings, InlayId, Location, LspAction, PrepareRenameResponse, Project,
     ProjectItem, ProjectPath, ProjectTransaction,
     bookmark_store::BookmarkStore,
     git_store::GitStoreEvent,
     lsp_store::{
-        CacheInlayHints, CompletionDocumentation, FormatTrigger, LspFormatTarget,
+        CompletionDocumentation, FormatTrigger, LspFormatTarget,
         OpenLspBufferHandle,
     },
     project_settings::{DiagnosticSeverity, GoToDiagnosticSeverityFilter, ProjectSettings},
@@ -237,7 +235,7 @@ use ui::{
 use ui_input::ErasedEditor;
 use util::{RangeExt, ResultExt, TryFutureExt, maybe, post_inc};
 use workspace::{
-    CollaboratorId, Item as WorkspaceItem, ItemId, ItemNavHistory, NavigationEntry, OpenInTerminal,
+    CollaboratorId, Item as WorkspaceItem, ItemId, ItemNavHistory, OpenInTerminal,
     OpenTerminal, Pane, RestoreOnStartupBehavior, SERIALIZATION_THROTTLE_TIME, SplitDirection,
     TabBarSettings, Toast, ViewId, Workspace, WorkspaceId, WorkspaceSettings,
     item::{ItemBufferKind, ItemHandle, PreviewTabsSettings, SaveOptions},
@@ -971,7 +969,6 @@ pub struct Editor {
     completion_tasks: Vec<(CompletionId, Task<()>)>,
     inline_blame_popover: Option<InlineBlamePopover>,
     inline_blame_popover_show_task: Option<Task<()>>,
-    find_all_references_task_sources: Vec<Anchor>,
     next_completion_id: CompletionId,
     code_actions_for_selection: CodeActionsForSelection,
     runnables_for_selection_toggle: Task<()>,
@@ -1523,14 +1520,6 @@ pub(crate) struct NavigationData {
     cursor_position: Point,
     scroll_anchor: ScrollAnchor,
     scroll_top_row: u32,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum GotoDefinitionKind {
-    Symbol,
-    Declaration,
-    Type,
-    Implementation,
 }
 
 pub enum FormatTarget {
@@ -2197,7 +2186,6 @@ impl Editor {
             completion_tasks: Vec::new(),
             inline_blame_popover: None,
             inline_blame_popover_show_task: None,
-            find_all_references_task_sources: Vec::new(),
             next_completion_id: 0,
             next_inlay_id: 0,
             code_action_providers,
@@ -10109,41 +10097,6 @@ impl CollaborationHub for Entity<Project> {
 }
 
 pub trait SemanticsProvider {
-    fn inline_values(
-        &self,
-        buffer_handle: Entity<Buffer>,
-        range: Range<text::Anchor>,
-        cx: &mut App,
-    ) -> Option<Task<anyhow::Result<Vec<InlayHint>>>>;
-
-    fn applicable_inlay_chunks(
-        &self,
-        buffer: &Entity<Buffer>,
-        ranges: &[Range<text::Anchor>],
-        cx: &mut App,
-    ) -> Vec<Range<BufferRow>>;
-
-    fn invalidate_inlay_hints(&self, for_buffers: &HashSet<BufferId>, cx: &mut App);
-
-    fn inlay_hints(
-        &self,
-        invalidate: InvalidationStrategy,
-        buffer: Entity<Buffer>,
-        ranges: Vec<Range<text::Anchor>>,
-        known_chunks: Option<(clock::Global, HashSet<Range<BufferRow>>)>,
-        cx: &mut App,
-    ) -> Option<HashMap<Range<BufferRow>, Task<Result<CacheInlayHints>>>>;
-
-    fn supports_inlay_hints(&self, buffer: &Entity<Buffer>, cx: &mut App) -> bool;
-
-    fn definitions(
-        &self,
-        buffer: &Entity<Buffer>,
-        position: text::Anchor,
-        kind: GotoDefinitionKind,
-        cx: &mut App,
-    ) -> Option<Task<Result<Option<Vec<LocationLink>>>>>;
-
     fn range_for_rename(
         &self,
         buffer: &Entity<Buffer>,
@@ -10161,79 +10114,6 @@ pub trait SemanticsProvider {
 }
 
 impl SemanticsProvider for WeakEntity<Project> {
-    fn definitions(
-        &self,
-        buffer: &Entity<Buffer>,
-        position: text::Anchor,
-        kind: GotoDefinitionKind,
-        cx: &mut App,
-    ) -> Option<Task<Result<Option<Vec<LocationLink>>>>> {
-        self.update(cx, |project, cx| match kind {
-            GotoDefinitionKind::Symbol => project.definitions(buffer, position, cx),
-            GotoDefinitionKind::Declaration => project.declarations(buffer, position, cx),
-            GotoDefinitionKind::Type => project.type_definitions(buffer, position, cx),
-            GotoDefinitionKind::Implementation => project.implementations(buffer, position, cx),
-        })
-        .ok()
-    }
-
-    fn supports_inlay_hints(&self, buffer: &Entity<Buffer>, cx: &mut App) -> bool {
-        self.update(cx, |project, cx| {
-            buffer.update(cx, |buffer, cx| {
-                project.any_language_server_supports_inlay_hints(buffer, cx)
-            })
-        })
-        .unwrap_or(false)
-    }
-
-    fn inline_values(
-        &self,
-        _buffer_handle: Entity<Buffer>,
-        _range: Range<text::Anchor>,
-        _cx: &mut App,
-    ) -> Option<Task<anyhow::Result<Vec<InlayHint>>>> {
-        None
-    }
-
-    fn applicable_inlay_chunks(
-        &self,
-        buffer: &Entity<Buffer>,
-        ranges: &[Range<text::Anchor>],
-        cx: &mut App,
-    ) -> Vec<Range<BufferRow>> {
-        self.update(cx, |project, cx| {
-            project.lsp_store().update(cx, |lsp_store, cx| {
-                lsp_store.applicable_inlay_chunks(buffer, ranges, cx)
-            })
-        })
-        .unwrap_or_default()
-    }
-
-    fn invalidate_inlay_hints(&self, for_buffers: &HashSet<BufferId>, cx: &mut App) {
-        self.update(cx, |project, cx| {
-            project.lsp_store().update(cx, |lsp_store, _| {
-                lsp_store.invalidate_inlay_hints(for_buffers)
-            })
-        })
-        .ok();
-    }
-
-    fn inlay_hints(
-        &self,
-        invalidate: InvalidationStrategy,
-        buffer: Entity<Buffer>,
-        ranges: Vec<Range<text::Anchor>>,
-        known_chunks: Option<(clock::Global, HashSet<Range<BufferRow>>)>,
-        cx: &mut App,
-    ) -> Option<HashMap<Range<BufferRow>, Task<Result<CacheInlayHints>>>> {
-        self.update(cx, |project, cx| {
-            project.lsp_store().update(cx, |lsp_store, cx| {
-                lsp_store.inlay_hints(invalidate, buffer, ranges, known_chunks, cx)
-            })
-        })
-        .ok()
-    }
-
     fn range_for_rename(
         &self,
         buffer: &Entity<Buffer>,
@@ -11070,16 +10950,6 @@ impl RowRangeExt for Range<DisplayRow> {
 
     fn iter_rows(&self) -> impl DoubleEndedIterator<Item = DisplayRow> {
         (self.start.0..self.end.0).map(DisplayRow)
-    }
-}
-
-/// If select range has more than one line, we
-/// just point the cursor to range.start.
-fn collapse_multiline_range(range: Range<Point>) -> Range<Point> {
-    if range.start.row == range.end.row {
-        range
-    } else {
-        range.start..range.start
     }
 }
 

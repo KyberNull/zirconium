@@ -12,7 +12,6 @@
       "shift-alt-i": "editor::SplitSelectionIntoLines", // Insert cursor at end of each line selected
       "alt-z": "editor::ToggleSoftWrap", // Toggle Word Wrap
       "ctrl-shift-a": "editor::ToggleBlockComments", // Toggle Block Comment
-      "ctrl-k f12": "editor::GoToDefinitionSplit", // Open Definition to the Side
     },
   },
   {

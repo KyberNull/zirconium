@@ -42,10 +42,6 @@
       // "cmd-alt-shift-g": "" // find_under_prev (cancels any selections)
       "f5": "editor::SortLinesCaseSensitive",
       "ctrl-f5": "editor::SortLinesCaseInsensitive",
-      "shift-f12": "editor::FindAllReferences",
-      "alt-cmd-down": "editor::GoToDefinition",
-      "ctrl-alt-cmd-down": "editor::GoToDefinitionSplit",
-      "alt-shift-cmd-down": "editor::FindAllReferences",
       "ctrl-.": "editor::GoToHunk",
       "ctrl-,": "editor::GoToPreviousHunk",
       "cmd-k cmd-u": "editor::ConvertToUpperCase",

@@ -19,8 +19,6 @@
     "bindings": {
       "ctrl-shift-l": "language_selector::Toggle", // grammar-selector:show
       "ctrl-|": "pane::RevealInProjectPanel", // tree-view:reveal-active-file
-      "ctrl-b": "editor::GoToDefinition", // fuzzy-finder:toggle-buffer-finder
-      "ctrl-alt-b": "editor::GoToDefinitionSplit", // N/A: From JetBrains
       "ctrl-<": "editor::ScrollCursorCenter", // editor:scroll-to-cursor
       "f3": ["editor::SelectNext", { "replace_newest": true }], // find-and-replace:find-next
       "shift-f3": ["editor::SelectPrevious", { "replace_newest": true }], //find-and-replace:find-previous

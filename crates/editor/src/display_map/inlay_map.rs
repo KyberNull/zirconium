@@ -1454,7 +1454,7 @@ mod tests {
     use crate::{
         MultiBuffer,
         display_map::{HighlightKey, InlayHighlights},
-        hover_links::InlayHighlight,
+        inlays::InlayHighlight,
     };
     use collections::HashMap;
     use gpui::{App, HighlightStyle};

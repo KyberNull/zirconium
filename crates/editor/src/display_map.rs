@@ -132,7 +132,7 @@ use std::{
 };
 
 use crate::{
-    EditorStyle, RowExt, hover_links::InlayHighlight, inlays::Inlay, movement::TextLayoutDetails,
+    EditorStyle, RowExt, inlays::{Inlay, InlayHighlight}, movement::TextLayoutDetails,
 };
 use block_map::{BlockPointCursor, BlockRow, BlockSnapshot};
 use fold_map::{FoldPointCursor, FoldSnapshot};
@@ -1053,26 +1053,6 @@ impl DisplayMap {
             Entry::Vacant(slot) => {
                 ranges.sort_by(|a, b| a.start.cmp(&b.start, &multi_buffer_snapshot));
                 slot.insert(Arc::new((style, ranges)));
-            }
-        }
-    }
-
-    #[instrument(skip_all)]
-    pub(crate) fn highlight_inlays(
-        &mut self,
-        key: HighlightKey,
-        highlights: Vec<InlayHighlight>,
-        style: HighlightStyle,
-    ) {
-        for highlight in highlights {
-            let update = self.inlay_highlights.update(&key, |highlights| {
-                highlights.insert(highlight.inlay, (style, highlight.clone()))
-            });
-            if update.is_none() {
-                self.inlay_highlights.insert(
-                    key,
-                    TreeMap::from_ordered_entries([(highlight.inlay, (style, highlight))]),
-                );
             }
         }
     }

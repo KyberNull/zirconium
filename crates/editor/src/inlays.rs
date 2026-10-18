@@ -12,12 +12,19 @@
 
 use std::sync::OnceLock;
 
-use gpui::{Context, HighlightStyle, Hsla, Rgba};
+use gpui::{Context, Hsla, Rgba};
 use multi_buffer::Anchor;
 use project::{InlayHint, InlayId};
 use text::Rope;
 
-use crate::{Editor, HighlightKey, hover_links::InlayHighlight};
+use crate::Editor;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InlayHighlight {
+    pub inlay: InlayId,
+    pub inlay_position: Anchor,
+    pub range: std::ops::Range<usize>,
+}
 
 #[derive(Debug, Clone)]
 pub struct Inlay {
@@ -112,18 +119,6 @@ impl Editor {
         self.display_map.update(cx, |display_map, cx| {
             display_map.splice_inlays(to_remove, to_insert, cx)
         });
-        cx.notify();
-    }
-
-    pub(crate) fn highlight_inlays(
-        &mut self,
-        key: HighlightKey,
-        highlights: Vec<InlayHighlight>,
-        style: HighlightStyle,
-        cx: &mut Context<Self>,
-    ) {
-        self.display_map
-            .update(cx, |map, _| map.highlight_inlays(key, highlights, style));
         cx.notify();
     }
 

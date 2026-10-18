@@ -716,15 +716,6 @@ impl HoverState {
                 self.info_popovers.iter().find_map(|info_popover| {
                     match &info_popover.symbol_range {
                         RangeInEditor::Text(range) => Some(&range.start),
-                        RangeInEditor::Inlay(_) => None,
-                    }
-                })
-            })
-            .or_else(|| {
-                self.info_popovers.iter().find_map(|info_popover| {
-                    match &info_popover.symbol_range {
-                        RangeInEditor::Text(_) => None,
-                        RangeInEditor::Inlay(range) => Some(&range.inlay_position),
                     }
                 })
             })?;

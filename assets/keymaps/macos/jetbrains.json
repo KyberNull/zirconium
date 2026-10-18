@@ -37,12 +37,6 @@
       "shift-f6": "editor::Rename",
       "cmd-[": "pane::GoBack",
       "cmd-]": "pane::GoForward",
-      "alt-f7": "editor::FindAllReferences",
-      "cmd-alt-f7": "editor::FindAllReferences",
-      "cmd-b": "editor::GoToDefinition", // Conflicts with workspace::ToggleLeftDock
-      "cmd-alt-b": "editor::GoToImplementation",
-      "cmd-shift-b": "editor::GoToTypeDefinition",
-      "cmd-alt-shift-b": "editor::GoToTypeDefinitionSplit",
       "f2": "editor::GoToDiagnostic",
       "shift-f2": "editor::GoToPreviousDiagnostic",
       "ctrl-alt-shift-down": "editor::GoToHunk",
