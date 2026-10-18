@@ -9017,35 +9017,19 @@ dependencies = [
 name = "language_tools"
 version = "0.1.0"
 dependencies = [
- "anyhow",
- "client",
- "collections",
  "command_palette_hooks",
- "edit_prediction",
  "editor",
- "futures 0.3.32",
  "gpui",
  "itertools 0.14.0",
  "language",
- "lsp",
  "menu",
- "path",
  "project",
- "proto",
- "release_channel",
- "semver",
  "serde_json",
- "settings",
- "sysinfo 0.37.2",
- "telemetry",
  "theme",
- "theme_settings",
  "tree-sitter",
  "ui",
- "util",
  "workspace",
  "zed_actions",
- "zlog",
 ]
 
 [[package]]
