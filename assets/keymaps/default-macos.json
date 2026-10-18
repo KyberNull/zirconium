@@ -594,8 +594,6 @@
       "cmd-/": ["editor::ToggleComments", { "advance_downwards": false }],
       "cmd-k cmd-/": "editor::ToggleBlockComments",
       "shift-alt-a": "editor::ToggleBlockComments",
-      "f8": ["editor::GoToDiagnostic", { "severity": { "min": "hint", "max": "error" } }],
-      "shift-f8": ["editor::GoToPreviousDiagnostic", { "severity": { "min": "hint", "max": "error" } }],
       "cmd-|": "editor::MoveToEnclosingBracket",
       "ctrl-m": "editor::MoveToEnclosingBracket", // From Jetbrains
       "alt-cmd-[": "editor::Fold",

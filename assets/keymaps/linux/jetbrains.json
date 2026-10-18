@@ -36,8 +36,6 @@
       "ctrl-alt-o": "editor::OrganizeImports",
       "ctrl-alt-left": "pane::GoBack",
       "ctrl-alt-right": "pane::GoForward",
-      "f2": "editor::GoToDiagnostic",
-      "shift-f2": "editor::GoToPreviousDiagnostic",
       "ctrl-alt-shift-down": "editor::GoToHunk",
       "ctrl-alt-shift-up": "editor::GoToPreviousHunk",
       "ctrl-alt-z": "git::Restore",
