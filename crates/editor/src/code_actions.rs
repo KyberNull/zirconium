@@ -32,9 +32,7 @@ impl Editor {
         self.discard_edit_prediction(EditPredictionDiscardReason::Ignored, cx);
 
         let multibuffer_point = match &action.deployed_from {
-            Some(CodeActionSource::RunMenu(row)) => {
-                DisplayPoint::new(*row, 0).to_point(&snapshot)
-            }
+            Some(CodeActionSource::RunMenu(row)) => DisplayPoint::new(*row, 0).to_point(&snapshot),
             _ => self
                 .selections
                 .newest::<Point>(&snapshot.display_snapshot)
@@ -76,16 +74,14 @@ impl Editor {
                 None => task_context_task.await.ok().flatten(),
             };
 
-            let resolved_tasks =
-                tasks
-                    .zip(task_context.clone())
-                    .map(|(tasks, task_context)| ResolvedTasks {
-                        templates: tasks.resolve(&task_context).collect(),
-                        position: snapshot.buffer_snapshot().anchor_before(Point::new(
-                            multibuffer_point.row,
-                            tasks.column,
-                        )),
-                    });
+            let resolved_tasks = tasks
+                .zip(task_context.clone())
+                .map(|(tasks, task_context)| ResolvedTasks {
+                    templates: tasks.resolve(&task_context).collect(),
+                    position: snapshot
+                        .buffer_snapshot()
+                        .anchor_before(Point::new(multibuffer_point.row, tasks.column)),
+                });
             anyhow::Ok(resolved_tasks)
         });
 
@@ -233,5 +229,4 @@ impl Editor {
     pub fn context_menu(&self) -> &RefCell<Option<CodeContextMenu>> {
         &self.context_menu
     }
-
 }

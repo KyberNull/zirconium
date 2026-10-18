@@ -1,4 +1,3 @@
-
 use crate::{
     Mode, Vim,
     motion::{Motion, MotionKind},

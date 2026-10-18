@@ -887,11 +887,7 @@ impl Editor {
     }
 
     /// Deletes the content covered by the current selections.
-    pub fn delete_selections(
-        &mut self,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
+    pub fn delete_selections(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.replace_selections("", None, window, cx);
     }
 

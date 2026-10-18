@@ -33,13 +33,12 @@ use ui::{
 use util::ResultExt;
 
 use crate::hover_popover::{hover_markdown_style, open_markdown_url};
+use crate::{CodeActionSource, EditorSettings};
 use crate::{
-    CompletionId, CompletionProvider, DisplayRow, Editor, EditorStyle,
-    ResolvedTasks,
+    CompletionId, CompletionProvider, DisplayRow, Editor, EditorStyle, ResolvedTasks,
     actions::{ConfirmCodeAction, ConfirmCompletion},
     split_words, styled_runs_for_code_label,
 };
-use crate::{CodeActionSource, EditorSettings};
 use collections::{HashSet, VecDeque};
 use settings::{CompletionDetailAlignment, CompletionMenuItemKind, Settings, SnippetSortOrder};
 
@@ -1857,15 +1856,12 @@ impl CodeActionContents {
     }
 
     fn iter(&self) -> impl Iterator<Item = CodeActionsItem> + '_ {
-        self.tasks
-            .iter()
-            .flat_map(|tasks| {
-                tasks
-                    .templates
-                    .iter()
-                    .map(|(kind, task)| CodeActionsItem::Task(kind.clone(), task.clone()))
-            })
-
+        self.tasks.iter().flat_map(|tasks| {
+            tasks
+                .templates
+                .iter()
+                .map(|(kind, task)| CodeActionsItem::Task(kind.clone(), task.clone()))
+        })
     }
 
     pub fn get(&self, index: usize) -> Option<CodeActionsItem> {

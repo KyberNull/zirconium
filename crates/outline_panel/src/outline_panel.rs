@@ -23,8 +23,8 @@ use gpui::{
     uniform_list,
 };
 use itertools::Itertools;
-use language::{Anchor, BufferId, BufferSnapshot, OffsetRangeExt, OutlineItem};
 use language::LanguageAwareStyling;
+use language::{Anchor, BufferId, BufferSnapshot, OffsetRangeExt, OutlineItem};
 
 use menu::{Cancel, SelectFirst, SelectLast, SelectNext, SelectPrevious};
 use std::{

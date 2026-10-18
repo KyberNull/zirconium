@@ -38,8 +38,7 @@ use workspace::{
 
 use crate::{
     Autoscroll, DiffHunkDelegate, Editor, EditorEvent, EditorSettings, ResolvedDiffHunks,
-    ToggleSoftWrap, UncommittedDiffHunkDelegate,
-    display_map::Companion,
+    ToggleSoftWrap, UncommittedDiffHunkDelegate, display_map::Companion,
 };
 use zed_actions::{OpenSettingsAt, assistant::InlineAssist};
 

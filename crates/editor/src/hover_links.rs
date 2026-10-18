@@ -3,8 +3,8 @@ use crate::{
     scroll::ScrollAmount,
 };
 use gpui::{
-    AsyncWindowContext, Context, Entity, HighlightStyle, Modifiers, Pixels, Task,
-    UnderlineStyle, Window, px,
+    AsyncWindowContext, Context, Entity, HighlightStyle, Modifiers, Pixels, Task, UnderlineStyle,
+    Window, px,
 };
 use language::{Bias, ToOffset};
 use linkify::{LinkFinder, LinkKind};
@@ -738,8 +738,7 @@ fn surrounding_filename(
 mod tests {
     use super::*;
     use crate::{
-        display_map::ToDisplayPoint,
-        editor_tests::init_test,
+        display_map::ToDisplayPoint, editor_tests::init_test,
         test::editor_lsp_test_context::EditorLspTestContext,
     };
     use futures::StreamExt;

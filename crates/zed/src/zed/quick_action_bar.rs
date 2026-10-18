@@ -9,9 +9,8 @@ use editor::actions::{
 };
 use editor::{Editor, EditorSettings};
 use gpui::{
-    Action, Anchor, ClickEvent, Context, ElementId, Entity, EventEmitter,
-    FocusHandle, Focusable, InteractiveElement, ParentElement, Render, Styled, Subscription,
-    WeakEntity, Window,
+    Action, Anchor, ClickEvent, Context, ElementId, Entity, EventEmitter, FocusHandle, Focusable,
+    InteractiveElement, ParentElement, Render, Styled, Subscription, WeakEntity, Window,
 };
 use project::{DisableAiSettings, project_settings::ProjectSettings};
 use search::{BufferSearchBar, buffer_search};
@@ -26,7 +25,6 @@ use workspace::{
     ToolbarItemEvent, ToolbarItemLocation, ToolbarItemView, Workspace, item::ItemHandle,
 };
 use zed_actions::{agent::AddSelectionToThread, assistant::InlineAssist, outline::ToggleOutline};
-
 
 pub struct QuickActionBar {
     _ai_settings_subscription: Subscription,

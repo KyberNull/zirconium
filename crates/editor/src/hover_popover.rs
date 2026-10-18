@@ -192,7 +192,8 @@ fn show_hover(
                 None
             };
 
-            let mut info_popovers = Vec::with_capacity(if invisible_char.is_some() { 1 } else { 0 });
+            let mut info_popovers =
+                Vec::with_capacity(if invisible_char.is_some() { 1 } else { 0 });
 
             if let Some((invisible, range)) = invisible_char {
                 let blocks = vec![HoverBlock {

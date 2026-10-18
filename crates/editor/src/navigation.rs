@@ -1231,11 +1231,7 @@ impl Editor {
                 };
                 let item = workspace
                     .update_in(cx, |workspace, window, cx| {
-                        workspace.open_resolved_path(
-                            file_target.resolved_path.clone(),
-                            window,
-                            cx,
-                        )
+                        workspace.open_resolved_path(file_target.resolved_path.clone(), window, cx)
                     })?
                     .await?;
 
@@ -1572,5 +1568,4 @@ impl Editor {
             |s| s.select_anchor_ranges([start..end]),
         );
     }
-
 }

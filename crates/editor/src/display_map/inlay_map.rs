@@ -2531,7 +2531,7 @@ mod tests {
             let highlights = crate::display_map::Highlights {
                 text_highlights: None,
                 inlay_highlights: Some(&inlay_highlights),
-                    styles: crate::display_map::HighlightStyles::default(),
+                styles: crate::display_map::HighlightStyles::default(),
             };
 
             let chunks: Vec<_> = inlay_snapshot

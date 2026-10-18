@@ -25,9 +25,9 @@ use indoc::indoc;
 use language::{
     BracketPair, BracketPairConfig,
     Capability::ReadWrite,
-    ContextLocation, ContextProvider, FakeLspAdapter, IndentGuideSettings,
-    LanguageConfig, LanguageConfigOverride, LanguageMatcher, LanguageName, LanguageQueries,
-    LanguageToolchainStore, Override, PLAIN_TEXT, Point,
+    ContextLocation, ContextProvider, FakeLspAdapter, IndentGuideSettings, LanguageConfig,
+    LanguageConfigOverride, LanguageMatcher, LanguageName, LanguageQueries, LanguageToolchainStore,
+    Override, PLAIN_TEXT, Point,
     language_settings::{
         CompletionSettingsContent, FormatOnSave, FormatterList, LanguageSettingsContent,
         LspInsertMode,
@@ -49,10 +49,9 @@ use project::{
 };
 use serde_json::{self, json};
 use settings::{
-    AllLanguageSettingsContent, EditorSettingsContent,
-    IndentGuideBackgroundColoring, IndentGuideColoring,
-    InlayHintSettingsContent, ProjectSettingsContent, ScrollBeyondLastLine, SearchSettingsContent,
-    SettingsContent, SettingsStore,
+    AllLanguageSettingsContent, EditorSettingsContent, IndentGuideBackgroundColoring,
+    IndentGuideColoring, InlayHintSettingsContent, ProjectSettingsContent, ScrollBeyondLastLine,
+    SearchSettingsContent, SettingsContent, SettingsStore,
 };
 use std::{
     borrow::Cow,

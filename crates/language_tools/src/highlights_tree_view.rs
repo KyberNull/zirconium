@@ -755,10 +755,8 @@ impl Render for HighlightsTreeView {
                                         )
                                 } else {
                                     this.child(Label::new("No highlights found")).child(
-                                        Label::new(
-                                            "The editor has no text or syntax highlights",
-                                        )
-                                        .size(LabelSize::Small),
+                                        Label::new("The editor has no text or syntax highlights")
+                                            .size(LabelSize::Small),
                                     )
                                 }
                             } else {

@@ -409,4 +409,3 @@ impl platform::Host for WasmState {
             .map(|(os, arch)| (os.into(), arch.into()))
     }
 }
-

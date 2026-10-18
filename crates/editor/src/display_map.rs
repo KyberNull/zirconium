@@ -107,8 +107,8 @@ use multi_buffer::{
     Anchor, AnchorRangeExt, MultiBuffer, MultiBufferOffset, MultiBufferOffsetUtf16,
     MultiBufferPoint, MultiBufferRow, MultiBufferSnapshot, RowInfo, ToOffset, ToPoint,
 };
-use project::project_settings::DiagnosticSeverity;
 use project::InlayId;
+use project::project_settings::DiagnosticSeverity;
 use serde::Deserialize;
 use settings::Settings;
 use smallvec::SmallVec;
@@ -132,7 +132,9 @@ use std::{
 };
 
 use crate::{
-    EditorStyle, RowExt, inlays::{Inlay, InlayHighlight}, movement::TextLayoutDetails,
+    EditorStyle, RowExt,
+    inlays::{Inlay, InlayHighlight},
+    movement::TextLayoutDetails,
 };
 use block_map::{BlockPointCursor, BlockRow, BlockSnapshot};
 use fold_map::{FoldPointCursor, FoldSnapshot};

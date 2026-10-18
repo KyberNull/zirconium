@@ -20,7 +20,8 @@ use db::{
 };
 use gpui::{Axis, Bounds, Task, WindowBounds, WindowId, point, size};
 use project::{
-    ProjectGroupKey, bookmark_store::SerializedBookmark,
+    ProjectGroupKey,
+    bookmark_store::SerializedBookmark,
     trusted_worktrees::{DbTrustedPaths, RemoteHostLocation},
 };
 
@@ -2712,7 +2713,6 @@ mod tests {
              the remaining active workspace's database id"
         );
     }
-
 
     #[gpui::test]
     async fn test_next_id_stability() {
