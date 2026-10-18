@@ -14,7 +14,6 @@
 pub mod actions;
 pub mod blink_manager;
 mod bracket_colorization;
-mod clangd_ext;
 pub mod code_context_menus;
 mod code_lens;
 pub mod display_map;
@@ -39,7 +38,6 @@ mod mouse_context_menu;
 pub mod movement;
 mod persistence;
 mod runnables;
-mod rust_analyzer_ext;
 pub mod scroll;
 mod selections_collection;
 pub mod semantic_tokens;

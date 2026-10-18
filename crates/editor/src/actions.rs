@@ -415,12 +415,8 @@ actions!(
         BlameHover,
         /// Cancels the current operation.
         Cancel,
-        /// Cancels the running flycheck operation.
-        CancelFlycheck,
         /// Cancels pending language server work.
         CancelLanguageServerWork,
-        /// Clears flycheck results.
-        ClearFlycheck,
         /// Confirms the rename operation.
         ConfirmRename,
         /// Confirms completion by inserting at cursor.
@@ -505,8 +501,6 @@ actions!(
         /// Toggles all diff hunks in the editor. Collapses all hunks if any are
         /// currently expanded, otherwise expands all hunks.
         ToggleAllDiffHunks,
-        /// Expands macros recursively at cursor position.
-        ExpandMacroRecursively,
         /// Finds the next match in the search.
         FindNextMatch,
         /// Finds the previous match in the search.
@@ -582,8 +576,6 @@ actions!(
         GoToNextBookmark,
         /// Goes to the next change in the file.
         GoToNextChange,
-        /// Goes to the parent module of the current file.
-        GoToParentModule,
         /// Goes to the previous bookmark in the file.
         GoToPreviousBookmark,
         /// Goes to the previous change in the file.
@@ -699,8 +691,6 @@ actions!(
         OpenExcerptsSplit,
         /// Opens the proposed changes editor.
         OpenProposedChangesEditor,
-        /// Opens documentation for the symbol at cursor.
-        OpenDocs,
         /// Opens a permalink to the current line.
         OpenPermalinkToLine,
         /// Opens the file whose name is selected in the editor.
@@ -744,8 +734,6 @@ actions!(
         RotateSelectionsBackward,
         /// Rotates selections or lines forward.
         RotateSelectionsForward,
-        /// Runs flycheck diagnostics.
-        RunFlycheck,
         /// Scrolls the cursor to the bottom of the viewport.
         ScrollCursorBottom,
         /// Scrolls the cursor to the center of the viewport.
@@ -834,8 +822,6 @@ actions!(
         SortLinesCaseSensitive,
         /// Stops the language server for the current file.
         StopLanguageServer,
-        /// Switches between source and header files.
-        SwitchSourceHeader,
         /// Inserts a tab character or indents.
         Tab,
         /// Removes a tab character or outdents.
