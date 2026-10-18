@@ -17,7 +17,6 @@ mod bracket_colorization;
 pub mod code_context_menus;
 mod code_lens;
 pub mod display_map;
-mod document_links;
 mod document_symbols;
 mod editor_settings;
 mod element;
@@ -94,9 +93,8 @@ pub use edit_prediction_types::Direction;
 pub use edit_prediction_types::EditPredictionRequestTrigger;
 pub use editor_settings::{
     CompletionDetailAlignment, CompletionMenuItemKind, CurrentLineHighlight, DiffViewStyle,
-    EditorSettings, EditorSettingsScrollbarProxy, OpenResultsIn,
-    ScrollBeyondLastLine, ScrollbarAxes, SearchSettings, ShowMinimap,
-    ui_scrollbar_settings_from_raw,
+    EditorSettings, EditorSettingsScrollbarProxy, OpenResultsIn, ScrollBeyondLastLine,
+    ScrollbarAxes, SearchSettings, ShowMinimap, ui_scrollbar_settings_from_raw,
 };
 pub use element::{
     CursorLayout, EditorElement, HighlightedRange, HighlightedRangeLine, PointForPosition,
@@ -140,7 +138,6 @@ use code_lens::CodeLensState;
 use collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use convert_case::{Case, Casing};
 use display_map::*;
-use document_links::LspDocumentLinks;
 use edit_prediction_types::{
     EditPredictionDelegate, EditPredictionDelegateHandle, EditPredictionDiscardReason,
     EditPredictionGranularity, SuggestionDisplayType,
@@ -204,8 +201,8 @@ use project::{
     bookmark_store::BookmarkStore,
     git_store::GitStoreEvent,
     lsp_store::{
-        CacheInlayHints, CompletionDocumentation, FormatTrigger,
-        LspFormatTarget, OpenLspBufferHandle,
+        CacheInlayHints, CompletionDocumentation, FormatTrigger, LspFormatTarget,
+        OpenLspBufferHandle,
     },
     project_settings::{DiagnosticSeverity, GoToDiagnosticSeverityFilter, ProjectSettings},
 };
@@ -1139,7 +1136,6 @@ pub struct Editor {
     bracket_fetched_tree_sitter_chunks: HashMap<Range<text::Anchor>, HashSet<Range<BufferRow>>>,
     pub(crate) refresh_matching_bracket_highlights_task: Task<()>,
     refresh_document_symbols_task: Shared<Task<()>>,
-    lsp_document_links: LspDocumentLinks,
     lsp_document_symbols: HashMap<BufferId, Vec<OutlineItem<text::Anchor>>>,
     refresh_outline_symbols_at_cursor_at_cursor_task: Task<()>,
     outline_symbols_at_cursor: Option<(BufferId, Vec<OutlineItem<Anchor>>)>,
@@ -1977,9 +1973,6 @@ impl Editor {
                     project::Event::RefreshCodeLens { .. } => {
                         editor.refresh_code_lenses(None, window, cx);
                     }
-                    project::Event::RefreshDocumentLinks { .. } => {
-                        editor.refresh_document_links(None, cx);
-                    }
                     project::Event::RefreshFoldingRanges { .. } => {
                         editor.refresh_folding_ranges(None, window, cx);
                     }
@@ -2416,7 +2409,6 @@ impl Editor {
             number_deleted_lines: false,
             refresh_matching_bracket_highlights_task: Task::ready(()),
             refresh_document_symbols_task: Task::ready(()).shared(),
-            lsp_document_links: LspDocumentLinks::new(cx),
             lsp_document_symbols: HashMap::default(),
             refresh_outline_symbols_at_cursor_at_cursor_task: Task::ready(()),
             outline_symbols_at_cursor: None,
@@ -8863,7 +8855,6 @@ impl Editor {
                     self.registered_buffers.remove(buffer_id);
                     self.clear_runnables(Some(*buffer_id));
                     self.lsp_document_symbols.remove(buffer_id);
-                    self.lsp_document_links.per_buffer.remove(buffer_id);
                     self.display_map.update(cx, |display_map, cx| {
                         display_map.clear_lsp_folding_ranges(*buffer_id, cx);
                     });
@@ -9093,17 +9084,6 @@ impl Editor {
             let was_inline = self.code_lens.is_some();
             if code_lens_inline != was_inline {
                 self.toggle_code_lens(code_lens_inline, window, cx);
-            }
-
-            let lsp_document_links_enabled = EditorSettings::get_global(cx).lsp_document_links;
-            if lsp_document_links_enabled != self.lsp_document_links.enabled {
-                self.lsp_document_links.enabled = lsp_document_links_enabled;
-                if lsp_document_links_enabled {
-                    self.refresh_document_links(None, cx);
-                } else {
-                    self.lsp_document_links.per_buffer.clear();
-                    self.lsp_document_links.refresh_task = Task::ready(());
-                }
             }
 
             self.refresh_inlay_hints(
@@ -10024,7 +10004,6 @@ impl Editor {
         if let Some(buffer_id) = for_buffer {
             self.pull_diagnostics(buffer_id, window, cx);
         }
-        self.refresh_document_links(for_buffer, cx);
         self.refresh_folding_ranges(for_buffer, window, cx);
         self.refresh_code_lenses(for_buffer, window, cx);
         self.refresh_document_symbols(for_buffer, cx);
