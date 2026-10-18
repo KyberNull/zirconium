@@ -8810,20 +8810,9 @@ dependencies = [
 name = "language_extension"
 version = "0.1.0"
 dependencies = [
- "anyhow",
- "async-trait",
- "collections",
  "extension",
- "futures 0.3.32",
- "gpui",
  "language",
- "log",
- "lsp",
- "project",
- "serde",
- "serde_json",
  "tracing",
- "util",
  "ztracing",
 ]
 

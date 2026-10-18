@@ -7,7 +7,6 @@ use language::File;
 use lsp::LanguageServerId;
 
 use extension::ExtensionHostProxy;
-use extension_host::headless_host::HeadlessExtensionStore;
 use fs::Fs;
 use gpui::{App, AppContext as _, AsyncApp, Context, Entity, PromptLevel, TaskExt};
 use http_client::HttpClient;
@@ -59,7 +58,6 @@ pub struct HeadlessProject {
     pub settings_observer: Entity<SettingsObserver>,
     pub next_entry_id: Arc<AtomicUsize>,
     pub languages: Arc<LanguageRegistry>,
-    pub extensions: Entity<HeadlessExtensionStore>,
     pub git_store: Entity<GitStore>,
     pub environment: Entity<ProjectEnvironment>,
     pub profiling_collector: gpui::ProfilingCollector,
@@ -224,11 +222,7 @@ impl HeadlessProject {
         });
 
         cx.subscribe(&lsp_store, Self::on_lsp_store_event).detach();
-        language_extension::init(
-            language_extension::LspAccess::ViaLspStore(lsp_store.downgrade()),
-            proxy.clone(),
-            languages.clone(),
-        );
+        language_extension::init(proxy.clone(), languages.clone());
 
         cx.subscribe(&buffer_store, |_this, _buffer_store, event, cx| {
             if let BufferStoreEvent::BufferAdded(buffer) = event {
@@ -236,15 +230,6 @@ impl HeadlessProject {
             }
         })
         .detach();
-
-        let extensions = HeadlessExtensionStore::new(
-            fs.clone(),
-            http_client.clone(),
-            paths::remote_extensions_dir().to_path_buf(),
-            proxy,
-            node_runtime,
-            cx,
-        );
 
         // local_machine -> ssh handlers
         session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &worktree_store);
@@ -282,15 +267,6 @@ impl HeadlessProject {
         session.add_entity_request_handler(BufferStore::handle_update_buffer);
         session.add_entity_message_handler(BufferStore::handle_close_buffer);
 
-        session.add_request_handler(
-            extensions.downgrade(),
-            HeadlessExtensionStore::handle_sync_extensions,
-        );
-        session.add_request_handler(
-            extensions.downgrade(),
-            HeadlessExtensionStore::handle_install_extension,
-        );
-
         session.add_request_handler(cx.weak_entity(), Self::handle_spawn_kernel);
         session.add_request_handler(cx.weak_entity(), Self::handle_kill_kernel);
 
@@ -316,7 +292,6 @@ impl HeadlessProject {
             agent_server_store,
             context_server_store,
             languages,
-            extensions,
             git_store,
             environment,
             profiling_collector: gpui::ProfilingCollector::new(startup_time),

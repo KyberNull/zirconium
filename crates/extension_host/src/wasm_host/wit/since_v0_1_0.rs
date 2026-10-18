@@ -4,12 +4,12 @@ use ::settings::{Settings, WorktreeId};
 use anyhow::{Context as _, Result, bail};
 use async_compression::futures::bufread::GzipDecoder;
 use async_tar::Archive;
-use extension::{ExtensionLanguageServerProxy, KeyValueStoreDelegate, WorktreeDelegate};
+use extension::{KeyValueStoreDelegate, WorktreeDelegate};
 use futures::{AsyncReadExt, lock::Mutex};
 use futures::{FutureExt as _, io::BufReader};
 use gpui::BackgroundExecutor;
 use language::LanguageName;
-use language::{BinaryStatus, language_settings::AllLanguageSettings};
+use language::language_settings::AllLanguageSettings;
 use project::project_settings::ProjectSettings;
 use semver::Version;
 use std::{
@@ -485,20 +485,9 @@ impl ExtensionImports for WasmState {
 
     async fn set_language_server_installation_status(
         &mut self,
-        server_name: String,
-        status: LanguageServerInstallationStatus,
+        _server_name: String,
+        _status: LanguageServerInstallationStatus,
     ) -> wasmtime::Result<()> {
-        let status = match status {
-            LanguageServerInstallationStatus::CheckingForUpdate => BinaryStatus::CheckingForUpdate,
-            LanguageServerInstallationStatus::Downloading => BinaryStatus::Downloading,
-            LanguageServerInstallationStatus::None => BinaryStatus::None,
-            LanguageServerInstallationStatus::Failed(error) => BinaryStatus::Failed { error },
-        };
-
-        self.host
-            .proxy
-            .update_language_server_status(::lsp::LanguageServerName(server_name.into()), status);
-
         Ok(())
     }
 

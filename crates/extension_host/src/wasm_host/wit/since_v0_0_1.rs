@@ -2,9 +2,8 @@ use super::{latest, since_v0_6_0};
 use crate::wasm_host::WasmState;
 use crate::wasm_host::wit::since_v0_0_4;
 use anyhow::Result;
-use extension::{ExtensionLanguageServerProxy, WorktreeDelegate};
+use extension::WorktreeDelegate;
 use gpui::BackgroundExecutor;
-use language::BinaryStatus;
 use semver::Version;
 use std::sync::{Arc, OnceLock};
 use wasmtime::component::{Linker, Resource};
@@ -137,21 +136,9 @@ impl ExtensionImports for WasmState {
 
     async fn set_language_server_installation_status(
         &mut self,
-        server_name: String,
-        status: LanguageServerInstallationStatus,
+        _server_name: String,
+        _status: LanguageServerInstallationStatus,
     ) -> wasmtime::Result<()> {
-        let status = match status {
-            LanguageServerInstallationStatus::CheckingForUpdate => BinaryStatus::CheckingForUpdate,
-            LanguageServerInstallationStatus::Downloading => BinaryStatus::Downloading,
-            LanguageServerInstallationStatus::Cached
-            | LanguageServerInstallationStatus::Downloaded => BinaryStatus::None,
-            LanguageServerInstallationStatus::Failed(error) => BinaryStatus::Failed { error },
-        };
-
-        self.host
-            .proxy
-            .update_language_server_status(lsp::LanguageServerName(server_name.into()), status);
-
         Ok(())
     }
 

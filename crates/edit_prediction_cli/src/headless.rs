@@ -6,7 +6,6 @@ use gpui::http_client::read_proxy_from_env;
 use gpui::{App, AppContext, Entity};
 use gpui_tokio::Tokio;
 use language::LanguageRegistry;
-use language_extension::LspAccess;
 use node_runtime::{NodeBinaryOptions, NodeRuntime};
 use project::project_settings::ProjectSettings;
 use release_channel::{AppCommitSha, AppVersion};
@@ -107,7 +106,7 @@ pub fn init(cx: &mut App) -> EpAppState {
 
     let extension_host_proxy = ExtensionHostProxy::global(cx);
 
-    language_extension::init(LspAccess::Noop, extension_host_proxy, languages.clone());
+    language_extension::init(extension_host_proxy, languages.clone());
     language_model::init(cx);
     RefreshLlmTokenListener::register(client.clone(), user_store.clone(), cx);
     language_models::init(user_store.clone(), client.clone(), cx);

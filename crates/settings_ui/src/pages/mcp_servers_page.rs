@@ -670,7 +670,6 @@ fn extension_only_provides_context_server(manifest: &extension::ExtensionManifes
         && manifest.icon_themes.is_empty()
         && manifest.languages.is_empty()
         && manifest.grammars.is_empty()
-        && manifest.language_servers.is_empty()
         && manifest.slash_commands.is_empty()
         && manifest.snippets.is_none()
 }

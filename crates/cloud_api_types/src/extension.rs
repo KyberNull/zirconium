@@ -40,6 +40,7 @@ pub enum ExtensionProvides {
     Themes,
     IconThemes,
     Grammars,
+    /// Deprecated
     LanguageServers,
     /// Deprecated
     DebugAdapters,
@@ -59,6 +60,7 @@ impl ExtensionProvides {
             self,
             ExtensionProvides::AgentServers
                 | ExtensionProvides::DebugAdapters
+                | ExtensionProvides::LanguageServers
                 | ExtensionProvides::SlashCommands
                 | ExtensionProvides::IndexedDocsProviders
         )

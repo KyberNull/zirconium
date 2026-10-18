@@ -5,9 +5,8 @@ use crate::{ExtensionManifest, ExtensionSettings};
 use anyhow::{Context as _, Result, anyhow, bail};
 use async_trait::async_trait;
 use extension::{
-    CodeLabel, Command, Completion, ContextServerConfiguration, ExtensionCapability,
-    ExtensionHostProxy, KeyValueStoreDelegate, ProjectDelegate, SlashCommand,
-    SlashCommandArgumentCompletion, SlashCommandOutput, Symbol, WorktreeDelegate,
+    Command, ContextServerConfiguration, ExtensionCapability, KeyValueStoreDelegate, ProjectDelegate, SlashCommand,
+    SlashCommandArgumentCompletion, SlashCommandOutput, WorktreeDelegate,
 };
 use fs::Fs;
 use futures::future::LocalBoxFuture;
@@ -21,8 +20,6 @@ use futures::{
 };
 use gpui::{App, AsyncApp, BackgroundExecutor, Task};
 use http_client::HttpClient;
-use language::LanguageName;
-use lsp::LanguageServerName;
 use moka::sync::Cache;
 use node_runtime::NodeRuntime;
 use release_channel::ReleaseChannel;
@@ -47,7 +44,6 @@ pub struct WasmHost {
     release_channel: ReleaseChannel,
     http_client: Arc<dyn HttpClient>,
     node_runtime: NodeRuntime,
-    pub(crate) proxy: Arc<ExtensionHostProxy>,
     fs: Arc<dyn Fs>,
     pub work_dir: PathBuf,
     /// The capabilities granted to extensions running on the host.
@@ -80,224 +76,6 @@ impl extension::Extension for WasmExtension {
 
     fn work_dir(&self) -> Arc<Path> {
         self.work_dir.clone()
-    }
-
-    async fn language_server_command(
-        &self,
-        language_server_id: LanguageServerName,
-        language_name: LanguageName,
-        worktree: Arc<dyn WorktreeDelegate>,
-    ) -> Result<Command> {
-        self.call(|extension, store| {
-            async move {
-                let resource = store.data_mut().table.push(worktree)?;
-                let command = extension
-                    .call_language_server_command(
-                        store,
-                        &language_server_id,
-                        &language_name,
-                        resource,
-                    )
-                    .await?
-                    .map_err(|err| store.data().extension_error(err))?;
-
-                Ok(command.into())
-            }
-            .boxed()
-        })
-        .await?
-    }
-
-    async fn language_server_initialization_options(
-        &self,
-        language_server_id: LanguageServerName,
-        language_name: LanguageName,
-        worktree: Arc<dyn WorktreeDelegate>,
-    ) -> Result<Option<String>> {
-        self.call(|extension, store| {
-            async move {
-                let resource = store.data_mut().table.push(worktree)?;
-                let options = extension
-                    .call_language_server_initialization_options(
-                        store,
-                        &language_server_id,
-                        &language_name,
-                        resource,
-                    )
-                    .await?
-                    .map_err(|err| store.data().extension_error(err))?;
-                anyhow::Ok(options)
-            }
-            .boxed()
-        })
-        .await?
-    }
-
-    async fn language_server_workspace_configuration(
-        &self,
-        language_server_id: LanguageServerName,
-        worktree: Arc<dyn WorktreeDelegate>,
-    ) -> Result<Option<String>> {
-        self.call(|extension, store| {
-            async move {
-                let resource = store.data_mut().table.push(worktree)?;
-                let options = extension
-                    .call_language_server_workspace_configuration(
-                        store,
-                        &language_server_id,
-                        resource,
-                    )
-                    .await?
-                    .map_err(|err| store.data().extension_error(err))?;
-                anyhow::Ok(options)
-            }
-            .boxed()
-        })
-        .await?
-    }
-
-    async fn language_server_initialization_options_schema(
-        &self,
-        language_server_id: LanguageServerName,
-        worktree: Arc<dyn WorktreeDelegate>,
-    ) -> Result<Option<String>> {
-        self.call(|extension, store| {
-            async move {
-                let resource = store.data_mut().table.push(worktree)?;
-                extension
-                    .call_language_server_initialization_options_schema(
-                        store,
-                        &language_server_id,
-                        resource,
-                    )
-                    .await
-            }
-            .boxed()
-        })
-        .await?
-    }
-
-    async fn language_server_workspace_configuration_schema(
-        &self,
-        language_server_id: LanguageServerName,
-        worktree: Arc<dyn WorktreeDelegate>,
-    ) -> Result<Option<String>> {
-        self.call(|extension, store| {
-            async move {
-                let resource = store.data_mut().table.push(worktree)?;
-                extension
-                    .call_language_server_workspace_configuration_schema(
-                        store,
-                        &language_server_id,
-                        resource,
-                    )
-                    .await
-            }
-            .boxed()
-        })
-        .await?
-    }
-
-    async fn language_server_additional_initialization_options(
-        &self,
-        language_server_id: LanguageServerName,
-        target_language_server_id: LanguageServerName,
-        worktree: Arc<dyn WorktreeDelegate>,
-    ) -> Result<Option<String>> {
-        self.call(|extension, store| {
-            async move {
-                let resource = store.data_mut().table.push(worktree)?;
-                let options = extension
-                    .call_language_server_additional_initialization_options(
-                        store,
-                        &language_server_id,
-                        &target_language_server_id,
-                        resource,
-                    )
-                    .await?
-                    .map_err(|err| store.data().extension_error(err))?;
-                anyhow::Ok(options)
-            }
-            .boxed()
-        })
-        .await?
-    }
-
-    async fn language_server_additional_workspace_configuration(
-        &self,
-        language_server_id: LanguageServerName,
-        target_language_server_id: LanguageServerName,
-        worktree: Arc<dyn WorktreeDelegate>,
-    ) -> Result<Option<String>> {
-        self.call(|extension, store| {
-            async move {
-                let resource = store.data_mut().table.push(worktree)?;
-                let options = extension
-                    .call_language_server_additional_workspace_configuration(
-                        store,
-                        &language_server_id,
-                        &target_language_server_id,
-                        resource,
-                    )
-                    .await?
-                    .map_err(|err| store.data().extension_error(err))?;
-                anyhow::Ok(options)
-            }
-            .boxed()
-        })
-        .await?
-    }
-
-    async fn labels_for_completions(
-        &self,
-        language_server_id: LanguageServerName,
-        completions: Vec<Completion>,
-    ) -> Result<Vec<Option<CodeLabel>>> {
-        self.call(|extension, store| {
-            async move {
-                let labels = extension
-                    .call_labels_for_completions(
-                        store,
-                        &language_server_id,
-                        completions.into_iter().map(Into::into).collect(),
-                    )
-                    .await?
-                    .map_err(|err| store.data().extension_error(err))?;
-
-                Ok(labels
-                    .into_iter()
-                    .map(|label| label.map(Into::into))
-                    .collect())
-            }
-            .boxed()
-        })
-        .await?
-    }
-
-    async fn labels_for_symbols(
-        &self,
-        language_server_id: LanguageServerName,
-        symbols: Vec<Symbol>,
-    ) -> Result<Vec<Option<CodeLabel>>> {
-        self.call(|extension, store| {
-            async move {
-                let labels = extension
-                    .call_labels_for_symbols(
-                        store,
-                        &language_server_id,
-                        symbols.into_iter().map(Into::into).collect(),
-                    )
-                    .await?
-                    .map_err(|err| store.data().extension_error(err))?;
-
-                Ok(labels
-                    .into_iter()
-                    .map(|label| label.map(Into::into))
-                    .collect())
-            }
-            .boxed()
-        })
-        .await?
     }
 
     async fn complete_slash_command_argument(
@@ -507,7 +285,6 @@ impl WasmHost {
         fs: Arc<dyn Fs>,
         http_client: Arc<dyn HttpClient>,
         node_runtime: NodeRuntime,
-        proxy: Arc<ExtensionHostProxy>,
         work_dir: PathBuf,
         cx: &mut App,
     ) -> Arc<Self> {
@@ -526,7 +303,6 @@ impl WasmHost {
             work_dir,
             http_client,
             node_runtime,
-            proxy,
             release_channel: ReleaseChannel::global(cx),
             granted_capabilities: extension_settings.granted_capabilities.clone(),
             _main_thread_message_task: task,
@@ -900,7 +676,7 @@ impl CacheStore for IncrementalCompilationCache {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use extension::ExtensionHostProxy;
+    
     use fs::FakeFs;
     use gpui::TestAppContext;
     use http_client::FakeHttpClient;
@@ -942,7 +718,6 @@ mod tests {
                 fs.clone(),
                 FakeHttpClient::with_200_response(),
                 NodeRuntime::unavailable(),
-                Arc::new(ExtensionHostProxy::default()),
                 PathBuf::from("/work"),
                 cx,
             )

@@ -105,7 +105,6 @@ mod tests {
             icon_themes: vec![],
             languages: vec![],
             grammars: BTreeMap::default(),
-            language_servers: BTreeMap::default(),
             context_servers: BTreeMap::default(),
             slash_commands: BTreeMap::default(),
             snippets: None,
