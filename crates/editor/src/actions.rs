@@ -848,10 +848,6 @@ actions!(
         ToggleDiagnostics,
         /// Toggles indent guides display.
         ToggleIndentGuides,
-        /// Toggles inlay hints display.
-        ToggleInlayHints,
-        /// Toggles inline values display.
-        ToggleInlineValues,
         /// Toggles inline diagnostics display.
         ToggleInlineDiagnostics,
         /// Toggles edit prediction feature.

@@ -12,7 +12,7 @@ use crate::{
     ContextMenuPlacement, CursorShape, CustomBlockId, DisplayDiffHunk, DisplayPoint, DisplayRow,
     EditDisplayMode, EditPrediction, Editor, EditorMode, EditorSettings, EditorSnapshot,
     EditorStyle, FILE_HEADER_HEIGHT, FocusedBlock, GutterDimensions, HalfPageDown, HalfPageUp,
-    HandleInput, HoveredCursor, InlayHintRefreshReason, LineDown, LineHighlight, LineUp,
+    HandleInput, HoveredCursor, LineDown, LineHighlight, LineUp,
     MAX_LINE_LEN, MINIMAP_FONT_SIZE, PageDown, PageUp, Point, RowExt, RowRangeExt, Selection,
     SelectionDragState, SizingBehavior, SoftWrap, ToPoint,
     code_context_menus::{CodeActionsMenu, MENU_ASIDE_MAX_WIDTH, MENU_ASIDE_MIN_WIDTH, MENU_GAP},
@@ -30,7 +30,6 @@ use crate::{
         self, HOVER_POPOVER_GAP, MIN_POPOVER_CHARACTER_WIDTH, MIN_POPOVER_LINE_HEIGHT,
         POPOVER_RIGHT_OFFSET,
     },
-    inlay_hint_settings,
     scroll::{
         ActiveScrollbarState, ScrollOffset, ScrollPixelOffset, ScrollbarThumbState,
         scroll_amount::ScrollAmount,
@@ -468,10 +467,8 @@ impl EditorElement {
         register_action(editor, window, Editor::toggle_line_numbers);
         register_action(editor, window, Editor::toggle_relative_line_numbers);
         register_action(editor, window, Editor::toggle_indent_guides);
-        register_action(editor, window, Editor::toggle_inline_values);
         register_action(editor, window, Editor::toggle_edit_predictions);
         if editor.read(cx).lsp_data_enabled() {
-            register_action(editor, window, Editor::toggle_inlay_hints);
             register_action(editor, window, Editor::toggle_diagnostics);
         }
         if editor.read(cx).inline_diagnostics_enabled() {
@@ -715,25 +712,6 @@ impl EditorElement {
                     return;
                 }
                 editor.update(cx, |editor, cx| {
-                    let inlay_hint_settings = inlay_hint_settings(
-                        editor.selections.newest_anchor().head(),
-                        &editor.buffer.read(cx).snapshot(cx),
-                        cx,
-                    );
-
-                    if let Some(inlay_modifiers) = inlay_hint_settings
-                        .toggle_on_modifiers_press
-                        .as_ref()
-                        .filter(|modifiers| modifiers.modified())
-                    {
-                        editor.refresh_inlay_hints(
-                            InlayHintRefreshReason::ModifiersChanged(
-                                inlay_modifiers == &event.modifiers,
-                            ),
-                            cx,
-                        );
-                    }
-
                     if editor.hover_state.focused(window, cx) {
                         return;
                     }

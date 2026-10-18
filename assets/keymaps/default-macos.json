@@ -929,7 +929,6 @@
       "cmd-f8": "editor::GoToHunk",
       "cmd-shift-f8": "editor::GoToPreviousHunk",
       "ctrl-enter": "assistant::InlineAssist",
-      "ctrl-:": "editor::ToggleInlayHints",
     },
   },
   {

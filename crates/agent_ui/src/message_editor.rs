@@ -942,11 +942,6 @@ impl MessageEditor {
     }
 
     pub fn send(&mut self, cx: &mut Context<Self>) {
-        if !self.is_empty(cx) {
-            self.editor.update(cx, |editor, cx| {
-                editor.clear_inlay_hints(cx);
-            });
-        }
         cx.emit(MessageEditorEvent::Send)
     }
 
@@ -1008,10 +1003,6 @@ impl MessageEditor {
         if self.is_empty(cx) {
             return;
         }
-
-        self.editor.update(cx, |editor, cx| {
-            editor.clear_inlay_hints(cx);
-        });
 
         cx.emit(MessageEditorEvent::SendImmediately)
     }

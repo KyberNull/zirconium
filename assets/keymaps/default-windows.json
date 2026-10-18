@@ -874,7 +874,6 @@
       "ctrl-f8": "editor::GoToHunk",
       "ctrl-shift-f8": "editor::GoToPreviousHunk",
       "ctrl-enter": "assistant::InlineAssist",
-      "ctrl-shift-;": "editor::ToggleInlayHints",
     },
   },
   {

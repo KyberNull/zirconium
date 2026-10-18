@@ -157,7 +157,6 @@ use gpui::{
 use hover_links::{HoverLink, HoveredLinkState, find_file};
 use hover_popover::{HoverState, hide_hover};
 use indent_guides::ActiveIndentGuidesState;
-use inlays::inlay_hints::InlayHintRefreshReason;
 use itertools::{Either, Itertools};
 use language::{
     AutoindentMode, BlockCommentConfig, BracketMatch, BracketPair, Buffer, BufferRow,
@@ -252,10 +251,6 @@ use crate::{
     code_context_menus::CompletionsMenuSource,
     editor_settings::MultiCursorModifier,
     hover_links::{find_url, find_url_from_range},
-    inlays::{
-        InlineValueCache,
-        inlay_hints::{LspInlayHintData, inlay_hint_settings},
-    },
     runnables::{ResolvedTasks, RunnableData, RunnableTaskStatus, RunnableTasks},
     scroll::{ScrollOffset, ScrollPixelOffset},
     selections_collection::resolve_selections_wrapping_blocks,
@@ -1101,12 +1096,10 @@ pub struct Editor {
     serialize_folds: Task<()>,
     minimap: Option<Entity<Self>>,
     pub change_list: ChangeList,
-    inline_value_cache: InlineValueCache,
     number_deleted_lines: bool,
 
     selection_drag_state: SelectionDragState,
     post_scroll_update: Task<()>,
-    inlay_hints: Option<LspInlayHintData>,
     folding_newlines: Task<()>,
     select_next_is_case_sensitive: Option<bool>,
     pub lookup_key: Option<Box<dyn Any + Send + Sync>>,
@@ -1128,14 +1121,6 @@ pub struct Editor {
 struct AccentData {
     colors: AccentColors,
     overrides: Vec<SharedString>,
-}
-
-fn debounce_value(debounce_ms: u64) -> Option<Duration> {
-    if debounce_ms > 0 {
-        Some(Duration::from_millis(debounce_ms))
-    } else {
-        None
-    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Default)]
@@ -1949,20 +1934,11 @@ impl Editor {
                 project,
                 window,
                 |editor, _, event, window, cx| match event {
-                    project::Event::RefreshInlayHints { server_id } => {
-                        editor.refresh_inlay_hints(
-                            InlayHintRefreshReason::RefreshRequested {
-                                server_id: *server_id,
-                            },
-                            cx,
-                        );
-                    }
                     project::Event::LanguageServerRemoved(_) => {
                         editor.registered_buffers.clear();
                         editor.register_visible_buffers(cx);
                         editor.refresh_runnables(None, window, cx);
                         editor.update_lsp_data(None, window, cx);
-                        editor.refresh_inlay_hints(InlayHintRefreshReason::ServerRemoved, cx);
                     }
                     project::Event::SnippetEdit(id, snippet_edits) => {
                         // todo(lw): Non singletons
@@ -1992,10 +1968,6 @@ impl Editor {
                             editor.register_buffer(buffer_id, cx);
                             editor.refresh_runnables(Some(buffer_id), window, cx);
                             editor.update_lsp_data(Some(buffer_id), window, cx);
-                            editor.refresh_inlay_hints(
-                                InlayHintRefreshReason::LanguageServerRegistered,
-                                cx,
-                            );
                             editor.refresh_code_actions_for_selection(window, cx);
                             editor.refresh_document_highlights(cx);
                         }
@@ -2120,10 +2092,6 @@ impl Editor {
             ));
         }
 
-        let buffer_snapshot = multi_buffer.read(cx).snapshot(cx);
-
-        let inlay_hint_settings =
-            inlay_hint_settings(selections.newest_anchor().head(), &buffer_snapshot, cx);
         let focus_handle = cx.focus_handle();
         if !is_minimap {
             cx.on_focus(&focus_handle, window, Self::handle_focus)
@@ -2276,7 +2244,6 @@ impl Editor {
             inline_diagnostics_enabled: full_mode,
             diagnostics_enabled: full_mode,
             word_completions_enabled: full_mode,
-            inline_value_cache: InlineValueCache::new(inlay_hint_settings.show_value_hints),
             gutter_hovered: false,
             pixel_position_of_newest_cursor: None,
             last_bounds: None,
@@ -2337,7 +2304,6 @@ impl Editor {
                 .unwrap_or_default(),
             runnables: RunnableData::new(),
             pull_diagnostics_task: Task::ready(()),
-            inlay_hints: None,
             post_scroll_update: Task::ready(()),
             in_project_search: false,
             previous_search_ranges: None,
@@ -2467,7 +2433,6 @@ impl Editor {
 
             editor.minimap =
                 editor.create_minimap(EditorSettings::get_global(cx).minimap, window, cx);
-            editor.inlay_hints = Some(LspInlayHintData::new(inlay_hint_settings));
 
             if let Some(buffer) = multi_buffer.read(cx).as_singleton() {
                 editor.register_buffer(buffer.read(cx).remote_id(), cx);
@@ -8711,10 +8676,6 @@ impl Editor {
                         let buffer_id = buffer.read(cx).remote_id();
                         self.register_buffer(buffer_id, cx);
                         self.update_lsp_data(Some(buffer_id), window, cx);
-                        self.refresh_inlay_hints(
-                            InlayHintRefreshReason::BufferEdited(buffer_id),
-                            cx,
-                        );
                     }
                 }
 
@@ -8748,7 +8709,6 @@ impl Editor {
                 }
                 self.register_visible_buffers(cx);
                 self.update_lsp_data(Some(buffer_id), window, cx);
-                self.refresh_inlay_hints(InlayHintRefreshReason::NewLinesShown, cx);
                 self.refresh_runnables(None, window, cx);
                 self.bracket_fetched_tree_sitter_chunks
                     .retain(|range, _| range.start.buffer_id != buffer_id);
@@ -8761,13 +8721,6 @@ impl Editor {
                 });
             }
             multi_buffer::Event::BuffersRemoved { removed_buffer_ids } => {
-                if let Some(inlay_hints) = &mut self.inlay_hints {
-                    inlay_hints.remove_inlay_chunk_data(removed_buffer_ids);
-                }
-                self.refresh_inlay_hints(
-                    InlayHintRefreshReason::BuffersRemoved(removed_buffer_ids.clone()),
-                    cx,
-                );
                 for buffer_id in removed_buffer_ids {
                     self.registered_buffers.remove(buffer_id);
                     self.clear_runnables(Some(*buffer_id));
@@ -8989,15 +8942,6 @@ impl Editor {
             if language_settings_changed {
                 self.refresh_outline_symbols_at_cursor(cx);
             }
-
-            self.refresh_inlay_hints(
-                InlayHintRefreshReason::SettingsChange(inlay_hint_settings(
-                    self.selections.newest_anchor().head(),
-                    &self.buffer.read(cx).snapshot(cx),
-                    cx,
-                )),
-                cx,
-            );
         }
 
         cx.notify();
@@ -9534,13 +9478,12 @@ impl Editor {
         &mut self,
         event: FocusOutEvent,
         _window: &mut Window,
-        cx: &mut Context<Self>,
+        _cx: &mut Context<Self>,
     ) {
         if event.blurred != self.focus_handle {
             self.last_focused_descendant = Some(event.blurred);
         }
         self.selection_drag_state = SelectionDragState::None;
-        self.refresh_inlay_hints(InlayHintRefreshReason::ModifiersChanged(false), cx);
     }
 
     pub fn handle_blur(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -10075,7 +10018,6 @@ impl Editor {
     fn do_update_data_on_scroll(&mut self, window: &mut Window, cx: &mut Context<'_, Self>) {
         self.register_visible_buffers(cx);
         self.colorize_brackets(false, cx);
-        self.refresh_inlay_hints(InlayHintRefreshReason::NewLinesShown, cx);
 
         if !self.buffer().read(cx).is_singleton() || self.needs_initial_data_update {
             self.needs_initial_data_update = false;

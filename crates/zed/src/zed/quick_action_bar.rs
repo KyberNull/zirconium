@@ -35,7 +35,6 @@ use zed_actions::{agent::AddSelectionToThread, assistant::InlineAssist, outline:
 const MAX_CODE_ACTION_MENU_LINES: u32 = 16;
 
 pub struct QuickActionBar {
-    _inlay_hints_enabled_subscription: Option<Subscription>,
     _ai_settings_subscription: Subscription,
     active_item: Option<Box<dyn ItemHandle>>,
     buffer_search_bar: Entity<BufferSearchBar>,
@@ -66,7 +65,6 @@ impl QuickActionBar {
         });
 
         let mut this = Self {
-            _inlay_hints_enabled_subscription: None,
             _ai_settings_subscription: ai_settings_subscription,
             active_item: None,
             buffer_search_bar,
@@ -112,11 +110,8 @@ impl Render for QuickActionBar {
             return div().id("empty quick action bar");
         };
 
-        let supports_inlay_hints = editor.update(cx, |editor, cx| editor.supports_inlay_hints(cx));
         let editor_value = editor.read(cx);
         let selection_menu_enabled = editor_value.selection_menu_enabled(cx);
-        let inlay_hints_enabled = editor_value.inlay_hints_enabled();
-        let inline_values_enabled = editor_value.inline_values_enabled();
         let is_full = editor_value.mode().is_full();
         let diagnostics_enabled = editor_value.diagnostics_enabled()
             && editor_value.diagnostics_max_severity != DiagnosticSeverity::Off;
@@ -342,51 +337,6 @@ impl Render for QuickActionBar {
                         let focus_handle = editor_focus_handle.clone();
                         |mut menu, _, _| {
                             menu = menu.context(focus_handle);
-
-                            if supports_inlay_hints {
-                                menu = menu.toggleable_entry(
-                                    "Inlay Hints",
-                                    inlay_hints_enabled,
-                                    IconPosition::Start,
-                                    Some(editor::actions::ToggleInlayHints.boxed_clone()),
-                                    {
-                                        let editor = editor.clone();
-                                        move |window, cx| {
-                                            editor
-                                                .update(cx, |editor, cx| {
-                                                    editor.toggle_inlay_hints(
-                                                        &editor::actions::ToggleInlayHints,
-                                                        window,
-                                                        cx,
-                                                    );
-                                                })
-                                                .ok();
-                                        }
-                                    },
-                                );
-
-                                menu = menu.toggleable_entry(
-                                    "Inline Values",
-                                    inline_values_enabled,
-                                    IconPosition::Start,
-                                    Some(editor::actions::ToggleInlineValues.boxed_clone()),
-                                    {
-                                        let editor = editor.clone();
-                                        move |window, cx| {
-                                            editor
-                                                .update(cx, |editor, cx| {
-                                                    editor.toggle_inline_values(
-                                                        &editor::actions::ToggleInlineValues,
-                                                        window,
-                                                        cx,
-                                                    );
-                                                })
-                                                .ok();
-                                        }
-                                    }
-                                );
-                            }
-
 
                             if supports_minimap {
                                 menu = menu.toggleable_entry("Minimap", minimap_enabled, IconPosition::Start, Some(editor::actions::ToggleMinimap.boxed_clone()), {
@@ -703,39 +653,9 @@ impl ToolbarItemView for QuickActionBar {
         &mut self,
         active_pane_item: Option<&dyn ItemHandle>,
         _: &mut Window,
-        cx: &mut Context<Self>,
+        _cx: &mut Context<Self>,
     ) -> ToolbarItemLocation {
         self.active_item = active_pane_item.map(ItemHandle::boxed_clone);
-        if let Some(active_item) = active_pane_item {
-            self._inlay_hints_enabled_subscription.take();
-
-            if let Some(editor) = active_item.downcast::<Editor>() {
-                let (mut inlay_hints_enabled, mut supports_inlay_hints) =
-                    editor.update(cx, |editor, cx| {
-                        (
-                            editor.inlay_hints_enabled(),
-                            editor.supports_inlay_hints(cx),
-                        )
-                    });
-                self._inlay_hints_enabled_subscription =
-                    Some(cx.observe(&editor, move |_, editor, cx| {
-                        let (new_inlay_hints_enabled, new_supports_inlay_hints) =
-                            editor.update(cx, |editor, cx| {
-                                (
-                                    editor.inlay_hints_enabled(),
-                                    editor.supports_inlay_hints(cx),
-                                )
-                            });
-                        let should_notify = inlay_hints_enabled != new_inlay_hints_enabled
-                            || supports_inlay_hints != new_supports_inlay_hints;
-                        inlay_hints_enabled = new_inlay_hints_enabled;
-                        supports_inlay_hints = new_supports_inlay_hints;
-                        if should_notify {
-                            cx.notify()
-                        }
-                    }));
-            }
-        }
         self.get_toolbar_item_location()
     }
 }

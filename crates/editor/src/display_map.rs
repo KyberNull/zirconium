@@ -1153,6 +1153,7 @@ impl DisplayMap {
         widths_changed
     }
 
+    #[cfg(any(test, feature = "test-support"))]
     pub(crate) fn current_inlays(&self) -> impl Iterator<Item = &Inlay> + Default {
         self.inlay_map.current_inlays()
     }
