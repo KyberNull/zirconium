@@ -123,7 +123,6 @@ impl RatePredictionsModal {
             diff_editor: cx.new(|cx| {
                 let multibuffer = cx.new(|_| MultiBuffer::new(language::Capability::ReadOnly));
                 let mut editor = Editor::for_multibuffer(multibuffer, None, window, cx);
-                editor.disable_inline_diagnostics();
                 editor.set_expand_all_diff_hunks(cx);
                 editor.set_show_git_diff_gutter(false, cx);
                 editor
@@ -737,7 +736,6 @@ impl RatePredictionsModal {
                 let mut editor = Editor::for_multibuffer(multibuffer, None, window, cx);
                 let expected_buffer_id = expected_buffer.read(cx).remote_id();
                 editor.disable_header_for_buffer(expected_buffer_id, cx);
-                editor.disable_inline_diagnostics();
                 editor.set_expand_all_diff_hunks(cx);
                 editor.set_show_git_diff_gutter(false, cx);
                 editor.set_show_runnables(false, cx);

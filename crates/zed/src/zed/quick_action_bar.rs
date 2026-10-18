@@ -3,10 +3,9 @@ mod repl_menu;
 
 use agent_settings::AgentSettings;
 use editor::actions::{
-    AddSelectionAbove, AddSelectionBelow, DuplicateLineDown, GoToDiagnostic,
-    GoToHunk, GoToPreviousDiagnostic, GoToPreviousHunk, MoveLineDown, MoveLineUp, SelectAll,
-    SelectLargerSyntaxNode, SelectNext, SelectSmallerSyntaxNode,
-    ToggleDiagnostics, ToggleGoToLine, ToggleInlineDiagnostics,
+    AddSelectionAbove, AddSelectionBelow, DuplicateLineDown, GoToHunk, GoToPreviousHunk,
+    MoveLineDown, MoveLineUp, SelectAll, SelectLargerSyntaxNode, SelectNext,
+    SelectSmallerSyntaxNode, ToggleGoToLine,
 };
 use editor::{Editor, EditorSettings};
 use gpui::{
@@ -14,10 +13,7 @@ use gpui::{
     FocusHandle, Focusable, InteractiveElement, ParentElement, Render, Styled, Subscription,
     WeakEntity, Window,
 };
-use project::{
-    DisableAiSettings,
-    project_settings::{DiagnosticSeverity, ProjectSettings},
-};
+use project::{DisableAiSettings, project_settings::ProjectSettings};
 use search::{BufferSearchBar, buffer_search};
 use settings::{GitDiffBaseSetting, Settings, SettingsStore, update_settings_file};
 use ui::{
@@ -110,11 +106,6 @@ impl Render for QuickActionBar {
 
         let editor_value = editor.read(cx);
         let selection_menu_enabled = editor_value.selection_menu_enabled(cx);
-        let is_full = editor_value.mode().is_full();
-        let diagnostics_enabled = editor_value.diagnostics_enabled()
-            && editor_value.diagnostics_max_severity != DiagnosticSeverity::Off;
-        let supports_inline_diagnostics = editor_value.inline_diagnostics_enabled();
-        let inline_diagnostics_enabled = editor_value.show_inline_diagnostics();
         let git_blame_inline_enabled = editor_value.git_blame_inline_enabled();
         let show_git_blame_gutter = editor_value.show_git_blame_gutter();
         let show_line_numbers = editor_value.line_numbers_enabled(cx);
@@ -218,12 +209,6 @@ impl Render for QuickActionBar {
                             .action("Go to Symbol", Box::new(ToggleOutline))
                             .action("Go to Line/Column", Box::new(ToggleGoToLine))
                             .separator()
-                            .action("Next Problem", Box::new(GoToDiagnostic::default()))
-                            .action(
-                                "Previous Problem",
-                                Box::new(GoToPreviousDiagnostic::default()),
-                            )
-                            .separator()
                             .action_disabled_when(!has_diff_hunks, "Next Hunk", Box::new(GoToHunk))
                             .action_disabled_when(
                                 !has_diff_hunks,
@@ -313,55 +298,6 @@ impl Render for QuickActionBar {
                             }
 
                             menu = menu.separator();
-
-                            if is_full {
-                                menu = menu.toggleable_entry(
-                                    "Diagnostics",
-                                    diagnostics_enabled,
-                                    IconPosition::Start,
-                                    Some(ToggleDiagnostics.boxed_clone()),
-                                    {
-                                        let editor = editor.clone();
-                                        move |window, cx| {
-                                            editor
-                                                .update(cx, |editor, cx| {
-                                                    editor.toggle_diagnostics(
-                                                        &ToggleDiagnostics,
-                                                        window,
-                                                        cx,
-                                                    );
-                                                })
-                                                .ok();
-                                        }
-                                    },
-                                );
-
-                                if supports_inline_diagnostics {
-                                    let mut inline_diagnostics_item = ContextMenuEntry::new("Inline Diagnostics")
-                                        .toggleable(IconPosition::Start, diagnostics_enabled && inline_diagnostics_enabled)
-                                        .action(ToggleInlineDiagnostics.boxed_clone())
-                                        .handler({
-                                            let editor = editor.clone();
-                                            move |window, cx| {
-                                                editor
-                                                    .update(cx, |editor, cx| {
-                                                        editor.toggle_inline_diagnostics(
-                                                            &ToggleInlineDiagnostics,
-                                                            window,
-                                                            cx,
-                                                        );
-                                                    })
-                                                    .ok();
-                                            }
-                                        });
-                                    if !diagnostics_enabled {
-                                        inline_diagnostics_item = inline_diagnostics_item.disabled(true).documentation_aside(DocumentationSide::Left, |_|  Label::new("Inline diagnostics are not available until regular diagnostics are enabled.").into_any_element());
-                                    }
-                                    menu = menu.item(inline_diagnostics_item)
-                                }
-
-                                menu = menu.separator();
-                            }
 
                             menu = menu.toggleable_entry(
                                 "Line Numbers",

@@ -78,8 +78,6 @@ impl EditorPreview {
             editor.set_input_enabled(false);
             editor.scroll_manager.set_forbid_vertical_scroll(true);
             editor.disable_scrollbars_and_minimap(window, cx);
-            editor.disable_inline_diagnostics();
-            editor.disable_diagnostics(cx);
             editor.disable_expand_excerpt_buttons(cx);
             editor.disable_mouse_wheel_zoom();
             editor.set_show_gutter(editor_settings.gutter.line_numbers, cx); // needed for line numbers

@@ -53,7 +53,6 @@ mod clipboard;
 mod code_actions;
 mod completions;
 mod config;
-mod diagnostics;
 mod edit_prediction;
 mod input;
 mod markdown_actions;
@@ -68,8 +67,6 @@ pub use completions::CompletionProvider;
 #[cfg(test)]
 pub(crate) use completions::snippet_candidate_suffixes;
 pub(crate) use completions::split_words;
-use diagnostics::{ActiveDiagnostic, GlobalDiagnosticRenderer, InlineDiagnostic};
-pub use diagnostics::{DiagnosticRenderer, set_diagnostic_renderer};
 pub use display_map::{
     ChunkRenderer, ChunkRendererContext, DisplayPoint, FoldPlaceholder, HighlightKey,
     NavigationOverlayKey,
@@ -159,9 +156,8 @@ use indent_guides::ActiveIndentGuidesState;
 use itertools::{Either, Itertools};
 use language::{
     AutoindentMode, BlockCommentConfig, BracketMatch, BracketPair, Buffer, BufferRow,
-    BufferSnapshot, Capability, CharClassifier, CharKind, CharScopeContext, CodeLabel, CursorShape,
-    DiagnosticEntryRef, DiffOptions, EditPredictionsMode, EditPreview, HighlightedText, IndentKind,
-    IndentSize, Language, LanguageAwareStyling, LanguageName, LanguageRegistry, LanguageScope,
+    BufferSnapshot, Capability, CharClassifier, CharKind, CharScopeContext, CodeLabel, CursorShape, DiffOptions, EditPredictionsMode, EditPreview, HighlightedText, IndentKind,
+    IndentSize, Language, LanguageAwareStyling, LanguageName, LanguageScope,
     LocalFile, OffsetRangeExt, OutlineItem, Point, Selection, SelectionGoal, TextObject,
     TransactionId, TreeSitterOptions, WordsQuery,
     language_settings::{
@@ -191,7 +187,7 @@ use project::{
     lsp_store::{
         CompletionDocumentation, FormatTrigger, LspFormatTarget,
     },
-    project_settings::{DiagnosticSeverity, GoToDiagnosticSeverityFilter, ProjectSettings},
+    project_settings::{DiagnosticSeverity, ProjectSettings},
 };
 use rand::seq::SliceRandom;
 use regex::Regex;
@@ -897,13 +893,7 @@ pub struct Editor {
     select_syntax_node_history: SelectSyntaxNodeHistory,
     ime_transaction: Option<TransactionId>,
     pub diagnostics_max_severity: DiagnosticSeverity,
-    active_diagnostics: ActiveDiagnostic,
-    show_inline_diagnostics: bool,
-    inline_diagnostics_update: Task<()>,
-    inline_diagnostics_enabled: bool,
-    diagnostics_enabled: bool,
     word_completions_enabled: bool,
-    inline_diagnostics: Vec<(Anchor, InlineDiagnostic)>,
     soft_wrap_mode_override: Option<language_settings::SoftWrap>,
     hard_wrap: Option<usize>,
     project: Option<Entity<Project>>,
@@ -1054,7 +1044,6 @@ pub struct Editor {
     /// Counter for generating unique comment IDs.
     next_review_comment_id: usize,
     hovered_diff_hunk_row: Option<DisplayRow>,
-    pull_diagnostics_task: Task<()>,
     in_project_search: bool,
     previous_search_ranges: Option<Arc<[Range<Anchor>]>>,
     breadcrumb_header: Option<String>,
@@ -1893,7 +1882,6 @@ impl Editor {
                 |editor, _, event, window, cx| match event {
                     project::Event::LanguageServerRemoved(_) => {
                         editor.refresh_runnables(None, window, cx);
-                        editor.update_lsp_data(None, window, cx);
                     }
                     project::Event::SnippetEdit(id, snippet_edits) => {
                         // todo(lw): Non singletons
@@ -1921,7 +1909,6 @@ impl Editor {
                         let buffer_id = *buffer_id;
                         if editor.buffer().read(cx).buffer(buffer_id).is_some() {
                             editor.refresh_runnables(Some(buffer_id), window, cx);
-                            editor.update_lsp_data(Some(buffer_id), window, cx);
                         }
                     }
 
@@ -2090,10 +2077,6 @@ impl Editor {
             snippet_stack: InvalidationStack::default(),
             select_syntax_node_history: SelectSyntaxNodeHistory::default(),
             ime_transaction: None,
-            active_diagnostics: ActiveDiagnostic::None,
-            show_inline_diagnostics: ProjectSettings::get_global(cx).diagnostics.inline.enabled,
-            inline_diagnostics_update: Task::ready(()),
-            inline_diagnostics: Vec::new(),
             soft_wrap_mode_override,
             diagnostics_max_severity,
             hard_wrap: None,
@@ -2179,8 +2162,6 @@ impl Editor {
             edit_prediction_preview: EditPredictionPreview::Inactive {
                 released_too_fast: false,
             },
-            inline_diagnostics_enabled: full_mode,
-            diagnostics_enabled: full_mode,
             word_completions_enabled: full_mode,
             gutter_hovered: false,
             pixel_position_of_newest_cursor: None,
@@ -2241,7 +2222,6 @@ impl Editor {
                 })
                 .unwrap_or_default(),
             runnables: RunnableData::new(),
-            pull_diagnostics_task: Task::ready(()),
             post_scroll_update: Task::ready(()),
             in_project_search: false,
             previous_search_ranges: None,
@@ -3079,11 +3059,6 @@ impl Editor {
         }
         if !self.diff_review_overlays.is_empty() {
             self.dismiss_all_diff_review_overlays(cx);
-            dismissed = true;
-        }
-
-        if self.mode.is_full() && self.has_active_diagnostic_group() {
-            self.dismiss_diagnostics(cx);
             dismissed = true;
         }
 
@@ -8085,7 +8060,6 @@ impl Editor {
             } => {
                 self.scrollbar_marker_state.dirty = true;
                 self.active_indent_guides_state.dirty = true;
-                self.refresh_active_diagnostics(cx);
                 self.refresh_single_line_folds(window, cx);
                 let snapshot = self.snapshot(window, cx);
                 self.refresh_matching_bracket_highlights(&snapshot, cx);
@@ -8101,11 +8075,6 @@ impl Editor {
                 if let Some(buffer) = edited_buffer {
                     if buffer.read(cx).file().is_none() {
                         cx.emit(EditorEvent::TitleChanged);
-                    }
-
-                    if self.project.is_some() {
-                        let buffer_id = buffer.read(cx).remote_id();
-                        self.update_lsp_data(Some(buffer_id), window, cx);
                     }
                 }
 
@@ -8136,7 +8105,6 @@ impl Editor {
                     self.update_uncommitted_diff_for_buffer(&project, [buffer.clone()], cx)
                         .detach();
                 }
-                self.update_lsp_data(Some(buffer_id), window, cx);
                 self.refresh_runnables(None, window, cx);
                 self.bracket_fetched_tree_sitter_chunks
                     .retain(|range, _| range.start.buffer_id != buffer_id);
@@ -8197,9 +8165,6 @@ impl Editor {
             }
             multi_buffer::Event::Reloaded | multi_buffer::Event::BufferDiffChanged => {
                 cx.emit(EditorEvent::TitleChanged)
-            }
-            multi_buffer::Event::DiagnosticsUpdated => {
-                self.update_diagnostics_state(window, cx);
             }
             _ => {}
         };
@@ -8284,12 +8249,6 @@ impl Editor {
         let accents_changed = new_accents != self.accent_data;
         self.accent_data = new_accents;
 
-        if self.diagnostics_enabled() {
-            let new_severity = EditorSettings::get_global(cx)
-                .diagnostics_max_severity
-                .unwrap_or(DiagnosticSeverity::Hint);
-            self.set_max_diagnostics_severity(new_severity, cx);
-        }
         self.refresh_runnables(None, window, cx);
         self.update_edit_prediction_settings(cx);
         self.refresh_edit_prediction(
@@ -8322,11 +8281,10 @@ impl Editor {
             cx.emit(EditorEvent::BreadcrumbsChanged);
         }
 
-        let (restore_unsaved_buffers, show_inline_diagnostics, inline_blame_enabled) = {
+        let (restore_unsaved_buffers, inline_blame_enabled) = {
             let project_settings = ProjectSettings::get_global(cx);
             (
                 project_settings.session.restore_unsaved_buffers,
-                project_settings.diagnostics.inline.enabled,
                 project_settings.git.inline_blame.enabled,
             )
         };
@@ -8335,11 +8293,6 @@ impl Editor {
             .then(|| BufferSerialization::new(restore_unsaved_buffers));
 
         if self.mode.is_full() {
-            if self.show_inline_diagnostics != show_inline_diagnostics {
-                self.show_inline_diagnostics = show_inline_diagnostics;
-                self.refresh_inline_diagnostics(false, window, cx);
-            }
-
             if self.git_blame_inline_enabled != inline_blame_enabled {
                 self.toggle_git_blame_inline_internal(false, window, cx);
             }
@@ -9264,21 +9217,6 @@ impl Editor {
         self.enable_lsp_data && self.mode().is_full()
     }
 
-    fn update_lsp_data(
-        &mut self,
-        for_buffer: Option<BufferId>,
-        window: &mut Window,
-        cx: &mut Context<'_, Self>,
-    ) {
-        if !self.lsp_data_enabled() {
-            return;
-        }
-
-        if let Some(buffer_id) = for_buffer {
-            self.pull_diagnostics(buffer_id, window, cx);
-        }
-    }
-
     fn create_style(&self, cx: &App) -> EditorStyle {
         let settings = ThemeSettings::get_global(cx);
 
@@ -9326,7 +9264,7 @@ impl Editor {
             inlay_hints_style: make_inlay_hints_style(cx),
             edit_prediction_styles: make_suggestion_styles(cx),
             unnecessary_code_fade: settings.unnecessary_code_fade,
-            show_underlines: self.diagnostics_enabled(),
+            show_underlines: self.mode.is_full(),
         }
     }
 
@@ -9411,7 +9349,6 @@ impl Editor {
 
         if !self.buffer().read(cx).is_singleton() || self.needs_initial_data_update {
             self.needs_initial_data_update = false;
-            self.update_lsp_data(None, window, cx);
             self.refresh_runnables(None, window, cx);
         }
     }

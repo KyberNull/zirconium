@@ -14,7 +14,7 @@ use gpui::{
     ScrollHandle, TextStyleRefinement, WeakEntity, Window,
 };
 use language::language_settings::SoftWrap;
-use project::{AgentId, Project, project_settings::DiagnosticSeverity};
+use project::{AgentId, Project};
 use rope::Point;
 use settings::{Settings as _, ThinkingBlockDisplay};
 use terminal_view::TerminalView;
@@ -670,8 +670,6 @@ fn create_editor_diff(
             cx,
         );
         editor.set_show_gutter(false, cx);
-        editor.disable_diagnostics(cx);
-        editor.set_max_diagnostics_severity(DiagnosticSeverity::Off, cx);
         editor.disable_expand_excerpt_buttons(cx);
         editor.set_show_vertical_scrollbar(false, cx);
         editor.set_minimap_visibility(MinimapVisibility::Disabled, window, cx);

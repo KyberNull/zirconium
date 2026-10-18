@@ -225,12 +225,6 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
                     zed_actions::outline::ToggleOutline,
                 ),
                 MenuItem::action("Go to Line/Column...", editor::actions::ToggleGoToLine),
-                MenuItem::separator(),
-                MenuItem::action("Next Problem", editor::actions::GoToDiagnostic::default()),
-                MenuItem::action(
-                    "Previous Problem",
-                    editor::actions::GoToPreviousDiagnostic::default(),
-                ),
             ],
         },
         Menu {
