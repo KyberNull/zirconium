@@ -560,7 +560,6 @@
       "shift-alt-a": "editor::ToggleBlockComments",
       "f8": ["editor::GoToDiagnostic", { "severity": { "min": "hint", "max": "error" } }],
       "shift-f8": ["editor::GoToPreviousDiagnostic", { "severity": { "min": "hint", "max": "error" } }],
-      "f2": "editor::Rename",
       "ctrl-shift-\\": "editor::MoveToEnclosingBracket",
       "ctrl-shift-[": "editor::Fold",
       "ctrl-shift-]": "editor::UnfoldLines",
@@ -776,13 +775,6 @@
     },
   },
   // Bindings that should be unified with bindings for more general actions
-  {
-    "context": "Editor && renaming",
-    "use_key_equivalents": true,
-    "bindings": {
-      "enter": "editor::ConfirmRename",
-    },
-  },
   {
     "context": "Editor && showing_completions",
     "use_key_equivalents": true,

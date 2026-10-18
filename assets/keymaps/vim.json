@@ -88,7 +88,6 @@
       "ctrl-y": "vim::LineUp",
       // "g" commands
       "g shift-r": "vim::PushReplaceWithRegister",
-      "g r n": "editor::Rename",
       "g r a": "editor::ToggleCodeActions",
       "g g": "vim::StartOfDocument",
       "g h": "editor::Hover",
@@ -538,7 +537,6 @@
       "space k": "editor::Hover",
       "space s": "outline::Toggle",
       "space d": "editor::GoToDiagnostic",
-      "space r": "editor::Rename",
       "space a": "editor::ToggleCodeActions",
       "space h": "editor::SelectAllMatches",
       "space c": "editor::ToggleComments",
@@ -711,7 +709,6 @@
     "bindings": {
       "c": "vim::CurrentLine",
       "x": "vim::Exchange",
-      "d": "editor::Rename", // zed specific
       "s": ["vim::PushChangeSurrounds", {}],
     },
   },

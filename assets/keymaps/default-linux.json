@@ -558,7 +558,6 @@
       "shift-alt-a": "editor::ToggleBlockComments",
       "f8": ["editor::GoToDiagnostic", { "severity": { "min": "hint", "max": "error" } }],
       "shift-f8": ["editor::GoToPreviousDiagnostic", { "severity": { "min": "hint", "max": "error" } }],
-      "f2": "editor::Rename",
       "ctrl-m": "editor::MoveToEnclosingBracket", // from jetbrains
       "ctrl-|": "editor::MoveToEnclosingBracket",
       "ctrl-{": "editor::Fold",
@@ -785,12 +784,6 @@
     },
   },
   // Bindings that should be unified with bindings for more general actions
-  {
-    "context": "Editor && renaming",
-    "bindings": {
-      "enter": "editor::ConfirmRename",
-    },
-  },
   {
     "context": "Editor && showing_completions",
     "bindings": {

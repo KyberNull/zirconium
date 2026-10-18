@@ -147,7 +147,7 @@ use gpui::{
     Action, Animation, AnimationExt, AnyElement, App, AppContext, AsyncWindowContext,
     AvailableSpace, Background, Bounds, ClickEvent, ClipboardEntry, ClipboardItem, Context,
     DispatchPhase, Edges, Entity, EntityId, EntityInputHandler, EventEmitter, FocusHandle,
-    FocusOutEvent, Focusable, FontId, FontStyle, FontWeight, Global, HighlightStyle, Hsla, IsZero,
+    FocusOutEvent, Focusable, FontId, FontStyle, Global, HighlightStyle, Hsla, IsZero,
     KeyContext, Modifiers, MouseButton, MouseDownEvent, MouseMoveEvent, PaintQuad, ParentElement,
     Pixels, PressureStage, Render, ScrollHandle, SharedString, SharedUri, Size, Stateful, Styled,
     Subscription, Task, TextRun, TextStyle, TextStyleRefinement, UTF16Selection, UnderlineStyle,
@@ -185,7 +185,7 @@ use parking_lot::Mutex;
 use persistence::EditorDb;
 use project::{
     CodeAction, Completion, CompletionDisplayOptions, CompletionIntent, CompletionResponse,
-    CompletionSource, DisableAiSettings, InlayId, Location, LspAction, PrepareRenameResponse, Project,
+    CompletionSource, DisableAiSettings, InlayId, Location, LspAction, Project,
     ProjectItem, ProjectPath, ProjectTransaction,
     bookmark_store::BookmarkStore,
     git_store::GitStoreEvent,
@@ -923,7 +923,6 @@ pub struct Editor {
     soft_wrap_mode_override: Option<language_settings::SoftWrap>,
     hard_wrap: Option<usize>,
     project: Option<Entity<Project>>,
-    semantics_provider: Option<Rc<dyn SemanticsProvider>>,
     completion_provider: Option<Rc<dyn CompletionProvider>>,
     collaboration_hub: Option<Box<dyn CollaborationHub>>,
     blink_manager: Entity<BlinkManager>,
@@ -976,7 +975,6 @@ pub struct Editor {
     debounced_selection_highlight_task: Option<(Range<Anchor>, Task<()>)>,
     debounced_selection_highlight_complete: bool,
     last_selection_from_search: bool,
-    pending_rename: Option<RenameState>,
     searchable: bool,
     cursor_shape: CursorShape,
     /// Whether the cursor is offset one character to the left when something is
@@ -1466,14 +1464,6 @@ struct SnippetState {
     ranges: Vec<Vec<Range<Anchor>>>,
     active_index: usize,
     choices: Vec<Option<Vec<String>>>,
-}
-
-#[doc(hidden)]
-pub struct RenameState {
-    pub range: Range<Anchor>,
-    pub old_name: Arc<str>,
-    pub editor: Entity<Editor>,
-    block_id: CustomBlockId,
 }
 
 struct InvalidationStack<T>(Vec<T>);
@@ -2138,9 +2128,6 @@ impl Editor {
             diagnostics_max_severity,
             hard_wrap: None,
             completion_provider: project.clone().map(|project| Rc::new(project) as _),
-            semantics_provider: project
-                .as_ref()
-                .map(|project| Rc::new(project.downgrade()) as _),
             collaboration_hub: project.clone().map(|project| Box::new(project) as _),
             project,
             blink_manager: blink_manager.clone(),
@@ -2195,7 +2182,6 @@ impl Editor {
             debounced_selection_highlight_task: None,
             debounced_selection_highlight_complete: false,
             last_selection_from_search: false,
-            pending_rename: None,
             searchable: !is_minimap,
             cursor_shape: EditorSettings::get_global(cx)
                 .cursor_shape
@@ -2478,9 +2464,6 @@ impl Editor {
         }
 
         key_context.set("mode", mode);
-        if self.pending_rename.is_some() {
-            key_context.add("renaming");
-        }
 
         if let Some(snippet_stack) = self.snippet_stack.last() {
             key_context.add("in_snippet");
@@ -2884,14 +2867,6 @@ impl Editor {
         self.custom_context_menu = Some(Box::new(f))
     }
 
-    pub fn semantics_provider(&self) -> Option<Rc<dyn SemanticsProvider>> {
-        self.semantics_provider.clone()
-    }
-
-    pub fn set_semantics_provider(&mut self, provider: Option<Rc<dyn SemanticsProvider>>) {
-        self.semantics_provider = provider;
-    }
-
     pub fn placeholder_text(&self, cx: &mut App) -> Option<String> {
         self.placeholder_display_map
             .as_ref()
@@ -2944,35 +2919,6 @@ impl Editor {
 
     pub fn set_cursor_offset_on_selection(&mut self, set_cursor_offset_on_selection: bool) {
         self.cursor_offset_on_selection = set_cursor_offset_on_selection;
-    }
-
-    /// Returns the anchor to use as the rename target for a selection.
-    ///
-    /// In selection-based modes, like vim's visual mode and helix, the rendered
-    /// block cursor sits one position to the left of the selection's head,
-    /// since the head is the exclusive end of a forward selection. Using the
-    /// head
-    /// directly would place the rename one character past the symbol, for
-    /// example, trailing whitespace, so for a non-empty forward selection we
-    /// shift one point left to land back on the symbol under the cursor.
-    fn rename_target_anchor(&self, selection: &Selection<Anchor>, cx: &mut App) -> Anchor {
-        let head = selection.head();
-
-        if self.cursor_offset_on_selection
-            && !selection.reversed
-            && selection.start != selection.end
-        {
-            let display_map = self.display_snapshot(cx);
-            let display_head = head.to_display_point(&display_map);
-
-            if display_head.column() > 0 {
-                return display_map.display_point_to_anchor(
-                    movement::left(&display_map, display_head),
-                    Bias::Left,
-                );
-            }
-        }
-        head
     }
 
     pub fn set_current_line_highlight(
@@ -3158,7 +3104,6 @@ impl Editor {
     ) -> bool {
         let mut dismissed = false;
 
-        dismissed |= self.take_rename(false, window, cx).is_some();
         dismissed |= self.hide_blame_popover(true, cx);
         dismissed |= hide_hover(self, cx);
         dismissed |= self.hide_context_menu(window, cx).is_some();
@@ -6789,304 +6734,6 @@ impl Editor {
         }
     }
 
-    pub fn rename(
-        &mut self,
-        _: &Rename,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> Option<Task<Result<()>>> {
-        use language::ToOffset as _;
-
-        if self.read_only(cx) {
-            return None;
-        }
-        let provider = self.semantics_provider.clone()?;
-        let selection = *self.selections.newest_anchor();
-        let cursor = self.rename_target_anchor(&selection, cx);
-        let (cursor_buffer, cursor_buffer_position) =
-            self.buffer.read(cx).text_anchor_for_position(cursor, cx)?;
-        let (head_buffer, head_buffer_position) = self
-            .buffer
-            .read(cx)
-            .text_anchor_for_position(selection.head(), cx)?;
-        let (tail_buffer, cursor_buffer_position_end) = self
-            .buffer
-            .read(cx)
-            .text_anchor_for_position(selection.tail(), cx)?;
-        if tail_buffer != cursor_buffer || head_buffer != cursor_buffer {
-            return None;
-        }
-
-        let snapshot = cursor_buffer.read(cx).snapshot();
-        let cursor_buffer_offset = cursor_buffer_position.to_offset(&snapshot);
-        let head_buffer_offset = head_buffer_position.to_offset(&snapshot);
-        let cursor_buffer_offset_end = cursor_buffer_position_end.to_offset(&snapshot);
-        let prepare_rename = provider.range_for_rename(&cursor_buffer, cursor_buffer_position, cx);
-        drop(snapshot);
-
-        Some(cx.spawn_in(window, async move |this, cx| {
-            let rename_range = prepare_rename.await?;
-            if let Some(rename_range) = rename_range {
-                this.update_in(cx, |this, window, cx| {
-                    let snapshot = cursor_buffer.read(cx).snapshot();
-                    let rename_buffer_range = rename_range.to_offset(&snapshot);
-                    let cursor_offset_in_rename_range =
-                        cursor_buffer_offset.saturating_sub(rename_buffer_range.start);
-                    let head_offset_in_rename_range =
-                        head_buffer_offset.saturating_sub(rename_buffer_range.start);
-                    let tail_offset_in_rename_range =
-                        cursor_buffer_offset_end.saturating_sub(rename_buffer_range.start);
-
-                    this.take_rename(false, window, cx);
-                    let buffer = this.buffer.read(cx).read(cx);
-                    let cursor_offset = cursor.to_offset(&buffer);
-                    let rename_start =
-                        cursor_offset.saturating_sub_usize(cursor_offset_in_rename_range);
-                    let rename_end = rename_start + rename_buffer_range.len();
-                    let range = buffer.anchor_before(rename_start)..buffer.anchor_after(rename_end);
-                    let mut old_highlight_id = None;
-                    let old_name: Arc<str> = buffer
-                        .chunks(
-                            rename_start..rename_end,
-                            LanguageAwareStyling {
-                                tree_sitter: true,
-                                diagnostics: true,
-                            },
-                        )
-                        .map(|chunk| {
-                            if old_highlight_id.is_none() {
-                                old_highlight_id = chunk.syntax_highlight_id;
-                            }
-                            chunk.text
-                        })
-                        .collect::<String>()
-                        .into();
-
-                    drop(buffer);
-
-                    // Position the selection in the rename editor so that it matches the current selection.
-                    this.show_local_selections = false;
-                    let rename_editor = cx.new(|cx| {
-                        let mut editor = Editor::single_line(window, cx);
-                        editor.buffer.update(cx, |buffer, cx| {
-                            buffer.edit(
-                                [(MultiBufferOffset(0)..MultiBufferOffset(0), old_name.clone())],
-                                None,
-                                cx,
-                            )
-                        });
-                        let head_offset_in_rename_range =
-                            MultiBufferOffset(head_offset_in_rename_range);
-                        let tail_offset_in_rename_range =
-                            MultiBufferOffset(tail_offset_in_rename_range);
-                        let rename_selection_range =
-                            match head_offset_in_rename_range.cmp(&tail_offset_in_rename_range) {
-                                Ordering::Equal => {
-                                    editor.select_all(&SelectAll, window, cx);
-                                    return editor;
-                                }
-                                Ordering::Less => {
-                                    head_offset_in_rename_range..tail_offset_in_rename_range
-                                }
-                                Ordering::Greater => {
-                                    tail_offset_in_rename_range..head_offset_in_rename_range
-                                }
-                            };
-                        if rename_selection_range.end.0 > old_name.len() {
-                            editor.select_all(&SelectAll, window, cx);
-                        } else {
-                            editor.change_selections(Default::default(), window, cx, |s| {
-                                s.select_ranges([rename_selection_range]);
-                            });
-                        }
-                        editor
-                    });
-                    cx.subscribe(&rename_editor, |_, _, e: &EditorEvent, cx| {
-                        if e == &EditorEvent::Focused {
-                            cx.emit(EditorEvent::FocusedIn)
-                        }
-                    })
-                    .detach();
-
-                    let write_highlights =
-                        this.clear_background_highlights(HighlightKey::DocumentHighlightWrite, cx);
-                    let read_highlights =
-                        this.clear_background_highlights(HighlightKey::DocumentHighlightRead, cx);
-                    let ranges = write_highlights
-                        .iter()
-                        .flat_map(|(_, ranges)| ranges.iter())
-                        .chain(read_highlights.iter().flat_map(|(_, ranges)| ranges.iter()))
-                        .cloned()
-                        .collect();
-
-                    this.highlight_text(
-                        HighlightKey::Rename,
-                        ranges,
-                        HighlightStyle {
-                            fade_out: Some(0.6),
-                            ..Default::default()
-                        },
-                        cx,
-                    );
-                    let rename_focus_handle = rename_editor.focus_handle(cx);
-                    window.focus(&rename_focus_handle, cx);
-                    let block_id = this.insert_blocks(
-                        [BlockProperties {
-                            style: BlockStyle::Flex,
-                            placement: BlockPlacement::Below(range.start),
-                            height: Some(1),
-                            render: Arc::new({
-                                let rename_editor = rename_editor.clone();
-                                move |cx: &mut BlockContext| {
-                                    let mut text_style = cx.editor_style.text.clone();
-                                    if let Some(highlight_style) = old_highlight_id
-                                        .and_then(|h| cx.editor_style.syntax.get(h).cloned())
-                                    {
-                                        text_style = text_style.highlight(highlight_style);
-                                    }
-                                    div()
-                                        .block_mouse_except_scroll()
-                                        .pl(cx.anchor_x)
-                                        .child(EditorElement::new(
-                                            &rename_editor,
-                                            EditorStyle {
-                                                background: cx.theme().system().transparent,
-                                                local_player: cx.editor_style.local_player,
-                                                text: text_style,
-                                                scrollbar_width: cx.editor_style.scrollbar_width,
-                                                syntax: cx.editor_style.syntax.clone(),
-                                                status: cx.editor_style.status.clone(),
-                                                inlay_hints_style: HighlightStyle {
-                                                    font_weight: Some(FontWeight::BOLD),
-                                                    ..make_inlay_hints_style(cx.app)
-                                                },
-                                                edit_prediction_styles: make_suggestion_styles(
-                                                    cx.app,
-                                                ),
-                                                ..EditorStyle::default()
-                                            },
-                                        ))
-                                        .into_any_element()
-                                }
-                            }),
-                            priority: 0,
-                        }],
-                        Some(Autoscroll::fit()),
-                        cx,
-                    )[0];
-                    this.pending_rename = Some(RenameState {
-                        range,
-                        old_name,
-                        editor: rename_editor,
-                        block_id,
-                    });
-                })?;
-            }
-
-            Ok(())
-        }))
-    }
-
-    pub fn confirm_rename(
-        &mut self,
-        _: &ConfirmRename,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> Option<Task<Result<()>>> {
-        if self.read_only(cx) {
-            return None;
-        }
-        let rename = self.take_rename(false, window, cx)?;
-        let new_name = rename.editor.read(cx).text(cx);
-        if new_name.trim().is_empty() {
-            return Some(Task::ready(Ok(())));
-        }
-
-        let workspace = self.workspace()?.downgrade();
-        let (buffer, start) = self
-            .buffer
-            .read(cx)
-            .text_anchor_for_position(rename.range.start, cx)?;
-        let (end_buffer, _) = self
-            .buffer
-            .read(cx)
-            .text_anchor_for_position(rename.range.end, cx)?;
-        if buffer != end_buffer {
-            return None;
-        }
-
-        let old_name = rename.old_name;
-
-        let rename = self.semantics_provider.as_ref()?.perform_rename(
-            &buffer,
-            start,
-            new_name.clone(),
-            cx,
-        )?;
-
-        Some(cx.spawn_in(window, async move |editor, cx| {
-            let project_transaction = rename.await?;
-            Self::open_project_transaction(
-                &editor,
-                workspace,
-                project_transaction,
-                format!("Rename: {} → {}", old_name, new_name),
-                cx,
-            )
-            .await?;
-
-            Ok(())
-        }))
-    }
-
-    fn take_rename(
-        &mut self,
-        moving_cursor: bool,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> Option<RenameState> {
-        let rename = self.pending_rename.take()?;
-        if rename.editor.focus_handle(cx).is_focused(window) {
-            window.focus(&self.focus_handle, cx);
-        }
-
-        self.remove_blocks(
-            [rename.block_id].into_iter().collect(),
-            Some(Autoscroll::fit()),
-            cx,
-        );
-        self.clear_highlights(HighlightKey::Rename, cx);
-        self.show_local_selections = true;
-
-        if moving_cursor {
-            let cursor_in_rename_editor = rename.editor.update(cx, |editor, cx| {
-                editor
-                    .selections
-                    .newest::<MultiBufferOffset>(&editor.display_snapshot(cx))
-                    .head()
-            });
-
-            // Update the selection to match the position of the selection inside
-            // the rename editor.
-            let snapshot = self.buffer.read(cx).read(cx);
-            let rename_range = rename.range.to_offset(&snapshot);
-            let cursor_in_editor = snapshot
-                .clip_offset(rename_range.start + cursor_in_rename_editor, Bias::Left)
-                .min(rename_range.end);
-            drop(snapshot);
-
-            self.change_selections(SelectionEffects::no_scroll(), window, cx, |s| {
-                s.select_ranges(vec![cursor_in_editor..cursor_in_editor])
-            });
-        }
-
-        Some(rename)
-    }
-
-    pub fn pending_rename(&self) -> Option<&RenameState> {
-        self.pending_rename.as_ref()
-    }
-
     fn can_format_selections(&self, cx: &App) -> bool {
         if !self.mode.is_full() {
             return false;
@@ -10093,74 +9740,6 @@ impl CollaborationHub for Entity<Project> {
         let this = self.read(cx);
         let user_ids = this.collaborators().values().map(|c| c.user_id);
         this.user_store().read(cx).participant_names(user_ids, cx)
-    }
-}
-
-pub trait SemanticsProvider {
-    fn range_for_rename(
-        &self,
-        buffer: &Entity<Buffer>,
-        position: text::Anchor,
-        cx: &mut App,
-    ) -> Task<Result<Option<Range<text::Anchor>>>>;
-
-    fn perform_rename(
-        &self,
-        buffer: &Entity<Buffer>,
-        position: text::Anchor,
-        new_name: String,
-        cx: &mut App,
-    ) -> Option<Task<Result<ProjectTransaction>>>;
-}
-
-impl SemanticsProvider for WeakEntity<Project> {
-    fn range_for_rename(
-        &self,
-        buffer: &Entity<Buffer>,
-        position: text::Anchor,
-        cx: &mut App,
-    ) -> Task<Result<Option<Range<text::Anchor>>>> {
-        let Some(this) = self.upgrade() else {
-            return Task::ready(Ok(None));
-        };
-
-        this.update(cx, |project, cx| {
-            let buffer = buffer.clone();
-            let task = project.prepare_rename(buffer.clone(), position, cx);
-            cx.spawn(async move |_, cx| {
-                Ok(match task.await? {
-                    PrepareRenameResponse::Success(range) => Some(range),
-                    PrepareRenameResponse::InvalidPosition => None,
-                    PrepareRenameResponse::OnlyUnpreparedRenameSupported => {
-                        // Fallback on using TreeSitter info to determine identifier range
-                        buffer.read_with(cx, |buffer, _| {
-                            let snapshot = buffer.snapshot();
-                            let (range, kind) = snapshot.surrounding_word(position, None);
-                            if kind != Some(CharKind::Word) {
-                                return None;
-                            }
-                            Some(
-                                snapshot.anchor_before(range.start)
-                                    ..snapshot.anchor_after(range.end),
-                            )
-                        })
-                    }
-                })
-            })
-        })
-    }
-
-    fn perform_rename(
-        &self,
-        buffer: &Entity<Buffer>,
-        position: text::Anchor,
-        new_name: String,
-        cx: &mut App,
-    ) -> Option<Task<Result<ProjectTransaction>>> {
-        self.update(cx, |project, cx| {
-            project.perform_rename(buffer.clone(), position, new_name, cx)
-        })
-        .ok()
     }
 }
 

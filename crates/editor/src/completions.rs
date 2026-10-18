@@ -325,10 +325,6 @@ impl Editor {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if self.pending_rename.is_some() {
-            return;
-        }
-
         let completions_source = self
             .context_menu
             .borrow()

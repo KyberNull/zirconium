@@ -180,7 +180,6 @@ pub enum HighlightKey {
     PendingInput,
     PickerPreview,
     ProjectSearchView,
-    Rename,
     SearchWithinRange,
     SelectedTextHighlight,
     SyntaxTreeView(usize),

@@ -635,20 +635,6 @@ impl EditorElement {
                     cx.propagate();
                 }
             });
-            register_action(editor, window, |editor, action, window, cx| {
-                if let Some(task) = editor.rename(action, window, cx) {
-                    editor.detach_and_notify_err(task, window, cx);
-                } else {
-                    cx.propagate();
-                }
-            });
-            register_action(editor, window, |editor, action, window, cx| {
-                if let Some(task) = editor.confirm_rename(action, window, cx) {
-                    editor.detach_and_notify_err(task, window, cx);
-                } else {
-                    cx.propagate();
-                }
-            });
         }
     }
 

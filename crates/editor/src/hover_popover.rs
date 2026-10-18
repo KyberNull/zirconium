@@ -161,10 +161,6 @@ fn show_hover(
     window: &mut Window,
     cx: &mut Context<Editor>,
 ) -> Option<()> {
-    if editor.pending_rename.is_some() {
-        return None;
-    }
-
     let snapshot = editor.snapshot(window, cx);
 
     let language_registry = editor

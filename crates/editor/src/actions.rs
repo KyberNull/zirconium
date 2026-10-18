@@ -417,8 +417,6 @@ actions!(
         Cancel,
         /// Cancels pending language server work.
         CancelLanguageServerWork,
-        /// Confirms the rename operation.
-        ConfirmRename,
         /// Confirms completion by inserting at cursor.
         ConfirmCompletionInsert,
         /// Confirms completion by replacing existing text.
@@ -704,8 +702,6 @@ actions!(
         Redo,
         /// Redoes the last selection change.
         RedoSelection,
-        /// Renames the symbol at cursor.
-        Rename,
         /// Restarts the language server for the current file.
         RestartLanguageServer,
         /// Reverses the order of selected lines.

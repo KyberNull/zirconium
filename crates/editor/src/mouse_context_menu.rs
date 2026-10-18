@@ -1,6 +1,6 @@
 use crate::{
     Copy, CopyAndTrim, CopyPermalinkToLine, Cut, DisplayPoint, DisplaySnapshot, Editor,
-    Paste, Rename, RevealInFileManager, SelectMode,
+    Paste, RevealInFileManager, SelectMode,
     SelectionEffects, SelectionExt, ToDisplayPoint, ToggleCodeActions,
     actions::{Format, FormatSelections},
     selections_collection::SelectionsCollection,
@@ -243,7 +243,6 @@ pub fn deploy_context_menu(
         ui::ContextMenu::build(window, cx, |menu, _window, _cx| {
             let builder = menu
                 .on_blur_subscription(Subscription::new(|| {}))
-                .action("Rename Symbol", Box::new(Rename))
                 .action("Format Buffer", Box::new(Format))
                 .when(format_selections, |cx| {
                     cx.action("Format Selections", Box::new(FormatSelections))
