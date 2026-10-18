@@ -1351,13 +1351,6 @@
     },
   },
   {
-    "context": "EditPredictionContext > Editor",
-    "bindings": {
-      "alt-left": "dev::EditPredictionContextGoBack",
-      "alt-right": "dev::EditPredictionContextGoForward",
-    },
-  },
-  {
     "context": "NotebookEditor",
     "bindings": {
       "shift-enter": "notebook::RunAndAdvance",

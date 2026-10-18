@@ -163,7 +163,6 @@ impl EditPredictionDelegate for ZedEditPredictionDelegate {
                 return;
             }
 
-            store.refresh_context(&self.project, &buffer, cursor_position, cx);
             store.refresh_prediction_from_buffer(
                 self.project.clone(),
                 buffer,

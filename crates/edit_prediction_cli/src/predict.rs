@@ -238,7 +238,6 @@ pub async fn run_prediction(
                             break;
                         }
                     }
-                    _ => {}
                 }
             }
             anyhow::Ok(())
