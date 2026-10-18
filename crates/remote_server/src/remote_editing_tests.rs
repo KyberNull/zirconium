@@ -1116,8 +1116,6 @@ async fn test_remote_code_action_resolve(cx: &mut TestAppContext, server_cx: &mu
             s.select_ranges([Point::new(0, 0)..Point::new(0, 0)]);
         });
     });
-    cx.executor()
-        .advance_clock(editor::CODE_ACTIONS_DEBOUNCE_TIMEOUT * 2);
     cx.run_until_parked();
 
     editor.update_in(cx, |editor, window, cx| {
@@ -1866,8 +1864,6 @@ async fn test_remote_code_lens_resolve(cx: &mut TestAppContext, server_cx: &mut 
             s.select_ranges([Point::new(0, 0)..Point::new(0, 0)]);
         });
     });
-    cx.executor()
-        .advance_clock(editor::CODE_ACTIONS_DEBOUNCE_TIMEOUT * 2);
     cx.run_until_parked();
 
     editor.update_in(cx, |editor, window, cx| {
