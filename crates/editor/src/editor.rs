@@ -27,7 +27,6 @@ mod indent_guides;
 mod inlays;
 pub mod items;
 mod jsx_tag_auto_close;
-mod lsp_ext;
 mod mouse_context_menu;
 pub mod movement;
 mod persistence;
@@ -104,7 +103,6 @@ pub use hover_popover::hover_markdown_style;
 pub use inlays::Inlay;
 pub use items::MAX_TAB_TITLE_LEN;
 pub use lsp::CompletionContext;
-pub use lsp_ext::lsp_tasks;
 pub use multi_buffer::{
     Anchor, AnchorRangeExt, BufferOffset, ExcerptRange, MBTextSummary, MultiBuffer,
     MultiBufferOffset, MultiBufferOffsetUtf16, MultiBufferSnapshot, PathKey, RowInfo, ToOffset,

@@ -396,13 +396,6 @@ pub fn task_contexts(
         })
     });
 
-    let lsp_task_sources = active_editor
-        .as_ref()
-        .map(|active_editor| {
-            active_editor.update(cx, |editor, cx| editor.lsp_task_sources(false, false, cx))
-        })
-        .unwrap_or_default();
-
     let latest_selection = active_editor.as_ref().and_then(|active_editor| {
         let snapshot = active_editor.read(cx).buffer().read(cx).snapshot(cx);
         snapshot
@@ -422,7 +415,6 @@ pub fn task_contexts(
     cx.background_spawn(async move {
         let mut task_contexts = TaskContexts::default();
 
-        task_contexts.lsp_task_sources = lsp_task_sources;
         task_contexts.latest_selection = latest_selection;
 
         if let Some(editor_context_task) = editor_context_task

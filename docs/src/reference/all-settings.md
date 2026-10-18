@@ -4302,8 +4302,7 @@ List of `integer` column numbers
 {
   "tasks": {
     "variables": {},
-    "enabled": true,
-    "prefer_lsp": false
+    "enabled": true
   }
 }
 ```
@@ -4312,7 +4311,6 @@ List of `integer` column numbers
 
 - `variables`: Custom variables for task configuration
 - `enabled`: Whether tasks are enabled
-- `prefer_lsp`: Whether to prefer LSP-provided tasks over Zed language extension ones
 
 ## Telemetry
 

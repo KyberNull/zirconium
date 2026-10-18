@@ -136,39 +136,6 @@ impl Editor {
         }
     }
 
-    pub(super) fn is_lsp_relevant(&self, file: Option<&Arc<dyn language::File>>, cx: &App) -> bool {
-        let Some(project) = self.project() else {
-            return false;
-        };
-        let Some(buffer_file) = project::File::from_dyn(file) else {
-            return false;
-        };
-        let Some(entry_id) = buffer_file.project_entry_id() else {
-            return false;
-        };
-        let project = project.read(cx);
-        let Some(buffer_worktree) = project.worktree_for_id(buffer_file.worktree_id(cx), cx) else {
-            return false;
-        };
-        let Some(worktree_entry) = buffer_worktree.read(cx).entry_for_id(entry_id) else {
-            return false;
-        };
-        !worktree_entry.is_ignored
-    }
-
-    pub(super) fn visible_buffers(&self, cx: &mut Context<Editor>) -> Vec<Entity<Buffer>> {
-        let display_snapshot = self.display_snapshot(cx);
-        let visible_range = self.multi_buffer_visible_range(&display_snapshot, cx);
-        let multi_buffer = self.buffer().read(cx);
-        display_snapshot
-            .buffer_snapshot()
-            .range_to_buffer_ranges(visible_range)
-            .into_iter()
-            .filter(|(_, excerpt_visible_range, _)| !excerpt_visible_range.is_empty())
-            .filter_map(|(buffer_snapshot, _, _)| multi_buffer.buffer(buffer_snapshot.remote_id()))
-            .collect()
-    }
-
     pub(super) fn visible_buffer_ranges(
         &self,
         cx: &mut Context<Editor>,

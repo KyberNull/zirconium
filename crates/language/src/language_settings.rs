@@ -244,14 +244,6 @@ pub struct LanguageTaskSettings {
     /// Extra task variables to set for a particular language.
     pub variables: HashMap<String, String>,
     pub enabled: bool,
-    /// Use LSP tasks over Zed language extension ones.
-    /// If no LSP tasks are returned due to error/timeout or regular execution,
-    /// Zed language extension tasks will be used instead.
-    ///
-    /// Other Zed tasks will still be shown:
-    /// * Zed task from either of the task config file
-    /// * Zed task from history (e.g. one-off task was spawned before)
-    pub prefer_lsp: bool,
 }
 
 /// Allows to enable/disable formatting with Prettier
@@ -854,7 +846,6 @@ impl settings::Settings for AllLanguageSettings {
                 tasks: LanguageTaskSettings {
                     variables: tasks.variables.unwrap_or_default(),
                     enabled: tasks.enabled.unwrap(),
-                    prefer_lsp: tasks.prefer_lsp.unwrap(),
                 },
                 show_completions_on_input: settings.show_completions_on_input.unwrap(),
                 show_completion_documentation: settings.show_completion_documentation.unwrap(),

@@ -1201,10 +1201,6 @@ impl ContextProvider for RustContextProvider {
 
         Task::ready(Some(TaskTemplates(task_templates)))
     }
-
-    fn lsp_task_source(&self) -> Option<LanguageServerName> {
-        Some(SERVER_NAME)
-    }
 }
 
 /// Part of the data structure of Cargo metadata

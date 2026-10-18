@@ -9657,7 +9657,7 @@ fn language_settings_data() -> Box<[SettingsPageItem]> {
         ]
     }
 
-    fn tasks_section() -> [SettingsPageItem; 4] {
+    fn tasks_section() -> [SettingsPageItem; 3] {
         [
             SettingsPageItem::SectionHeader("Tasks"),
             SettingsPageItem::SettingItem(SettingItem {
@@ -9704,26 +9704,6 @@ fn language_settings_data() -> Box<[SettingsPageItem]> {
                     }
                     .unimplemented(),
                 ),
-                metadata: None,
-                files: USER | PROJECT,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Prefer LSP",
-                description: "Use LSP tasks over Zed language extension tasks.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("languages.$(language).tasks.prefer_lsp"),
-                    pick: |settings_content| {
-                        language_settings_field(settings_content, |language| {
-                            language.tasks.as_ref()?.prefer_lsp.as_ref()
-                        })
-                    },
-                    write: |settings_content, value, _| {
-                        language_settings_field_mut(settings_content, value, |language, value| {
-                            language.tasks.get_or_insert_default().prefer_lsp = value;
-                        })
-                    },
-                }),
                 metadata: None,
                 files: USER | PROJECT,
             }),
@@ -10356,11 +10336,7 @@ fn non_editor_language_settings_data() -> Box<[SettingsPageItem]> {
         ]
     }
 
-    concat_sections!(
-        lsp_section(),
-        lsp_completions_section(),
-        prettier_section(),
-    )
+    concat_sections!(lsp_section(), lsp_completions_section(), prettier_section(),)
 }
 
 fn edit_prediction_language_settings_section() -> [SettingsPageItem; 5] {
