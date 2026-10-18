@@ -13122,31 +13122,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "project_symbols"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "editor",
- "futures 0.3.32",
- "fuzzy",
- "gpui",
- "language",
- "lsp",
- "ordered-float 2.10.1",
- "picker",
- "picker_preview",
- "project",
- "release_channel",
- "semver",
- "serde_json",
- "settings",
- "theme",
- "theme_settings",
- "util",
- "workspace",
-]
-
-[[package]]
 name = "prompt_store"
 version = "0.1.0"
 dependencies = [
@@ -21407,7 +21382,6 @@ dependencies = [
  "profiling",
  "project",
  "project_panel",
- "project_symbols",
  "prompt_store",
  "proto",
  "rayon",

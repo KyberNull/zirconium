@@ -111,7 +111,6 @@
       "g a": "editor::SelectAllMatches",
       "g s": "outline::Toggle",
       "g shift-o": "outline::Toggle",
-      "g shift-s": "project_symbols::Toggle",
       "g .": "editor::ToggleCodeActions", // zed specific
       "g shift-a": "editor::FindAllReferences", // zed specific
       "g space": "editor::OpenExcerpts", // zed specific
@@ -557,7 +556,6 @@
       "space f": "file_finder::Toggle",
       "space k": "editor::Hover",
       "space s": "outline::Toggle",
-      "space shift-s": "project_symbols::Toggle",
       "space d": "editor::GoToDiagnostic",
       "space r": "editor::Rename",
       "space a": "editor::ToggleCodeActions",
@@ -980,7 +978,6 @@
       "[ shift-b": ["pane::ActivateItem", 0],
       "space f": "file_finder::Toggle",
       "space /": "pane::DeploySearch",
-      "space shift-s": "project_symbols::Toggle",
       "space w h": "workspace::ActivatePaneLeft",
       "space w j": "workspace::ActivatePaneDown",
       "space w k": "workspace::ActivatePaneUp",
