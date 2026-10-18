@@ -1797,6 +1797,7 @@ impl DisplaySnapshot {
     /// Returns combined highlight styles (tree-sitter syntax + custom highlights)
     /// for a byte range within the specified buffer.
     /// Returned ranges are 0-based relative to `buffer_range.start`.
+    #[cfg(test)]
     pub(super) fn combined_highlights(
         &self,
         multibuffer_range: Range<MultiBufferOffset>,

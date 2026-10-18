@@ -17,7 +17,6 @@ mod bracket_colorization;
 pub mod code_context_menus;
 mod code_lens;
 pub mod display_map;
-mod document_symbols;
 mod editor_settings;
 mod element;
 mod fold;
@@ -1132,8 +1131,6 @@ pub struct Editor {
     accent_data: Option<AccentData>,
     bracket_fetched_tree_sitter_chunks: HashMap<Range<text::Anchor>, HashSet<Range<BufferRow>>>,
     pub(crate) refresh_matching_bracket_highlights_task: Task<()>,
-    refresh_document_symbols_task: Shared<Task<()>>,
-    lsp_document_symbols: HashMap<BufferId, Vec<OutlineItem<text::Anchor>>>,
     refresh_outline_symbols_at_cursor_at_cursor_task: Task<()>,
     outline_symbols_at_cursor: Option<(BufferId, Vec<OutlineItem<Anchor>>)>,
     sticky_headers_task: Task<()>,
@@ -1970,9 +1967,6 @@ impl Editor {
                     project::Event::RefreshCodeLens { .. } => {
                         editor.refresh_code_lenses(None, window, cx);
                     }
-                    project::Event::RefreshDocumentSymbols { .. } => {
-                        editor.refresh_document_symbols(None, cx);
-                    }
                     project::Event::RefreshInlayHints { server_id } => {
                         editor.refresh_inlay_hints(
                             InlayHintRefreshReason::RefreshRequested {
@@ -2400,8 +2394,6 @@ impl Editor {
             bracket_fetched_tree_sitter_chunks: HashMap::default(),
             number_deleted_lines: false,
             refresh_matching_bracket_highlights_task: Task::ready(()),
-            refresh_document_symbols_task: Task::ready(()).shared(),
-            lsp_document_symbols: HashMap::default(),
             refresh_outline_symbols_at_cursor_at_cursor_task: Task::ready(()),
             outline_symbols_at_cursor: None,
             sticky_headers_task: Task::ready(()),
@@ -3657,27 +3649,35 @@ impl Editor {
         let cursor = self.selections.newest_anchor().head();
         let multi_buffer_snapshot = self.buffer().read(cx).snapshot(cx);
 
-        if self.uses_lsp_document_symbols(cursor, &multi_buffer_snapshot, cx) {
-            self.outline_symbols_at_cursor =
-                self.lsp_symbols_at_cursor(cursor, &multi_buffer_snapshot, cx);
-            cx.emit(EditorEvent::OutlineSymbolsChanged);
-            cx.notify();
-        } else {
-            let syntax = cx.theme().syntax().clone();
-            let background_task = cx.background_spawn(async move {
-                multi_buffer_snapshot.symbols_containing(cursor, Some(&syntax))
-            });
-            self.refresh_outline_symbols_at_cursor_at_cursor_task =
-                cx.spawn(async move |this, cx| {
-                    let symbols = background_task.await;
-                    this.update(cx, |this, cx| {
-                        this.outline_symbols_at_cursor = symbols;
-                        cx.emit(EditorEvent::OutlineSymbolsChanged);
-                        cx.notify();
-                    })
-                    .ok();
-                });
-        }
+        let syntax = cx.theme().syntax().clone();
+        let background_task = cx.background_spawn(async move {
+            multi_buffer_snapshot.symbols_containing(cursor, Some(&syntax))
+        });
+        self.refresh_outline_symbols_at_cursor_at_cursor_task = cx.spawn(async move |this, cx| {
+            let symbols = background_task.await;
+            this.update(cx, |this, cx| {
+                this.outline_symbols_at_cursor = symbols;
+                cx.emit(EditorEvent::OutlineSymbolsChanged);
+                cx.notify();
+            })
+            .ok();
+        });
+    }
+
+    /// Returns all document outline items for a buffer.
+    pub fn buffer_outline_items(
+        &self,
+        buffer_id: BufferId,
+        cx: &mut Context<Self>,
+    ) -> Task<Vec<OutlineItem<text::Anchor>>> {
+        let Some(buffer) = self.buffer.read(cx).buffer(buffer_id) else {
+            return Task::ready(Vec::new());
+        };
+
+        let buffer_snapshot = buffer.read(cx).snapshot();
+        let syntax = cx.theme().syntax().clone();
+        cx.background_executor()
+            .spawn(async move { buffer_snapshot.outline(Some(&syntax)).items })
     }
 
     #[ztracing::instrument(skip_all)]
@@ -8845,7 +8845,6 @@ impl Editor {
                 for buffer_id in removed_buffer_ids {
                     self.registered_buffers.remove(buffer_id);
                     self.clear_runnables(Some(*buffer_id));
-                    self.lsp_document_symbols.remove(buffer_id);
                 }
 
                 self.display_map.update(cx, |display_map, cx| {
@@ -9062,7 +9061,6 @@ impl Editor {
             }
 
             if language_settings_changed {
-                self.refresh_document_symbols(None, cx);
                 self.refresh_outline_symbols_at_cursor(cx);
             }
 
@@ -9992,7 +9990,6 @@ impl Editor {
             self.pull_diagnostics(buffer_id, window, cx);
         }
         self.refresh_code_lenses(for_buffer, window, cx);
-        self.refresh_document_symbols(for_buffer, cx);
     }
 
     fn register_visible_buffers(&mut self, cx: &mut Context<Self>) {
