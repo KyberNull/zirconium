@@ -1012,24 +1012,6 @@ impl Editor {
         self.go_to_singleton_buffer_range_impl(point..point, false, window, cx);
     }
 
-    pub fn go_to_next_document_highlight(
-        &mut self,
-        _: &GoToNextDocumentHighlight,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        self.go_to_document_highlight_before_or_after_position(Direction::Next, window, cx);
-    }
-
-    pub fn go_to_prev_document_highlight(
-        &mut self,
-        _: &GoToPreviousDocumentHighlight,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        self.go_to_document_highlight_before_or_after_position(Direction::Prev, window, cx);
-    }
-
     pub fn go_to_definition(
         &mut self,
         _: &GoToDefinition,
@@ -2487,68 +2469,4 @@ impl Editor {
         );
     }
 
-    fn go_to_document_highlight_before_or_after_position(
-        &mut self,
-        direction: Direction,
-        window: &mut Window,
-        cx: &mut Context<Editor>,
-    ) {
-        let snapshot = self.snapshot(window, cx);
-        let buffer = &snapshot.buffer_snapshot();
-        let position = self
-            .selections
-            .newest::<Point>(&snapshot.display_snapshot)
-            .head();
-        let anchor_position = buffer.anchor_after(position);
-
-        // Get all document highlights (both read and write)
-        let mut all_highlights = Vec::new();
-
-        if let Some((_, read_highlights)) = self
-            .background_highlights
-            .get(&HighlightKey::DocumentHighlightRead)
-        {
-            all_highlights.extend(read_highlights.iter());
-        }
-
-        if let Some((_, write_highlights)) = self
-            .background_highlights
-            .get(&HighlightKey::DocumentHighlightWrite)
-        {
-            all_highlights.extend(write_highlights.iter());
-        }
-
-        if all_highlights.is_empty() {
-            return;
-        }
-
-        // Sort highlights by position
-        all_highlights.sort_by(|a, b| a.start.cmp(&b.start, buffer));
-
-        let target_highlight = match direction {
-            Direction::Next => {
-                // Find the first highlight after the current position
-                all_highlights
-                    .iter()
-                    .find(|highlight| highlight.start.cmp(&anchor_position, buffer).is_gt())
-            }
-            Direction::Prev => {
-                // Find the last highlight before the current position
-                all_highlights
-                    .iter()
-                    .rev()
-                    .find(|highlight| highlight.end.cmp(&anchor_position, buffer).is_lt())
-            }
-        };
-
-        if let Some(highlight) = target_highlight {
-            let destination = highlight.start.to_point(buffer);
-            let autoscroll = Autoscroll::center();
-
-            self.unfold_ranges(&[destination..destination], false, false, cx);
-            self.change_selections(SelectionEffects::scroll(autoscroll), window, cx, |s| {
-                s.select_ranges([destination..destination]);
-            });
-        }
-    }
 }

@@ -186,7 +186,7 @@ use parking_lot::Mutex;
 use persistence::EditorDb;
 use project::{
     CodeAction, Completion, CompletionDisplayOptions, CompletionIntent, CompletionResponse,
-    CompletionSource, DisableAiSettings, DocumentHighlight, InlayHint, InlayId,
+    CompletionSource, DisableAiSettings, InlayHint, InlayId,
     InvalidationStrategy, Location, LocationLink, LspAction, PrepareRenameResponse, Project,
     ProjectItem, ProjectPath, ProjectTransaction,
     bookmark_store::BookmarkStore,
@@ -979,7 +979,6 @@ pub struct Editor {
     debounced_selection_highlight_task: Option<(Range<Anchor>, Task<()>)>,
     debounced_selection_highlight_complete: bool,
     last_selection_from_search: bool,
-    document_highlights_task: Option<Task<()>>,
     pending_rename: Option<RenameState>,
     searchable: bool,
     cursor_shape: CursorShape,
@@ -1969,7 +1968,6 @@ impl Editor {
                             editor.refresh_runnables(Some(buffer_id), window, cx);
                             editor.update_lsp_data(Some(buffer_id), window, cx);
                             editor.refresh_code_actions_for_selection(window, cx);
-                            editor.refresh_document_highlights(cx);
                         }
                     }
 
@@ -2209,7 +2207,6 @@ impl Editor {
             debounced_selection_highlight_task: None,
             debounced_selection_highlight_complete: false,
             last_selection_from_search: false,
-            document_highlights_task: None,
             pending_rename: None,
             searchable: !is_minimap,
             cursor_shape: EditorSettings::get_global(cx)
@@ -3339,106 +3336,6 @@ impl Editor {
 
     pub fn has_mouse_context_menu(&self) -> bool {
         self.mouse_context_menu.is_some()
-    }
-
-    fn refresh_document_highlights(&mut self, cx: &mut Context<Self>) -> Option<()> {
-        if self.pending_rename.is_some() {
-            return None;
-        }
-
-        let provider = self.semantics_provider.clone()?;
-        let buffer = self.buffer.read(cx);
-        let newest_selection = *self.selections.newest_anchor();
-        let cursor_position = newest_selection.head();
-        let (cursor_buffer, cursor_buffer_position) =
-            buffer.text_anchor_for_position(cursor_position, cx)?;
-        let (tail_buffer, tail_buffer_position) =
-            buffer.text_anchor_for_position(newest_selection.tail(), cx)?;
-        if cursor_buffer != tail_buffer {
-            return None;
-        }
-
-        let snapshot = cursor_buffer.read(cx).snapshot();
-        let word_ranges = cx.background_spawn(async move {
-            // this might look odd to put on the background thread, but
-            // `surrounding_word` can be quite expensive as it calls into
-            // tree-sitter language scopes
-            let (start_word_range, _) = snapshot.surrounding_word(cursor_buffer_position, None);
-            let (end_word_range, _) = snapshot.surrounding_word(tail_buffer_position, None);
-            (start_word_range, end_word_range)
-        });
-
-        let debounce = EditorSettings::get_global(cx).lsp_highlight_debounce.0;
-        self.document_highlights_task = Some(cx.spawn(async move |this, cx| {
-            let (start_word_range, end_word_range) = word_ranges.await;
-            if start_word_range != end_word_range {
-                this.update(cx, |this, cx| {
-                    this.document_highlights_task.take();
-                    this.clear_background_highlights(HighlightKey::DocumentHighlightRead, cx);
-                    this.clear_background_highlights(HighlightKey::DocumentHighlightWrite, cx);
-                })
-                .ok();
-                return;
-            }
-            cx.background_executor()
-                .timer(Duration::from_millis(debounce))
-                .await;
-
-            let highlights = if let Some(highlights) = cx.update(|cx| {
-                provider.document_highlights(&cursor_buffer, cursor_buffer_position, cx)
-            }) {
-                highlights.await.log_err()
-            } else {
-                None
-            };
-
-            if let Some(highlights) = highlights {
-                this.update(cx, |this, cx| {
-                    if this.pending_rename.is_some() {
-                        return;
-                    }
-
-                    let buffer = this.buffer.read(cx);
-                    if buffer
-                        .text_anchor_for_position(cursor_position, cx)
-                        .is_none_or(|(buffer, _)| buffer != cursor_buffer)
-                    {
-                        return;
-                    }
-
-                    let mut write_ranges = Vec::new();
-                    let mut read_ranges = Vec::new();
-                    let multibuffer_snapshot = buffer.snapshot(cx);
-                    for highlight in highlights {
-                        for range in
-                            multibuffer_snapshot.buffer_range_to_excerpt_ranges(highlight.range)
-                        {
-                            if highlight.kind == lsp::DocumentHighlightKind::WRITE {
-                                write_ranges.push(range);
-                            } else {
-                                read_ranges.push(range);
-                            }
-                        }
-                    }
-
-                    this.highlight_background(
-                        HighlightKey::DocumentHighlightRead,
-                        &read_ranges,
-                        |_, theme| theme.colors().editor_document_highlight_read_background,
-                        cx,
-                    );
-                    this.highlight_background(
-                        HighlightKey::DocumentHighlightWrite,
-                        &write_ranges,
-                        |_, theme| theme.colors().editor_document_highlight_write_background,
-                        cx,
-                    );
-                    cx.notify();
-                })
-                .log_err();
-            }
-        }));
-        None
     }
 
     fn prepare_highlight_query_from_selection(
@@ -7150,9 +7047,6 @@ impl Editor {
             )
             .await?;
 
-            editor.update(cx, |editor, cx| {
-                editor.refresh_document_highlights(cx);
-            })?;
             Ok(())
         }))
     }
@@ -7196,8 +7090,6 @@ impl Editor {
             self.change_selections(SelectionEffects::no_scroll(), window, cx, |s| {
                 s.select_ranges(vec![cursor_in_editor..cursor_in_editor])
             });
-        } else {
-            self.refresh_document_highlights(cx);
         }
 
         Some(rename)
@@ -8699,7 +8591,6 @@ impl Editor {
                 if let Some(hovered_link_state) = self.hovered_link_state.as_mut() {
                     hovered_link_state.symbol_range = None;
                 }
-                self.refresh_document_highlights(cx);
                 let buffer_id = buffer.read(cx).remote_id();
                 if self.buffer.read(cx).diff_for(buffer_id).is_none()
                     && let Some(project) = self.project.clone()
@@ -10245,13 +10136,6 @@ pub trait SemanticsProvider {
 
     fn supports_inlay_hints(&self, buffer: &Entity<Buffer>, cx: &mut App) -> bool;
 
-    fn document_highlights(
-        &self,
-        buffer: &Entity<Buffer>,
-        position: text::Anchor,
-        cx: &mut App,
-    ) -> Option<Task<Result<Vec<DocumentHighlight>>>>;
-
     fn definitions(
         &self,
         buffer: &Entity<Buffer>,
@@ -10277,18 +10161,6 @@ pub trait SemanticsProvider {
 }
 
 impl SemanticsProvider for WeakEntity<Project> {
-    fn document_highlights(
-        &self,
-        buffer: &Entity<Buffer>,
-        position: text::Anchor,
-        cx: &mut App,
-    ) -> Option<Task<Result<Vec<DocumentHighlight>>>> {
-        self.update(cx, |project, cx| {
-            project.document_highlights(buffer, position, cx)
-        })
-        .ok()
-    }
-
     fn definitions(
         &self,
         buffer: &Entity<Buffer>,

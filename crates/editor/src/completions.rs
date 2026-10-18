@@ -311,7 +311,6 @@ impl Editor {
                             s.select_anchors(pinned)
                         });
                     }
-                    editor.refresh_document_highlights(cx);
                 })?;
             }
             Ok(())

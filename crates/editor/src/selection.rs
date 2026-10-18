@@ -1666,7 +1666,6 @@ impl Editor {
             hide_hover(self, cx);
 
             self.refresh_code_actions_for_selection(window, cx);
-            self.refresh_document_highlights(cx);
 
             self.refresh_selected_text_highlights(&display_map, false, window, cx);
             self.refresh_matching_bracket_highlights(&display_map, cx);
