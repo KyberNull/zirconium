@@ -1012,39 +1012,6 @@ impl Editor {
 
         let provider = self.completion_provider.as_ref()?;
 
-        let lsp_store = self.project().map(|project| project.read(cx).lsp_store());
-        let command = lsp_store.as_ref().and_then(|lsp_store| {
-            let CompletionSource::Lsp {
-                lsp_completion,
-                server_id,
-                ..
-            } = &completion.source
-            else {
-                return None;
-            };
-            let lsp_command = lsp_completion.command.as_ref()?;
-            let available_commands = lsp_store
-                .read(cx)
-                .lsp_server_capabilities
-                .get(server_id)
-                .and_then(|server_capabilities| {
-                    server_capabilities
-                        .execute_command_provider
-                        .as_ref()
-                        .map(|options| options.commands.as_slice())
-                })?;
-            if available_commands.contains(&lsp_command.command) {
-                Some(CodeAction {
-                    server_id: *server_id,
-                    range: language::Anchor::min_min_range_for_buffer(buffer.remote_id()),
-                    lsp_action: LspAction::Command(lsp_command.clone()),
-                    resolved: false,
-                })
-            } else {
-                None
-            }
-        });
-
         drop(completion);
         let apply_edits = provider.apply_additional_edits_for_completion(
             buffer_handle.clone(),
@@ -1062,26 +1029,6 @@ impl Editor {
 
         Some(cx.spawn_in(window, async move |editor, cx| {
             let additional_edits_tx = apply_edits.await?;
-
-            if let Some((lsp_store, command)) = lsp_store.zip(command) {
-                let title = command.lsp_action.title().to_owned();
-                let project_transaction = lsp_store
-                    .update(cx, |lsp_store, cx| {
-                        lsp_store.apply_code_action(buffer_handle, command, false, cx)
-                    })
-                    .await
-                    .context("applying post-completion command")?;
-                if let Some(workspace) = editor.read_with(cx, |editor, _| editor.workspace())? {
-                    Self::open_project_transaction(
-                        &editor,
-                        workspace.downgrade(),
-                        project_transaction,
-                        title,
-                        cx,
-                    )
-                    .await?;
-                }
-            }
 
             if let Some(tx_id) = tx_id
                 && let Some(additional_edits_tx) = additional_edits_tx
@@ -1443,53 +1390,13 @@ fn snippet_completions(
 impl CompletionProvider for Entity<Project> {
     fn completions(
         &self,
-        buffer: &Entity<Buffer>,
-        buffer_position: text::Anchor,
-        options: CompletionContext,
+        _buffer: &Entity<Buffer>,
+        _buffer_position: text::Anchor,
+        _options: CompletionContext,
         _window: &mut Window,
-        cx: &mut Context<Editor>,
+        _cx: &mut Context<Editor>,
     ) -> Task<Result<Vec<CompletionResponse>>> {
-        self.update(cx, |project, cx| {
-            let task = project.completions(buffer, buffer_position, options, cx);
-            cx.background_spawn(task)
-        })
-    }
-
-    fn resolve_completions(
-        &self,
-        buffer: Entity<Buffer>,
-        completion_indices: Vec<usize>,
-        completions: Rc<RefCell<Box<[Completion]>>>,
-        cx: &mut Context<Editor>,
-    ) -> Task<Result<bool>> {
-        self.update(cx, |project, cx| {
-            project.lsp_store().update(cx, |lsp_store, cx| {
-                lsp_store.resolve_completions(buffer, completion_indices, completions, cx)
-            })
-        })
-    }
-
-    fn apply_additional_edits_for_completion(
-        &self,
-        buffer: Entity<Buffer>,
-        completions: Rc<RefCell<Box<[Completion]>>>,
-        completion_index: usize,
-        push_to_history: bool,
-        all_commit_ranges: Vec<Range<language::Anchor>>,
-        cx: &mut Context<Editor>,
-    ) -> Task<Result<Option<language::Transaction>>> {
-        self.update(cx, |project, cx| {
-            project.lsp_store().update(cx, |lsp_store, cx| {
-                lsp_store.apply_additional_edits_for_completion(
-                    buffer,
-                    completions,
-                    completion_index,
-                    push_to_history,
-                    all_commit_ranges,
-                    cx,
-                )
-            })
-        })
+        Task::ready(Ok(Vec::new()))
     }
 
     fn is_completion_trigger(

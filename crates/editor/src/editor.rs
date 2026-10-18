@@ -183,8 +183,8 @@ use multi_buffer::{
 use parking_lot::Mutex;
 use persistence::EditorDb;
 use project::{
-    CodeAction, Completion, CompletionDisplayOptions, CompletionIntent, CompletionResponse,
-    CompletionSource, DisableAiSettings, InlayId, Location, LspAction, Project,
+    Completion, CompletionDisplayOptions, CompletionIntent, CompletionResponse,
+    CompletionSource, DisableAiSettings, InlayId, Location, Project,
     ProjectItem, ProjectPath, ProjectTransaction,
     bookmark_store::BookmarkStore,
     git_store::GitStoreEvent,
