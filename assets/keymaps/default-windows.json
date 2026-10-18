@@ -681,7 +681,6 @@
       "ctrl-e": "file_finder::Toggle",
       "f1": "command_palette::Toggle",
       "ctrl-shift-p": "command_palette::Toggle",
-      "ctrl-shift-m": "diagnostics::Deploy",
       "ctrl-shift-e": "project_panel::ToggleFocus",
       "ctrl-shift-b": "outline_panel::ToggleFocus",
       "ctrl-shift-g": "git_panel::ToggleFocus",
@@ -1228,13 +1227,6 @@
     "use_key_equivalents": true,
     "bindings": {
       "escape": "menu::Cancel",
-    },
-  },
-  {
-    "context": "Diagnostics",
-    "use_key_equivalents": true,
-    "bindings": {
-      "ctrl-r": "diagnostics::ToggleDiagnosticsRefresh",
     },
   },
   {

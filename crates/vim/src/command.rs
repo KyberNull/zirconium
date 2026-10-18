@@ -1698,7 +1698,6 @@ fn generate_commands(_: &App) -> Vec<VimCommand> {
         .bang(workspace::CloseInactiveTabsAndPanes {
             save_intent: Some(SaveIntent::Skip),
         }),
-        VimCommand::str(("cl", "ist"), "diagnostics::Deploy"),
         VimCommand::new(("cc", ""), editor::actions::Hover),
         VimCommand::new(("ll", ""), editor::actions::Hover),
         VimCommand::new(("cn", "ext"), editor::actions::GoToDiagnostic::default())

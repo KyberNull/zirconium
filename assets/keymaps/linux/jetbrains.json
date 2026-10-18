@@ -121,7 +121,6 @@
       "shift shift": "command_palette::Toggle",
       "alt-0": "git_panel::ToggleFocus",
       "alt-1": "project_panel::ToggleFocus",
-      "alt-6": "diagnostics::Deploy",
       "alt-7": "outline_panel::ToggleFocus",
     },
   },
@@ -133,7 +132,7 @@
       "alt-3": null, // Find Panel (bottom dock)
       "alt-4": null, // Run Panel (bottom dock)
       "alt-5": null,
-      "alt-6": "diagnostics::Deploy",
+      "alt-6": null,
       "alt-7": "outline_panel::ToggleFocus",
       "alt-8": null, // Services (bottom dock)
       "alt-9": null, // Git History (bottom dock)

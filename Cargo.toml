@@ -43,7 +43,6 @@ members = [
     "crates/db",
     "crates/deepseek",
     "crates/dev_container",
-    "crates/diagnostics",
     "crates/docs_preprocessor",
     "crates/edit_prediction",
     "crates/edit_prediction_cli",
@@ -304,7 +303,6 @@ db = { path = "crates/db" }
 deepseek = { path = "crates/deepseek" }
 derive_refineable = { path = "crates/refineable/derive_refineable" }
 dev_container = { path = "crates/dev_container" }
-diagnostics = { path = "crates/diagnostics" }
 edit_prediction = { path = "crates/edit_prediction" }
 edit_prediction_context = { path = "crates/edit_prediction_context" }
 edit_prediction_metrics = { path = "crates/edit_prediction_metrics" }

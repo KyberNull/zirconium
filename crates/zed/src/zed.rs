@@ -585,8 +585,6 @@ pub fn initialize_workspace(app_state: Arc<AppState>, cx: &mut App) {
         });
 
         let search_button = cx.new(|_| search::search_status_button::SearchButton::new());
-        let diagnostic_summary =
-            cx.new(|cx| diagnostics::items::DiagnosticIndicator::new(workspace, cx));
         let active_file_name = cx.new(|_| workspace::active_file_name::ActiveFileName::new());
         let activity_indicator = activity_indicator::ActivityIndicator::new(
             workspace,
@@ -620,7 +618,6 @@ pub fn initialize_workspace(app_state: Arc<AppState>, cx: &mut App) {
         workspace.status_bar().update(cx, |status_bar, cx| {
             status_bar.add_left_item(search_button, window, cx);
             status_bar.add_left_item(lsp_button, window, cx);
-            status_bar.add_left_item(diagnostic_summary, window, cx);
             status_bar.add_left_item(active_file_name, window, cx);
             status_bar.add_left_item(git_blame_status, window, cx);
             status_bar.add_left_item(merge_conflict_indicator, window, cx);
@@ -1460,8 +1457,6 @@ fn initialize_pane(
             let quick_action_bar =
                 cx.new(|cx| QuickActionBar::new(buffer_search_bar, workspace, cx));
             toolbar.add_item(quick_action_bar, window, cx);
-            let diagnostic_editor_controls = cx.new(|_| diagnostics::ToolbarControls::new());
-            toolbar.add_item(diagnostic_editor_controls, window, cx);
             let project_search_bar = cx.new(|_| ProjectSearchBar::new());
             toolbar.add_item(project_search_bar, window, cx);
             let lsp_log_item = cx.new(|_| LspLogToolbarItemView::new());
@@ -5685,14 +5680,14 @@ mod tests {
         // From the Atom keymap
         use workspace::ActivatePreviousPane;
         // From the JetBrains keymap
-        use diagnostics::Deploy;
+        use outline_panel::ToggleFocus;
 
         window
             .update(cx, |_, _, cx| {
                 workspace.update(cx, |workspace, cx| {
                     workspace.register_action(|_, _: &ActionA, _window, _cx| {});
                     workspace.register_action(|_, _: &ActionB, _window, _cx| {});
-                    workspace.register_action(|_, _: &Deploy, _window, _cx| {});
+                    workspace.register_action(|_, _: &ToggleFocus, _window, _cx| {});
                     cx.notify();
                 });
             })
@@ -5771,7 +5766,7 @@ mod tests {
 
         cx.background_executor.run_until_parked();
 
-        assert_key_bindings_for(window.into(), cx, vec![("6", &Deploy)], line!());
+        assert_key_bindings_for(window.into(), cx, vec![("7", &ToggleFocus)], line!());
     }
 
     #[gpui::test]

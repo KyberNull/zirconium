@@ -123,7 +123,6 @@
       "cmd-shift-a": "command_palette::Toggle",
       "shift shift": "command_palette::Toggle",
       "cmd-1": "project_panel::ToggleFocus",
-      "cmd-6": "diagnostics::Deploy",
       "cmd-7": "outline_panel::ToggleFocus",
     },
   },
@@ -135,7 +134,7 @@
       "cmd-3": null, // Find Panel (bottom dock)
       "cmd-4": null, // Run Panel (bottom dock)
       "cmd-5": null,
-      "cmd-6": "diagnostics::Deploy",
+      "cmd-6": null,
       "cmd-7": "outline_panel::ToggleFocus",
       "cmd-8": null, // Services (bottom dock)
       "cmd-9": null, // Git History (bottom dock)

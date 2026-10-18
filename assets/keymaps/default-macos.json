@@ -743,7 +743,6 @@
       "ctrl-shift-tab": ["tab_switcher::Toggle", { "select_last": true }],
       "ctrl-tab": "tab_switcher::Toggle",
       "cmd-shift-p": "command_palette::Toggle",
-      "cmd-shift-m": "diagnostics::Deploy",
       "cmd-shift-e": "project_panel::ToggleFocus",
       "cmd-shift-b": "outline_panel::ToggleFocus",
       "ctrl-shift-g": "git_panel::ToggleFocus",
@@ -1299,13 +1298,6 @@
     "use_key_equivalents": true,
     "bindings": {
       "escape": "menu::Cancel",
-    },
-  },
-  {
-    "context": "Diagnostics",
-    "use_key_equivalents": true,
-    "bindings": {
-      "ctrl-r": "diagnostics::ToggleDiagnosticsRefresh",
     },
   },
   {
