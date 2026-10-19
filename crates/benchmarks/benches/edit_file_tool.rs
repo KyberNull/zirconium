@@ -20,12 +20,12 @@ use criterion::{
     BatchSize, BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main,
 };
 use editor::{Editor, EditorStyle};
-use futures::{StreamExt as _, pin_mut, task::noop_waker};
+use futures::{pin_mut, task::noop_waker};
 use gpui::{
     AnyWindowHandle, AppContext as _, BackgroundExecutor, Entity, Focusable as _, TestAppContext,
     UpdateGlobal as _,
 };
-use language::{FakeLspAdapter, rust_lang};
+use language::rust_lang;
 use language_model::fake_provider::FakeLanguageModel;
 use project::{FakeFs, Project};
 use prompt_store::ProjectContext;
@@ -191,18 +191,6 @@ async fn setup_editor_and_tool(cx: &mut TestAppContext, file_text: String) -> Ha
     let project = Project::test(fs, [Path::new("/root")], cx).await;
     let language_registry = project.read_with(cx, |project, _cx| project.languages().clone());
     language_registry.add(rust_lang());
-    let mut fake_servers = language_registry.register_fake_lsp(
-        "Rust",
-        FakeLspAdapter {
-            capabilities: lsp::ServerCapabilities {
-                text_document_sync: Some(lsp::TextDocumentSyncCapability::Kind(
-                    lsp::TextDocumentSyncKind::INCREMENTAL,
-                )),
-                ..Default::default()
-            },
-            ..Default::default()
-        },
-    );
 
     let context_server_registry =
         cx.new(|cx| ContextServerRegistry::new(project.read(cx).context_server_store(), cx));
@@ -226,40 +214,13 @@ async fn setup_editor_and_tool(cx: &mut TestAppContext, file_text: String) -> Ha
         language_registry,
     ));
 
-    // Open the same buffer the tool will edit and register it with the language
-    // servers so edits produce `didChange` notifications.
+    // Open the same buffer the tool will edit.
     let buffer = project
         .update(cx, |project, cx| {
             project.open_local_buffer(FILE_ABS_PATH, cx)
         })
         .await
         .expect("failed to open buffer");
-    let lsp_handle = project.update(cx, |project, cx| {
-        project.register_buffer_with_language_servers(&buffer, cx)
-    });
-
-    let fake_server = fake_servers
-        .next()
-        .await
-        .expect("fake language server should start");
-    // Publish diagnostics on every edit, mirroring a real server reacting to
-    // `didChange`, so the editor's diagnostics path runs per edit.
-    let server = fake_server.clone();
-    fake_server.handle_notification::<lsp::notification::DidChangeTextDocument, _>(
-        move |params, _cx| {
-            server.notify::<lsp::notification::PublishDiagnostics>(lsp::PublishDiagnosticsParams {
-                uri: params.text_document.uri.clone(),
-                version: Some(params.text_document.version),
-                diagnostics: vec![lsp::Diagnostic {
-                    range: lsp::Range::new(lsp::Position::new(0, 0), lsp::Position::new(0, 1)),
-                    severity: Some(lsp::DiagnosticSeverity::WARNING),
-                    message: "bench diagnostic".to_string(),
-                    ..Default::default()
-                }],
-            });
-        },
-    );
-
     // Attach an editor view in a window and lay it out once so the viewport-gated
     // observers (bracket colorization, selection highlights) have a visible range.
     let window = cx.add_window(|window, cx| {
@@ -281,12 +242,7 @@ async fn setup_editor_and_tool(cx: &mut TestAppContext, file_text: String) -> Ha
         );
     }
 
-    let keep_alive: Vec<Box<dyn Any>> = vec![
-        Box::new(lsp_handle),
-        Box::new(fake_server),
-        Box::new(fake_servers),
-        Box::new(buffer),
-    ];
+    let keep_alive: Vec<Box<dyn Any>> = vec![Box::new(buffer)];
 
     HarnessParts {
         edit_tool,

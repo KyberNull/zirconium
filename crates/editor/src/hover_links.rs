@@ -739,105 +739,21 @@ mod tests {
     use super::*;
     use crate::{
         display_map::ToDisplayPoint, editor_tests::init_test,
-        test::editor_lsp_test_context::EditorLspTestContext,
+        test::editor_language_test_context::EditorLanguageTestContext,
     };
-    use futures::StreamExt;
-    use gpui::{Modifiers, MousePressureEvent, PressureStage};
+    use gpui::Modifiers;
     use indoc::indoc;
     use language::Point;
-    use lsp::request::{GotoDefinition, GotoTypeDefinition};
+
     use multi_buffer::{MultiBufferOffset, PathKey};
-    use std::sync::Arc;
-    use std::sync::atomic::{AtomicUsize, Ordering};
+
     use util::path;
-    use workspace::item::Item;
-
-    #[gpui::test]
-    async fn test_hover_type_links(cx: &mut gpui::TestAppContext) {
-        init_test(cx, |_| {});
-
-        let mut cx = EditorLspTestContext::new_rust(
-            lsp::ServerCapabilities {
-                hover_provider: Some(lsp::HoverProviderCapability::Simple(true)),
-                type_definition_provider: Some(lsp::TypeDefinitionProviderCapability::Simple(true)),
-                ..Default::default()
-            },
-            cx,
-        )
-        .await;
-
-        cx.set_state(indoc! {"
-            struct A;
-            let vˇariable = A;
-        "});
-        let screen_coord = cx.editor(|editor, _, cx| editor.pixel_position_of_cursor(cx));
-
-        // Basic hold cmd+shift, expect highlight in region if response contains type definition
-        let symbol_range = cx.lsp_range(indoc! {"
-            struct A;
-            let «variable» = A;
-        "});
-        let target_range = cx.lsp_range(indoc! {"
-            struct «A»;
-            let variable = A;
-        "});
-
-        cx.run_until_parked();
-
-        let mut requests =
-            cx.set_request_handler::<GotoTypeDefinition, _, _>(move |url, _, _| async move {
-                Ok(Some(lsp::GotoTypeDefinitionResponse::Link(vec![
-                    lsp::LocationLink {
-                        origin_selection_range: Some(symbol_range),
-                        target_uri: url.clone(),
-                        target_range,
-                        target_selection_range: target_range,
-                    },
-                ])))
-            });
-
-        let modifiers = if cfg!(target_os = "macos") {
-            Modifiers::command_shift()
-        } else {
-            Modifiers::control_shift()
-        };
-
-        cx.simulate_mouse_move(screen_coord.unwrap(), None, modifiers);
-
-        requests.next().await;
-        cx.run_until_parked();
-        cx.assert_editor_text_highlights(
-            HighlightKey::HoveredLinkState,
-            indoc! {"
-            struct A;
-            let «variable» = A;
-        "},
-        );
-
-        cx.simulate_modifiers_change(Modifiers::secondary_key());
-        cx.run_until_parked();
-        // Assert no link highlights
-        cx.assert_editor_text_highlights(
-            HighlightKey::HoveredLinkState,
-            indoc! {"
-            struct A;
-            let variable = A;
-        "},
-        );
-
-        cx.simulate_click(screen_coord.unwrap(), modifiers);
-
-        cx.assert_editor_state(indoc! {"
-            struct «Aˇ»;
-            let variable = A;
-        "});
-    }
 
     #[gpui::test]
     async fn test_hover_link_after_multibuffer_path_changes(cx: &mut gpui::TestAppContext) {
         init_test(cx, |_| {});
 
-        let mut cx = EditorLspTestContext::new_rust(Default::default(), cx).await;
+        let mut cx = EditorLanguageTestContext::new_rust(cx).await;
         cx.set_state("https://zed.dev/ˇreleases");
         let old_snapshot = cx.update_editor(|editor, window, cx| editor.snapshot(window, cx));
         let link_start = MultiBufferOffset(17).to_display_point(&old_snapshot.display_snapshot);
@@ -899,440 +815,9 @@ mod tests {
     }
 
     #[gpui::test]
-    async fn test_go_to_definition_link_dedup(cx: &mut gpui::TestAppContext) {
-        init_test(cx, |_| {});
-
-        let mut cx = EditorLspTestContext::new_rust(
-            lsp::ServerCapabilities {
-                hover_provider: Some(lsp::HoverProviderCapability::Simple(true)),
-                definition_provider: Some(lsp::OneOf::Left(true)),
-                ..Default::default()
-            },
-            cx,
-        )
-        .await;
-
-        cx.set_state(indoc! {"
-            fn ˇtest() { do_work(); }
-            fn do_work() { test(); }
-        "});
-
-        let request_count = Arc::new(AtomicUsize::new(0));
-        let _requests = cx.set_request_handler::<GotoDefinition, _, _>({
-            let request_count = request_count.clone();
-            move |url, _, _| {
-                request_count.fetch_add(1, Ordering::SeqCst);
-                async move {
-                    // Return a bare `Location`, not an `originSelectionRange`
-                    // so we can confirm that jiggling the mouse within the same
-                    // symbol range does not trigger a second request, even
-                    // though `originSelectionRange` was not returned.
-                    Ok(Some(lsp::GotoDefinitionResponse::Scalar(lsp::Location {
-                        uri: url,
-                        range: lsp::Range::default(),
-                    })))
-                }
-            }
-        });
-
-        let symbol_start = cx.pixel_position(indoc! {"
-            fn test() { ˇdo_work(); }
-            fn do_work() { test(); }
-        "});
-        let symbol_end = cx.pixel_position(indoc! {"
-            fn test() { do_worˇk(); }
-            fn do_work() { test(); }
-        "});
-        let other_symbol = cx.pixel_position(indoc! {"
-            fn test() { do_work(); }
-            fn do_work() { teˇst(); }
-        "});
-
-        cx.simulate_mouse_move(symbol_start, None, Modifiers::secondary_key());
-        cx.run_until_parked();
-
-        cx.simulate_mouse_move(symbol_end, None, Modifiers::secondary_key());
-        cx.run_until_parked();
-
-        cx.simulate_mouse_move(other_symbol, None, Modifiers::secondary_key());
-        cx.run_until_parked();
-
-        assert_eq!(
-            request_count.load(Ordering::SeqCst),
-            2,
-            "expected one request per symbol, reused within a symbol"
-        );
-    }
-
-    #[gpui::test]
-    async fn test_go_to_definition_link_dedup_no_link(cx: &mut gpui::TestAppContext) {
-        init_test(cx, |_| {});
-
-        let mut cx = EditorLspTestContext::new_rust(
-            lsp::ServerCapabilities {
-                hover_provider: Some(lsp::HoverProviderCapability::Simple(true)),
-                definition_provider: Some(lsp::OneOf::Left(true)),
-                ..Default::default()
-            },
-            cx,
-        )
-        .await;
-
-        cx.set_state(indoc! {"
-            fn ˇtest() { do_work(); }
-            fn do_work() { test(); }
-        "});
-
-        let request_count = Arc::new(AtomicUsize::new(0));
-        let _requests = cx.set_request_handler::<GotoDefinition, _, _>({
-            let request_count = request_count.clone();
-
-            move |_, _, _| {
-                request_count.fetch_add(1, Ordering::SeqCst);
-
-                // Simulate response from the language server, reporting
-                // that no link was found.
-                async move { Ok(None) }
-            }
-        });
-
-        let first_point = cx.pixel_position(indoc! {"
-            fn test() { do_wˇork(); }
-            fn do_work() { test(); }
-        "});
-        let second_point = cx.pixel_position(indoc! {"
-            fn test() { do_woˇrk(); }
-            fn do_work() { test(); }
-        "});
-
-        cx.simulate_mouse_move(first_point, None, Modifiers::secondary_key());
-        cx.run_until_parked();
-
-        cx.simulate_mouse_move(second_point, None, Modifiers::secondary_key());
-        cx.run_until_parked();
-
-        // Jiggle within the same character should not produce a new request,
-        // even though the previous response was empty and produced no link to
-        // highlight.
-        cx.simulate_mouse_move(second_point, None, Modifiers::secondary_key());
-        cx.run_until_parked();
-
-        assert_eq!(
-            request_count.load(Ordering::SeqCst),
-            2,
-            "expected one definition request per distinct position"
-        );
-    }
-
-    #[gpui::test]
-    async fn test_hover_links(cx: &mut gpui::TestAppContext) {
-        init_test(cx, |_| {});
-
-        let mut cx = EditorLspTestContext::new_rust(
-            lsp::ServerCapabilities {
-                hover_provider: Some(lsp::HoverProviderCapability::Simple(true)),
-                definition_provider: Some(lsp::OneOf::Left(true)),
-                ..Default::default()
-            },
-            cx,
-        )
-        .await;
-
-        cx.set_state(indoc! {"
-                fn ˇtest() { do_work(); }
-                fn do_work() { test(); }
-            "});
-
-        // Basic hold cmd, expect highlight in region if response contains definition
-        let hover_point = cx.pixel_position(indoc! {"
-                fn test() { do_wˇork(); }
-                fn do_work() { test(); }
-            "});
-        let symbol_range = cx.lsp_range(indoc! {"
-                fn test() { «do_work»(); }
-                fn do_work() { test(); }
-            "});
-        let target_range = cx.lsp_range(indoc! {"
-                fn test() { do_work(); }
-                fn «do_work»() { test(); }
-            "});
-
-        let mut requests =
-            cx.set_request_handler::<GotoDefinition, _, _>(move |url, _, _| async move {
-                Ok(Some(lsp::GotoDefinitionResponse::Link(vec![
-                    lsp::LocationLink {
-                        origin_selection_range: Some(symbol_range),
-                        target_uri: url.clone(),
-                        target_range,
-                        target_selection_range: target_range,
-                    },
-                ])))
-            });
-
-        cx.simulate_mouse_move(hover_point, None, Modifiers::secondary_key());
-        requests.next().await;
-        cx.background_executor.run_until_parked();
-        cx.assert_editor_text_highlights(
-            HighlightKey::HoveredLinkState,
-            indoc! {"
-                fn test() { «do_work»(); }
-                fn do_work() { test(); }
-            "},
-        );
-
-        // Unpress cmd causes highlight to go away
-        cx.simulate_modifiers_change(Modifiers::none());
-        cx.assert_editor_text_highlights(
-            HighlightKey::HoveredLinkState,
-            indoc! {"
-                fn test() { do_work(); }
-                fn do_work() { test(); }
-            "},
-        );
-
-        let mut requests =
-            cx.set_request_handler::<GotoDefinition, _, _>(move |url, _, _| async move {
-                Ok(Some(lsp::GotoDefinitionResponse::Link(vec![
-                    lsp::LocationLink {
-                        origin_selection_range: Some(symbol_range),
-                        target_uri: url.clone(),
-                        target_range,
-                        target_selection_range: target_range,
-                    },
-                ])))
-            });
-
-        cx.simulate_mouse_move(hover_point, None, Modifiers::secondary_key());
-        requests.next().await;
-        cx.background_executor.run_until_parked();
-        cx.assert_editor_text_highlights(
-            HighlightKey::HoveredLinkState,
-            indoc! {"
-                fn test() { «do_work»(); }
-                fn do_work() { test(); }
-            "},
-        );
-
-        // Moving mouse to location with no response dismisses highlight
-        let hover_point = cx.pixel_position(indoc! {"
-                fˇn test() { do_work(); }
-                fn do_work() { test(); }
-            "});
-        let mut requests =
-            cx.lsp
-                .set_request_handler::<GotoDefinition, _, _>(move |_, _| async move {
-                    // No definitions returned
-                    Ok(Some(lsp::GotoDefinitionResponse::Link(vec![])))
-                });
-        cx.simulate_mouse_move(hover_point, None, Modifiers::secondary_key());
-
-        requests.next().await;
-        cx.background_executor.run_until_parked();
-
-        // Assert no link highlights
-        cx.assert_editor_text_highlights(
-            HighlightKey::HoveredLinkState,
-            indoc! {"
-                fn test() { do_work(); }
-                fn do_work() { test(); }
-            "},
-        );
-
-        // // Move mouse without cmd and then pressing cmd triggers highlight
-        let hover_point = cx.pixel_position(indoc! {"
-                fn test() { do_work(); }
-                fn do_work() { teˇst(); }
-            "});
-        cx.simulate_mouse_move(hover_point, None, Modifiers::none());
-
-        // Assert no link highlights
-        cx.assert_editor_text_highlights(
-            HighlightKey::HoveredLinkState,
-            indoc! {"
-                fn test() { do_work(); }
-                fn do_work() { test(); }
-            "},
-        );
-
-        let symbol_range = cx.lsp_range(indoc! {"
-                fn test() { do_work(); }
-                fn do_work() { «test»(); }
-            "});
-        let target_range = cx.lsp_range(indoc! {"
-                fn «test»() { do_work(); }
-                fn do_work() { test(); }
-            "});
-
-        let mut requests =
-            cx.set_request_handler::<GotoDefinition, _, _>(move |url, _, _| async move {
-                Ok(Some(lsp::GotoDefinitionResponse::Link(vec![
-                    lsp::LocationLink {
-                        origin_selection_range: Some(symbol_range),
-                        target_uri: url,
-                        target_range,
-                        target_selection_range: target_range,
-                    },
-                ])))
-            });
-
-        cx.simulate_modifiers_change(Modifiers::secondary_key());
-
-        requests.next().await;
-        cx.background_executor.run_until_parked();
-
-        cx.assert_editor_text_highlights(
-            HighlightKey::HoveredLinkState,
-            indoc! {"
-                fn test() { do_work(); }
-                fn do_work() { «test»(); }
-            "},
-        );
-
-        cx.deactivate_window();
-        cx.assert_editor_text_highlights(
-            HighlightKey::HoveredLinkState,
-            indoc! {"
-                fn test() { do_work(); }
-                fn do_work() { test(); }
-            "},
-        );
-
-        cx.simulate_mouse_move(hover_point, None, Modifiers::secondary_key());
-        cx.background_executor.run_until_parked();
-        cx.assert_editor_text_highlights(
-            HighlightKey::HoveredLinkState,
-            indoc! {"
-                fn test() { do_work(); }
-                fn do_work() { «test»(); }
-            "},
-        );
-
-        // Moving again within the same symbol range doesn't re-request
-        let hover_point = cx.pixel_position(indoc! {"
-                fn test() { do_work(); }
-                fn do_work() { tesˇt(); }
-            "});
-        cx.simulate_mouse_move(hover_point, None, Modifiers::secondary_key());
-        cx.background_executor.run_until_parked();
-        cx.assert_editor_text_highlights(
-            HighlightKey::HoveredLinkState,
-            indoc! {"
-                fn test() { do_work(); }
-                fn do_work() { «test»(); }
-            "},
-        );
-
-        // Cmd click with existing definition doesn't re-request and dismisses highlight
-        cx.simulate_click(hover_point, Modifiers::secondary_key());
-        cx.lsp
-            .set_request_handler::<GotoDefinition, _, _>(move |_, _| async move {
-                // Empty definition response to make sure we aren't hitting the lsp and using
-                // the cached location instead
-                Ok(Some(lsp::GotoDefinitionResponse::Link(vec![])))
-            });
-        cx.background_executor.run_until_parked();
-        cx.assert_editor_state(indoc! {"
-                fn «testˇ»() { do_work(); }
-                fn do_work() { test(); }
-            "});
-
-        // Assert no link highlights after jump
-        cx.assert_editor_text_highlights(
-            HighlightKey::HoveredLinkState,
-            indoc! {"
-                fn test() { do_work(); }
-                fn do_work() { test(); }
-            "},
-        );
-
-        // Cmd click without existing definition requests and jumps
-        let hover_point = cx.pixel_position(indoc! {"
-                fn test() { do_wˇork(); }
-                fn do_work() { test(); }
-            "});
-        let target_range = cx.lsp_range(indoc! {"
-                fn test() { do_work(); }
-                fn «do_work»() { test(); }
-            "});
-
-        let mut requests =
-            cx.set_request_handler::<GotoDefinition, _, _>(move |url, _, _| async move {
-                Ok(Some(lsp::GotoDefinitionResponse::Link(vec![
-                    lsp::LocationLink {
-                        origin_selection_range: None,
-                        target_uri: url,
-                        target_range,
-                        target_selection_range: target_range,
-                    },
-                ])))
-            });
-        cx.simulate_click(hover_point, Modifiers::secondary_key());
-        requests.next().await;
-        cx.background_executor.run_until_parked();
-        cx.assert_editor_state(indoc! {"
-                fn test() { do_work(); }
-                fn «do_workˇ»() { test(); }
-            "});
-
-        // 1. We have a pending selection, mouse point is over a symbol that we have a response for, hitting cmd and nothing happens
-        // 2. Selection is completed, hovering
-        let hover_point = cx.pixel_position(indoc! {"
-                fn test() { do_wˇork(); }
-                fn do_work() { test(); }
-            "});
-        let target_range = cx.lsp_range(indoc! {"
-                fn test() { do_work(); }
-                fn «do_work»() { test(); }
-            "});
-        let mut requests =
-            cx.set_request_handler::<GotoDefinition, _, _>(move |url, _, _| async move {
-                Ok(Some(lsp::GotoDefinitionResponse::Link(vec![
-                    lsp::LocationLink {
-                        origin_selection_range: None,
-                        target_uri: url,
-                        target_range,
-                        target_selection_range: target_range,
-                    },
-                ])))
-            });
-
-        // create a pending selection
-        let selection_range = cx.ranges(indoc! {"
-                fn «test() { do_w»ork(); }
-                fn do_work() { test(); }
-            "})[0]
-            .clone();
-        cx.update_editor(|editor, window, cx| {
-            let snapshot = editor.buffer().read(cx).snapshot(cx);
-            let anchor_range = snapshot.anchor_before(MultiBufferOffset(selection_range.start))
-                ..snapshot.anchor_after(MultiBufferOffset(selection_range.end));
-            editor.change_selections(Default::default(), window, cx, |s| {
-                s.set_pending_anchor_range(anchor_range, crate::SelectMode::Character)
-            });
-        });
-        cx.simulate_mouse_move(hover_point, None, Modifiers::secondary_key());
-        cx.background_executor.run_until_parked();
-        assert!(requests.try_recv().is_err());
-        cx.assert_editor_text_highlights(
-            HighlightKey::HoveredLinkState,
-            indoc! {"
-                fn test() { do_work(); }
-                fn do_work() { test(); }
-            "},
-        );
-        cx.background_executor.run_until_parked();
-    }
-
-    #[gpui::test]
     async fn test_urls(cx: &mut gpui::TestAppContext) {
         init_test(cx, |_| {});
-        let mut cx = EditorLspTestContext::new_rust(
-            lsp::ServerCapabilities {
-                ..Default::default()
-            },
-            cx,
-        )
-        .await;
+        let mut cx = EditorLanguageTestContext::new_rust(cx).await;
 
         cx.set_state(indoc! {"
             Let's test a [complex](https://zed.dev/channel/had-(oops)) caseˇ.
@@ -1360,13 +845,7 @@ mod tests {
     #[gpui::test]
     async fn test_hover_preconditions(cx: &mut gpui::TestAppContext) {
         init_test(cx, |_| {});
-        let mut cx = EditorLspTestContext::new_rust(
-            lsp::ServerCapabilities {
-                ..Default::default()
-            },
-            cx,
-        )
-        .await;
+        let mut cx = EditorLanguageTestContext::new_rust(cx).await;
 
         macro_rules! assert_no_highlight {
             ($cx:expr) => {
@@ -1413,13 +892,7 @@ mod tests {
     #[gpui::test]
     async fn test_urls_at_beginning_of_buffer(cx: &mut gpui::TestAppContext) {
         init_test(cx, |_| {});
-        let mut cx = EditorLspTestContext::new_rust(
-            lsp::ServerCapabilities {
-                ..Default::default()
-            },
-            cx,
-        )
-        .await;
+        let mut cx = EditorLanguageTestContext::new_rust(cx).await;
 
         cx.set_state(indoc! {"https://zed.dev/releases is a cool ˇwebpage."});
 
@@ -1439,13 +912,7 @@ mod tests {
     #[gpui::test]
     async fn test_urls_at_end_of_buffer(cx: &mut gpui::TestAppContext) {
         init_test(cx, |_| {});
-        let mut cx = EditorLspTestContext::new_rust(
-            lsp::ServerCapabilities {
-                ..Default::default()
-            },
-            cx,
-        )
-        .await;
+        let mut cx = EditorLanguageTestContext::new_rust(cx).await;
 
         cx.set_state(indoc! {"A cool ˇwebpage is https://zed.dev/releases"});
 
@@ -1561,13 +1028,7 @@ mod tests {
     #[gpui::test]
     async fn test_surrounding_filename(cx: &mut gpui::TestAppContext) {
         init_test(cx, |_| {});
-        let mut cx = EditorLspTestContext::new_rust(
-            lsp::ServerCapabilities {
-                ..Default::default()
-            },
-            cx,
-        )
-        .await;
+        let mut cx = EditorLanguageTestContext::new_rust(cx).await;
 
         let test_cases = [
             ("file ˇ name", None),
@@ -1645,13 +1106,7 @@ mod tests {
     #[gpui::test]
     async fn test_hover_filenames(cx: &mut gpui::TestAppContext) {
         init_test(cx, |_| {});
-        let mut cx = EditorLspTestContext::new_rust(
-            lsp::ServerCapabilities {
-                ..Default::default()
-            },
-            cx,
-        )
-        .await;
+        let mut cx = EditorLanguageTestContext::new_rust(cx).await;
 
         // Insert a new file
         let fs = cx.update_workspace(|workspace, _, cx| workspace.project().read(cx).fs().clone());
@@ -1813,13 +1268,7 @@ Sentence ending file2.rs.
     #[gpui::test]
     async fn test_hover_filename_with_row_column(cx: &mut gpui::TestAppContext) {
         init_test(cx, |_| {});
-        let mut cx = EditorLspTestContext::new_rust(
-            lsp::ServerCapabilities {
-                ..Default::default()
-            },
-            cx,
-        )
-        .await;
+        let mut cx = EditorLanguageTestContext::new_rust(cx).await;
 
         // Insert a new file with multiple lines
         let fs = cx.update_workspace(|workspace, _, cx| workspace.project().read(cx).fs().clone());
@@ -1891,13 +1340,7 @@ Sentence ending file2.rs.
     #[gpui::test]
     async fn test_hover_filename_with_row_only(cx: &mut gpui::TestAppContext) {
         init_test(cx, |_| {});
-        let mut cx = EditorLspTestContext::new_rust(
-            lsp::ServerCapabilities {
-                ..Default::default()
-            },
-            cx,
-        )
-        .await;
+        let mut cx = EditorLanguageTestContext::new_rust(cx).await;
 
         let fs = cx.update_workspace(|workspace, _, cx| workspace.project().read(cx).fs().clone());
         fs.as_fake()
@@ -1951,13 +1394,7 @@ Sentence ending file2.rs.
     #[gpui::test]
     async fn test_hover_filename_with_non_numeric_suffix(cx: &mut gpui::TestAppContext) {
         init_test(cx, |_| {});
-        let mut cx = EditorLspTestContext::new_rust(
-            lsp::ServerCapabilities {
-                ..Default::default()
-            },
-            cx,
-        )
-        .await;
+        let mut cx = EditorLanguageTestContext::new_rust(cx).await;
 
         let fs = cx.update_workspace(|workspace, _, cx| workspace.project().read(cx).fs().clone());
         fs.as_fake()
@@ -2008,13 +1445,7 @@ Sentence ending file2.rs.
     #[gpui::test]
     async fn test_hover_markdown_link_with_row_column(cx: &mut gpui::TestAppContext) {
         init_test(cx, |_| {});
-        let mut cx = EditorLspTestContext::new_rust(
-            lsp::ServerCapabilities {
-                ..Default::default()
-            },
-            cx,
-        )
-        .await;
+        let mut cx = EditorLanguageTestContext::new_rust(cx).await;
 
         let fs = cx.update_workspace(|workspace, _, cx| workspace.project().read(cx).fs().clone());
         fs.as_fake()
@@ -2085,13 +1516,7 @@ Sentence ending file2.rs.
     #[gpui::test]
     async fn test_hover_directories(cx: &mut gpui::TestAppContext) {
         init_test(cx, |_| {});
-        let mut cx = EditorLspTestContext::new_rust(
-            lsp::ServerCapabilities {
-                ..Default::default()
-            },
-            cx,
-        )
-        .await;
+        let mut cx = EditorLanguageTestContext::new_rust(cx).await;
 
         // Insert a new file
         let fs = cx.update_workspace(|workspace, _, cx| workspace.project().read(cx).fs().clone());
@@ -2129,13 +1554,7 @@ Sentence ending file2.rs.
     #[gpui::test]
     async fn test_hover_unicode(cx: &mut gpui::TestAppContext) {
         init_test(cx, |_| {});
-        let mut cx = EditorLspTestContext::new_rust(
-            lsp::ServerCapabilities {
-                ..Default::default()
-            },
-            cx,
-        )
-        .await;
+        let mut cx = EditorLanguageTestContext::new_rust(cx).await;
 
         cx.set_state(indoc! {"
             You can't open ˇ\"🤩\" because it's an emoji.
@@ -2162,78 +1581,5 @@ Sentence ending file2.rs.
         // Does not open the directory
         cx.simulate_click(screen_coord, Modifiers::secondary_key());
         cx.update_workspace(|workspace, _, cx| assert_eq!(workspace.items(cx).count(), 1));
-    }
-
-    #[gpui::test]
-    async fn test_pressure_links(cx: &mut gpui::TestAppContext) {
-        init_test(cx, |_| {});
-
-        let mut cx = EditorLspTestContext::new_rust(
-            lsp::ServerCapabilities {
-                hover_provider: Some(lsp::HoverProviderCapability::Simple(true)),
-                definition_provider: Some(lsp::OneOf::Left(true)),
-                ..Default::default()
-            },
-            cx,
-        )
-        .await;
-
-        cx.set_state(indoc! {"
-                    fn ˇtest() { do_work(); }
-                    fn do_work() { test(); }
-                "});
-
-        // Position the mouse over a symbol that has a definition
-        let hover_point = cx.pixel_position(indoc! {"
-                    fn test() { do_wˇork(); }
-                    fn do_work() { test(); }
-                "});
-        let symbol_range = cx.lsp_range(indoc! {"
-                    fn test() { «do_work»(); }
-                    fn do_work() { test(); }
-                "});
-        let target_range = cx.lsp_range(indoc! {"
-                    fn test() { do_work(); }
-                    fn «do_work»() { test(); }
-                "});
-
-        let mut requests =
-            cx.set_request_handler::<GotoDefinition, _, _>(move |url, _, _| async move {
-                Ok(Some(lsp::GotoDefinitionResponse::Link(vec![
-                    lsp::LocationLink {
-                        origin_selection_range: Some(symbol_range),
-                        target_uri: url.clone(),
-                        target_range,
-                        target_selection_range: target_range,
-                    },
-                ])))
-            });
-
-        cx.simulate_mouse_move(hover_point, None, Modifiers::none());
-
-        // First simulate Normal pressure to set up the previous stage
-        cx.simulate_event(MousePressureEvent {
-            pressure: 0.5,
-            stage: PressureStage::Normal,
-            position: hover_point,
-            modifiers: Modifiers::none(),
-        });
-        cx.background_executor.run_until_parked();
-
-        // Now simulate Force pressure to trigger the force click and go-to definition
-        cx.simulate_event(MousePressureEvent {
-            pressure: 1.0,
-            stage: PressureStage::Force,
-            position: hover_point,
-            modifiers: Modifiers::none(),
-        });
-        requests.next().await;
-        cx.background_executor.run_until_parked();
-
-        // Assert that we navigated to the definition
-        cx.assert_editor_state(indoc! {"
-                    fn test() { do_work(); }
-                    fn «do_workˇ»() { test(); }
-                "});
     }
 }

@@ -329,7 +329,8 @@ mod tests {
     use crate::{
         editor_tests::init_test,
         test::{
-            editor_lsp_test_context::EditorLspTestContext, editor_test_context::EditorTestContext,
+            editor_language_test_context::EditorLanguageTestContext,
+            editor_test_context::EditorTestContext,
         },
     };
     use indoc::indoc;
@@ -338,14 +339,7 @@ mod tests {
     async fn test_mouse_context_menu(cx: &mut gpui::TestAppContext) {
         init_test(cx, |_| {});
 
-        let mut cx = EditorLspTestContext::new_rust(
-            lsp::ServerCapabilities {
-                hover_provider: Some(lsp::HoverProviderCapability::Simple(true)),
-                ..Default::default()
-            },
-            cx,
-        )
-        .await;
+        let mut cx = EditorLanguageTestContext::new_rust(cx).await;
 
         cx.set_state(indoc! {"
             fn teˇst() {

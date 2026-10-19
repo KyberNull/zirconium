@@ -1,4 +1,4 @@
-pub mod editor_lsp_test_context;
+pub mod editor_language_test_context;
 pub mod editor_test_context;
 
 use std::{rc::Rc, sync::LazyLock};
