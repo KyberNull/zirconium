@@ -240,6 +240,7 @@ impl WorktreeStore {
         client.add_entity_request_handler(Self::handle_delete_project_entry);
         client.add_entity_request_handler(Self::handle_trash_project_entry);
         client.add_entity_request_handler(Self::handle_restore_project_entry);
+        client.add_entity_request_handler(Self::handle_rename_project_entry);
         client.add_entity_request_handler(Self::handle_expand_project_entry);
         client.add_entity_request_handler(Self::handle_expand_all_for_project_entry);
     }
@@ -1399,9 +1400,10 @@ impl WorktreeStore {
 
     pub async fn handle_rename_project_entry(
         this: Entity<Self>,
-        request: proto::RenameProjectEntry,
+        envelope: TypedEnvelope<proto::RenameProjectEntry>,
         mut cx: AsyncApp,
     ) -> Result<proto::ProjectEntryResponse> {
+        let request = envelope.payload;
         let entry_id = ProjectEntryId::from_proto(request.entry_id);
         let new_worktree_id = WorktreeId::from_proto(request.new_worktree_id);
         let rel_path = RelPath::from_unix_str(&request.new_path)
