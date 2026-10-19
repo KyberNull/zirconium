@@ -1,6 +1,6 @@
 ---
 title: Makefile
-description: "Configure Makefile language support in Zed, including language servers, formatting, and debugging."
+description: "Configure Makefile language support in Zed, including formatting and syntax highlighting."
 ---
 
 # Makefile

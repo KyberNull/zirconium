@@ -56,7 +56,6 @@ Settings PyCharm users typically configure first:
 | `format_on_save`        | Auto-format when saving. Set to `"on"` to enable.                               |
 | `soft_wrap`             | Wrap long lines. Options: `"none"`, `"editor_width"`, `"preferred_line_length"` |
 | `preferred_line_length` | Column width for wrapping and rulers. Default is 80, PEP 8 recommends 79.       |
-| `inlay_hints`           | Show parameter names and type hints inline, like PyCharm's hints.               |
 | `relative_line_numbers` | Useful if you're coming from IdeaVim.                                           |
 
 Zed also supports per-project settings. Create a `.zed/settings.json` file in your project root to override global settings for that project, similar to how you might use `.idea` folders in PyCharm.
@@ -264,7 +263,6 @@ PyCharm organizes auxiliary views into numbered tool windows (Project = 1, Pytho
 
 Zed has three dock positions: left, bottom, and right. Panels can be moved between docks by dragging or through settings.
 
-
 ### Running Tests
 
 PyCharm has a dedicated test runner with a visual interface showing pass/fail status for each test. Zed provides test running through:
@@ -308,7 +306,6 @@ To set expectations clearly, here's what PyCharm offers that Zed doesn't have:
 ## Collaboration in Zed vs. PyCharm
 
 PyCharm offers Code With Me as a separate plugin for collaboration. Zed has collaboration built into the core experience.
-
 
 - Create a channel and [invite your collaborators](https://zed.dev/docs/collaboration#inviting-a-collaborator) to join
 - [Share your screen or your codebase](https://zed.dev/docs/collaboration#share-a-project) directly
@@ -391,3 +388,4 @@ Now that you're set up, here are some resources to help you get the most out of 
 - [AI Features](../ai/overview.md) — Explore Zed's AI capabilities beyond code completion
 - [Collaboration](../collaboration/overview.md) — Share your projects and code together in real time
 - [Python in Zed](../languages/python.md) — Python-specific setup and configuration
+

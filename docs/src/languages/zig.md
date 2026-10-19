@@ -1,6 +1,6 @@
 ---
 title: Zig
-description: "Configure Zig language support in Zed, including language servers, formatting, and debugging."
+description: "Configure Zig language support in Zed, including formatting and syntax highlighting."
 ---
 
 # Zig
@@ -8,4 +8,3 @@ description: "Configure Zig language support in Zed, including language servers,
 Zig support is available through the [Zig extension](https://github.com/zed-extensions/zig).
 
 - Tree-sitter: [tree-sitter-zig](https://github.com/tree-sitter-grammars/tree-sitter-zig)
-- Language Server: [zls](https://github.com/zigtools/zls)

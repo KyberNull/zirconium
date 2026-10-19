@@ -331,9 +331,7 @@ TBD: Centered layout related settings
     "git_status": false,              // Color to show git status
     "close_position": "right",        // Close button position (left, right, hidden)
     "show_close_button": "hover",     // Close button shown (hover, always, hidden)
-    "file_icons": false,              // Icon showing file type
-    // Show diagnostics in file icon (off, errors, all). Requires file_icons=true
-    "show_diagnostics": "off"
+    "file_icons": false               // Icon showing file type
   }
 ```
 
@@ -357,12 +355,6 @@ TBD: Centered layout related settings
     // If set to "non_utf8", the button is hidden only for UTF-8 without BOM.
     // Defaults to "non_utf8".
     "active_encoding_button": "non_utf8"
-  },
-  "global_lsp_settings": {
-    // Show/hide the LSP button in the status bar.
-    // Activity from the LSP is still shown.
-    // Button is not shown if "enable_language_server" if false.
-    "button": true
   },
 ```
 
@@ -389,16 +381,9 @@ TBD: Centered layout related settings
   // If `auto_signature_help` is enabled, this setting will be treated as enabled also.
   "show_signature_help_after_edits": false,
 
-  // Whether to show code action button at start of buffer line.
-  "inline_code_actions": true,
-
   // Which level to use to filter out diagnostics displayed in the editor:
   "diagnostics_max_severity": null,      // off, error, warning, info, hint, null (all)
 
-  // How to render LSP `textDocument/documentColor` colors in the editor.
-  "lsp_document_colors": "inlay",        // none, inlay, border, background
-  // Whether to query and display LSP document links in the editor.
-  "lsp_document_links": true,
   // When to show the scrollbar in the completion menu.
   "completion_menu_scrollbar": "never", // auto, system, always, never
 
@@ -418,155 +403,6 @@ TBD: Centered layout related settings
   },
   "show_edit_predictions": true     // Show/hide predictions in editor
 ```
-
-### Editor Inlay Hints
-
-```json [settings]
-{
-  "inlay_hints": {
-    "enabled": false,
-    // Toggle certain types of hints on and off, all switched on by default.
-    "show_type_hints": true,
-    "show_parameter_hints": true,
-    "show_other_hints": true,
-
-    // Whether to show a background for inlay hints (theme `hint.background`)
-    "show_background": false, //
-
-    // Time to wait after editing before requesting hints (0 to disable debounce)
-    "edit_debounce_ms": 700,
-    // Time to wait after scrolling before requesting hints (0 to disable debounce)
-    "scroll_debounce_ms": 50,
-
-    // A set of modifiers which, when pressed, will toggle the visibility of inlay hints.
-    "toggle_on_modifiers_press": {
-      "control": false,
-      "shift": false,
-      "alt": false,
-      "platform": false,
-      "function": false
-    }
-  }
-}
-```
-
-## File Finder
-
-```json [settings]
-  // File Finder Settings
-  "file_finder": {
-    "file_icons": true,         // Show/hide file icons
-    "modal_max_width": "small", // Horizontal size: small, medium, large, xlarge, full
-    "include_ignored": null     // gitignored files in results: true, false, null
-  },
-```
-
-## Project Panel
-
-Project panel can be shown/hidden with {#action project_panel::ToggleFocus} ({#kb project_panel::ToggleFocus}) or with {#action pane::RevealInProjectPanel} ({#kb pane::RevealInProjectPanel}).
-
-```json [settings]
-  // Project Panel Settings
-  "project_panel": {
-    "button": true,                 // Show/hide button in the status bar
-    "default_width": 240,           // Default panel width
-    "dock": "right",                // Position of the dock (left, right)
-    "entry_spacing": "comfortable", // Vertical spacing (comfortable, standard)
-    "file_icons": true,             // Show/hide file icons
-    "folder_icons": true,           // Show/hide folder icons
-    "git_status": true,             // Indicate new/updated files
-    "indent_size": 20,              // Pixels for each successive indent
-    "auto_reveal_entries": true,    // Show file in panel when activating its buffer
-    "auto_fold_dirs": true,         // Fold dirs with single subdir
-    "bold_folder_labels": false,    // Show folder names with bold text
-    "sticky_scroll": true,          // Stick parent directories at top of the project panel.
-    "drag_and_drop": true,          // Whether drag and drop is enabled
-    "scrollbar": {                  // Project panel scrollbar settings
-      "show": null                  // Show/hide: (auto, system, always, never)
-    },
-    "show_diagnostics": "all",      //
-    // Settings related to indent guides in the project panel.
-    "indent_guides": {
-      // When to show indent guides in the project panel. (always, never)
-      "show": "always"
-    },
-    // Sort order for entries (directories_first, mixed, files_first)
-    "sort_mode": "directories_first",
-    // Whether to sort file and folder names case-sensitively.
-    // "default": Case-insensitive natural sort, lowercase preferred in ties.
-    // "upper":   Uppercase names grouped before lowercase, natural sort within.
-    // "lower":   Lowercase names grouped before uppercase, natural sort within.
-    // "unicode":  Pure Unicode codepoint comparison, no case folding.
-    "sort_order": "default",
-    // Whether to hide the root entry when only one folder is open in the window;
-    // this also affects how file paths appear in the file finder history.
-    "hide_root": false,
-    // Whether to hide the hidden entries in the project panel.
-    "hide_hidden": false
-  }
-```
-
-## Agent Panel
-
-```json [settings]
-{
-  "agent": {
-    "enabled": true, // Enable/disable the agent
-    "button": true, // Show/hide the icon in the status bar
-    "dock": "right", // Where to dock: left, right, bottom
-    "default_width": 640, // Default width (left/right docked)
-    "default_height": 320 // Default height (bottom docked)
-  },
-  // Controls the font family and size for agent responses in the agent panel.
-  // If not specified, they fall back to the UI font family and size.
-  "agent_ui_font_family": "Inter",
-  "agent_ui_font_size": 15,
-  // Controls the font family and size for the agent panel's message editor
-  // and user messages.
-  // If not specified, the font family falls back to the buffer font family.
-  "agent_buffer_font_family": "Berkeley Mono",
-  "agent_buffer_font_size": 12
-}
-```
-
-See [Zed AI Documentation](./ai/overview.md) for additional non-visual AI settings.
-
-## Terminal Panel
-
-```json [settings]
-  // Terminal Panel Settings
-  "terminal": {
-    "dock": "bottom",                   // Where to dock: left, right, bottom
-    "button": true,                     // Show/hide status bar icon
-    "default_width": 640,               // Default width (left/right docked)
-    "default_height": 320,              // Default height (bottom docked)
-
-    // Set the cursor blinking behavior in the terminal (on, off, terminal_controlled)
-    "blinking": "terminal_controlled",
-    // Default cursor shape for the terminal cursor (block, bar, underline, hollow)
-    "cursor_shape": "block",
-
-    // Environment variables to add to terminal's process environment
-    "env": {
-      // "KEY": "value"
-    },
-
-    // Terminal scrollbar
-    "scrollbar": {
-      "show": null                       // Show/hide: (auto, system, always, never)
-    },
-    // Terminal Font Settings
-    "font_family": "Fira Code",
-    "font_size": 15,
-    "font_weight": 400,
-    // Terminal line height: comfortable (1.618), standard(1.3) or `{ "custom": 2 }`
-    "line_height": "comfortable",
-
-    "max_scroll_history_lines": 10000,   // Scrollback history (0=disable, max=100000)
-  }
-```
-
-See [Terminal settings](./reference/all-settings.md#terminal) for additional non-visual customization options.
 
 ### Other Panels
 

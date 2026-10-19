@@ -11,8 +11,7 @@ Zed provides tools to help you write and modify code efficiently. This section c
 
 - **[Code Completions](./completions.md)** — Autocomplete from language servers and AI-powered edit predictions
 - **[Snippets](./snippets.md)** — Insert reusable code templates with tab stops
-- **[Formatting & Linting](./configuring-languages.md#formatting-and-linting)** — Configure automatic code formatting and linter integration
-- **[Diagnostics & Quick Fixes](./diagnostics.md)** — View errors, warnings, and apply fixes from your language server
+- **[Formatting & Linting](./configuring-languages.md#formatting)** — Configure automatic code formatting integration
 - **[Multibuffers](./multibuffers.md)** — Edit multiple files simultaneously with multiple cursors
 
 ## How These Features Work Together

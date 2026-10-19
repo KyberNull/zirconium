@@ -1,6 +1,6 @@
 ---
 title: XML
-description: "Configure XML language support in Zed, including language servers, formatting, and debugging."
+description: "Configure XML language support in Zed, including formatting and syntax highlighting."
 ---
 
 # XML

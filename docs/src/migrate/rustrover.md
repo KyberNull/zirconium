@@ -56,7 +56,6 @@ Settings RustRover users typically configure first:
 | `format_on_save`        | Auto-format when saving. Set to `"on"` to enable (uses rustfmt by default).     |
 | `soft_wrap`             | Wrap long lines. Options: `"none"`, `"editor_width"`, `"preferred_line_length"` |
 | `preferred_line_length` | Column width for wrapping and rulers. Rust convention is 100.                   |
-| `inlay_hints`           | Show type hints, parameter names, and chaining hints inline.                    |
 | `relative_line_numbers` | Useful if you're coming from IdeaVim.                                           |
 
 Zed also supports per-project settings. Create a `.zed/settings.json` file in your project root to override global settings for that project.
@@ -248,7 +247,6 @@ Zed has three dock positions: left, bottom, and right. Panels can be moved betwe
 
 Note that there's no dedicated Cargo tool window in Zed. Use the terminal or define tasks for your common Cargo commands.
 
-
 ### Running Tests
 
 RustRover has a dedicated test runner with a visual interface showing pass/fail status for each test. Zed provides test running through:
@@ -302,7 +300,6 @@ On licensing and telemetry:
 
 RustRover offers Code With Me as a separate feature for collaboration. Zed has collaboration built into the core experience.
 
-
 - Create a channel and [invite your collaborators](https://zed.dev/docs/collaboration#inviting-a-collaborator) to join
 - [Share your screen or your codebase](https://zed.dev/docs/collaboration#share-a-project) directly
 
@@ -341,55 +338,6 @@ Here are a few useful tweaks for Rust developers:
 "format_on_save": "on"
 ```
 
-**Configure inlay hints for Rust:**
-
-```json
-{
-  "inlay_hints": {
-    "enabled": true,
-    "show_type_hints": true,
-    "show_parameter_hints": true,
-    "show_other_hints": true
-  }
-}
-```
-
-**Configure rust-analyzer settings** (requires manual JSON editing):
-
-```json
-{
-  "lsp": {
-    "rust-analyzer": {
-      "initialization_options": {
-        "checkOnSave": {
-          "command": "clippy"
-        },
-        "cargo": {
-          "allFeatures": true
-        },
-        "procMacro": {
-          "enable": true
-        }
-      }
-    }
-  }
-}
-```
-
-**Use a separate target directory for rust-analyzer (faster builds):**
-
-```json
-{
-  "lsp": {
-    "rust-analyzer": {
-      "initialization_options": {
-        "rust-analyzer.cargo.targetDir": true
-      }
-    }
-  }
-}
-```
-
 This tells rust-analyzer to use `target/rust-analyzer` instead of `target`, so IDE analysis doesn't conflict with your manual `cargo build` commands.
 
 **Enable direnv support (useful for Rust projects using direnv):**
@@ -399,20 +347,6 @@ This tells rust-analyzer to use `target/rust-analyzer` instead of `target`, so I
 ```
 
 **Configure linked projects for workspaces:**
-
-If you work with multiple Cargo projects that aren't in a workspace, you can tell rust-analyzer about them:
-
-```json
-{
-  "lsp": {
-    "rust-analyzer": {
-      "initialization_options": {
-        "linkedProjects": ["./project-a/Cargo.toml", "./project-b/Cargo.toml"]
-      }
-    }
-  }
-}
-```
 
 ## Next Steps
 
@@ -424,3 +358,4 @@ Now that you're set up, here are some resources to help you get the most out of 
 - [AI Features](../ai/overview.md) — Explore Zed's AI capabilities beyond code completion
 - [Collaboration](../collaboration/overview.md) — Share your projects and code together in real time
 - [Rust in Zed](../languages/rust.md) — Rust-specific setup and configuration
+

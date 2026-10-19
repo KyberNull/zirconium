@@ -137,21 +137,6 @@ project_panel::SelectPrevGitEntry} to jump between tracked files with
 uncommitted changes. The right-click menu also offers **Restore File** to
 discard changes and **View File History** to browse a file's commit log.
 
-## Diagnostics
-
-The `project_panel.show_diagnostics` setting controls whether error and warning
-indicators appear on file and folder icons. Set it to `"all"` to see both errors
-and warnings, `"errors"` for errors only, or `"off"` to hide them. Diagnostics
-propagate upward—if a file deep in a directory has an error, its ancestor
-folders show an indicator too.
-
-Enable `project_panel.diagnostic_badges` (disabled by default) to display numeric error and warning
-counts next to each entry. Use {#action project_panel::SelectNextDiagnostic} and
-{#action project_panel::SelectPrevDiagnostic} to navigate between files that
-have diagnostics.
-
-See also [Diagnostics & Quick Fixes](./diagnostics.md) for editor and tab diagnostic settings.
-
 ## Filtering and Sorting
 
 ### Hiding Files

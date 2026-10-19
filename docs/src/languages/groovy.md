@@ -1,6 +1,6 @@
 ---
 title: Groovy
-description: "Configure Groovy language support in Zed, including language servers, formatting, and debugging."
+description: "Configure Groovy language support in Zed, including formatting and syntax highlighting."
 ---
 
 # Groovy
@@ -9,4 +9,3 @@ Groovy language support in Zed is provided by the community-maintained [Groovy e
 Report issues to: [https://github.com/valentinegb/zed-groovy/issues](https://github.com/valentinegb/zed-groovy/issues)
 
 - Tree-sitter: [murtaza64/tree-sitter-groovy](https://github.com/murtaza64/tree-sitter-groovy)
-- Language Server: [GroovyLanguageServer/groovy-language-server](https://github.com/GroovyLanguageServer/groovy-language-server)

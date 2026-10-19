@@ -56,7 +56,6 @@ Settings WebStorm users typically configure first:
 | `format_on_save`        | Auto-format when saving. Set to `"on"` to enable.                               |
 | `soft_wrap`             | Wrap long lines. Options: `"none"`, `"editor_width"`, `"preferred_line_length"` |
 | `preferred_line_length` | Column width for wrapping and rulers. Default is 80.                            |
-| `inlay_hints`           | Show parameter names and type hints inline, like WebStorm's hints.              |
 | `relative_line_numbers` | Useful if you're coming from IdeaVim.                                           |
 
 Zed also supports per-project settings. Create a `.zed/settings.json` file in your project root to override global settings for that project, similar to how you might use `.idea` folders in WebStorm.
@@ -249,7 +248,6 @@ Zed has three dock positions: left, bottom, and right. Panels can be moved betwe
 
 Note that there's no dedicated npm tool window in Zed. Use the terminal or define tasks for your common npm scripts.
 
-
 ### Running Tests
 
 WebStorm has a dedicated test runner with a visual interface showing pass/fail status for each test. Zed provides test running through:
@@ -305,7 +303,6 @@ To set expectations clearly, here's what WebStorm offers that Zed doesn't have:
 
 WebStorm offers Code With Me as a separate feature for collaboration. Zed has collaboration built into the core experience.
 
-
 - Create a channel and [invite your collaborators](https://zed.dev/docs/collaboration#inviting-a-collaborator) to join
 - [Share your screen or your codebase](https://zed.dev/docs/collaboration#share-a-project) directly
 
@@ -357,22 +354,6 @@ Here are a few useful tweaks for JavaScript/TypeScript developers:
 }
 ```
 
-**Enable ESLint code actions** (requires manual JSON editing):
-
-```json
-{
-  "lsp": {
-    "eslint": {
-      "settings": {
-        "codeActionOnSave": {
-          "rules": ["import/order"]
-        }
-      }
-    }
-  }
-}
-```
-
 **Configure TypeScript strict mode hints:**
 
 In your `tsconfig.json`, enable strict mode for better type checking:
@@ -403,3 +384,4 @@ Now that you're set up, here are some resources to help you get the most out of 
 - [Collaboration](../collaboration/overview.md) — Share your projects and code together in real time
 - [JavaScript in Zed](../languages/javascript.md) — JavaScript-specific setup and configuration
 - [TypeScript in Zed](../languages/typescript.md) — TypeScript-specific setup and configuration
+
