@@ -1,16 +1,15 @@
 use anyhow::Context as _;
 use collections::HashMap;
 use context_server::ContextServerCommand;
-use dap::adapters::DebugAdapterName;
 use fs::Fs;
 use futures::StreamExt as _;
 use git::repository::DEFAULT_WORKTREE_DIRECTORY;
 use gpui::{AsyncApp, BorrowAppContext, Context, Entity, EventEmitter, Subscription, Task};
 use lsp::{DEFAULT_LSP_REQUEST_TIMEOUT_SECS, LanguageServerName};
 use paths::{
-    EDITORCONFIG_NAME, debug_task_file_name, local_debug_file_relative_path,
+    EDITORCONFIG_NAME,
     local_settings_file_relative_path, local_tasks_file_relative_path,
-    local_vscode_launch_file_relative_path, local_vscode_tasks_file_relative_path, task_file_name,
+    local_vscode_tasks_file_relative_path, task_file_name,
 };
 use rpc::{
     AnyProtoClient, TypedEnvelope,
@@ -22,12 +21,12 @@ pub use settings::BinarySettings;
 pub use settings::DirenvSettings;
 pub use settings::LspSettings;
 use settings::{
-    DapSettingsContent, EditorconfigEvent, InvalidSettingsError, LocalSettingsKind,
+    EditorconfigEvent, InvalidSettingsError, LocalSettingsKind,
     LocalSettingsPath, RegisterSetting, SemanticTokenRules, Settings, SettingsLocation,
     SettingsStore, parse_json_with_comments, watch_config_file,
 };
 use std::{cell::OnceCell, collections::BTreeMap, path::PathBuf, sync::Arc, time::Duration};
-use task::{DebugTaskFile, TaskTemplates, VsCodeDebugTaskFile, VsCodeTaskFile};
+use task::{TaskTemplates, VsCodeTaskFile};
 use util::{ResultExt, rel_path::RelPath, serde::default_true};
 use worktree::{PathChange, UpdatedEntriesSet, Worktree, WorktreeId};
 
@@ -55,9 +54,6 @@ pub struct ProjectSettings {
 
     /// Common language server settings.
     pub global_lsp_settings: GlobalLspSettings,
-
-    /// Configuration for Debugger-related features
-    pub dap: HashMap<DebugAdapterName, DapSettings>,
 
     /// Settings for context servers used for AI-related features.
     pub context_servers: HashMap<Arc<str>, ContextServerSettings>,
@@ -772,12 +768,6 @@ impl Settings for ProjectSettings {
                     .unwrap()
                     .clone(),
             },
-            dap: project
-                .dap
-                .clone()
-                .into_iter()
-                .map(|(key, value)| (DebugAdapterName(key.into()), DapSettings::from(value)))
-                .collect(),
             diagnostics: DiagnosticsSettings {
                 button: diagnostics.button.unwrap(),
                 include_warnings: diagnostics.include_warnings.unwrap(),
@@ -813,9 +803,7 @@ pub enum SettingsObserverMode {
 pub enum SettingsObserverEvent {
     LocalSettingsUpdated(Result<PathBuf, InvalidSettingsError>),
     LocalTasksUpdated(Result<PathBuf, InvalidSettingsError>),
-    LocalDebugScenariosUpdated(Result<PathBuf, InvalidSettingsError>),
     GlobalTasksUpdated(Result<PathBuf, InvalidSettingsError>),
-    GlobalDebugScenariosUpdated(Result<PathBuf, InvalidSettingsError>),
 }
 
 impl EventEmitter<SettingsObserverEvent> for SettingsObserver {}
@@ -832,7 +820,6 @@ pub struct SettingsObserver {
     _user_settings_watcher: Option<Subscription>,
     _editorconfig_watcher: Option<Subscription>,
     _global_task_config_watcher: Task<()>,
-    _global_debug_config_watcher: Task<()>,
 }
 
 /// SettingsObserver observers changes to .zed/{settings, task}.json files in local worktrees
@@ -956,15 +943,6 @@ impl SettingsObserver {
             } else {
                 Task::ready(())
             },
-            _global_debug_config_watcher: if watch_global_configs {
-                Self::subscribe_to_global_debug_scenarios_changes(
-                    fs.clone(),
-                    paths::debug_scenarios_file().clone(),
-                    cx,
-                )
-            } else {
-                Task::ready(())
-            },
         }
     }
 
@@ -1013,11 +991,6 @@ impl SettingsObserver {
             _global_task_config_watcher: Self::subscribe_to_global_task_file_changes(
                 fs.clone(),
                 paths::tasks_file().clone(),
-                cx,
-            ),
-            _global_debug_config_watcher: Self::subscribe_to_global_debug_scenarios_changes(
-                fs.clone(),
-                paths::debug_scenarios_file().clone(),
                 cx,
             ),
         }
@@ -1200,30 +1173,6 @@ impl SettingsObserver {
                     .unwrap()
                     .into();
                 (settings_dir, LocalSettingsKind::Tasks)
-            } else if path.ends_with(local_debug_file_relative_path()) {
-                let settings_dir = path
-                    .ancestors()
-                    .nth(
-                        local_debug_file_relative_path()
-                            .components()
-                            .count()
-                            .saturating_sub(1),
-                    )
-                    .unwrap()
-                    .into();
-                (settings_dir, LocalSettingsKind::Debug)
-            } else if path.ends_with(local_vscode_launch_file_relative_path()) {
-                let settings_dir = path
-                    .ancestors()
-                    .nth(
-                        local_vscode_tasks_file_relative_path()
-                            .components()
-                            .count()
-                            .saturating_sub(1),
-                    )
-                    .unwrap()
-                    .into();
-                (settings_dir, LocalSettingsKind::Debug)
             } else if path.ends_with(RelPath::from_unix_str(EDITORCONFIG_NAME).unwrap()) {
                 let Some(settings_dir) = path.parent().map(Arc::from) else {
                     continue;
@@ -1273,23 +1222,6 @@ impl SettingsObserver {
                                         .with_context(|| {
                                             format!(
                                         "converting VSCode tasks into Zed ones, file {abs_path:?}"
-                                    )
-                                        })?;
-                                    serde_json::to_string(&zed_tasks).with_context(|| {
-                                        format!(
-                                            "serializing Zed tasks into JSON, file {abs_path:?}"
-                                        )
-                                    })
-                                } else if abs_path.ends_with(local_vscode_launch_file_relative_path().as_std_path()) {
-                                    let vscode_tasks =
-                                        parse_json_with_comments::<VsCodeDebugTaskFile>(&content)
-                                            .with_context(|| {
-                                                format!("parsing VSCode debug tasks, file {abs_path:?}")
-                                            })?;
-                                    let zed_tasks = DebugTaskFile::try_from(vscode_tasks)
-                                        .with_context(|| {
-                                            format!(
-                                        "converting VSCode debug tasks into Zed ones, file {abs_path:?}"
                                     )
                                         })?;
                                     serde_json::to_string(&zed_tasks).with_context(|| {
@@ -1410,37 +1342,6 @@ impl SettingsObserver {
                         }
                     }
                 }
-                (LocalSettingsPath::InWorktree(directory), LocalSettingsKind::Debug) => {
-                    let result = task_store.update(cx, |task_store, cx| {
-                        task_store.update_user_debug_scenarios(
-                            TaskSettingsLocation::Worktree(SettingsLocation {
-                                worktree_id,
-                                path: directory.as_ref(),
-                            }),
-                            file_content.as_deref(),
-                            cx,
-                        )
-                    });
-
-                    match result {
-                        Err(InvalidSettingsError::Debug { path, message }) => {
-                            log::error!(
-                                "Failed to set local debug scenarios in {path:?}: {message:?}"
-                            );
-                            cx.emit(SettingsObserverEvent::LocalDebugScenariosUpdated(Err(
-                                InvalidSettingsError::Debug { path, message },
-                            )));
-                        }
-                        Err(e) => {
-                            log::error!("Failed to set local debug scenarios: {e}");
-                        }
-                        Ok(()) => {
-                            cx.emit(SettingsObserverEvent::LocalDebugScenariosUpdated(Ok(
-                                directory.as_std_path().join(debug_task_file_name()),
-                            )));
-                        }
-                    }
-                }
                 (directory, LocalSettingsKind::Editorconfig) => {
                     apply_local_settings(worktree_id, directory.clone(), kind, &file_content, cx);
                 }
@@ -1511,47 +1412,6 @@ impl SettingsObserver {
         })
     }
 
-    fn subscribe_to_global_debug_scenarios_changes(
-        fs: Arc<dyn Fs>,
-        file_path: PathBuf,
-        cx: &mut Context<Self>,
-    ) -> Task<()> {
-        let (mut user_tasks_file_rx, watcher_task) =
-            watch_config_file(cx.background_executor(), fs, file_path.clone());
-        let user_tasks_content = cx.foreground_executor().block_on(user_tasks_file_rx.next());
-        cx.spawn(async move |settings_observer, cx| {
-            let _watcher_task = watcher_task;
-            let Ok(task_store) = settings_observer.read_with(cx, |settings_observer, _| {
-                settings_observer.task_store.downgrade()
-            }) else {
-                return;
-            };
-            let mut user_tasks_contents =
-                futures::stream::iter(user_tasks_content).chain(user_tasks_file_rx);
-            while let Some(user_tasks_content) = user_tasks_contents.next().await {
-                let Ok(result) = task_store.update(cx, |task_store, cx| {
-                    task_store.update_user_debug_scenarios(
-                        TaskSettingsLocation::Global(&file_path),
-                        Some(&user_tasks_content),
-                        cx,
-                    )
-                }) else {
-                    continue;
-                };
-
-                settings_observer
-                    .update(cx, |_, cx| match result {
-                        Ok(()) => cx.emit(SettingsObserverEvent::GlobalDebugScenariosUpdated(Ok(
-                            file_path.clone(),
-                        ))),
-                        Err(err) => {
-                            cx.emit(SettingsObserverEvent::GlobalDebugScenariosUpdated(Err(err)))
-                        }
-                    })
-                    .ok();
-            }
-        })
-    }
 }
 
 fn apply_local_settings(
@@ -1593,7 +1453,6 @@ pub fn local_settings_kind_from_proto(kind: proto::LocalSettingsKind) -> LocalSe
         proto::LocalSettingsKind::Settings => LocalSettingsKind::Settings,
         proto::LocalSettingsKind::Tasks => LocalSettingsKind::Tasks,
         proto::LocalSettingsKind::Editorconfig => LocalSettingsKind::Editorconfig,
-        proto::LocalSettingsKind::Debug => LocalSettingsKind::Debug,
     }
 }
 
@@ -1602,31 +1461,5 @@ pub fn local_settings_kind_to_proto(kind: LocalSettingsKind) -> proto::LocalSett
         LocalSettingsKind::Settings => proto::LocalSettingsKind::Settings,
         LocalSettingsKind::Tasks => proto::LocalSettingsKind::Tasks,
         LocalSettingsKind::Editorconfig => proto::LocalSettingsKind::Editorconfig,
-        LocalSettingsKind::Debug => proto::LocalSettingsKind::Debug,
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct DapSettings {
-    pub binary: DapBinary,
-    pub args: Option<Vec<String>>,
-    pub env: Option<HashMap<String, String>>,
-}
-
-impl From<DapSettingsContent> for DapSettings {
-    fn from(content: DapSettingsContent) -> Self {
-        DapSettings {
-            binary: content
-                .binary
-                .map_or_else(|| DapBinary::Default, |binary| DapBinary::Custom(binary)),
-            args: content.args,
-            env: content.env,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum DapBinary {
-    Default,
-    Custom(String),
 }

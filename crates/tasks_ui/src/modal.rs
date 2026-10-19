@@ -11,7 +11,7 @@ use gpui::{
 use itertools::Itertools;
 use picker::{Picker, PickerDelegate, highlighted_match_with_paths::HighlightedMatch};
 use project::{TaskSourceKind, task_store::TaskStore};
-use task::{DebugScenario, ResolvedTask, RevealTarget, TaskContext, TaskTemplate};
+use task::{ResolvedTask, RevealTarget, TaskContext, TaskTemplate};
 use ui::{
     ActiveTheme, Clickable, FluentBuilder as _, IconButtonShape, IconWithIndicator, Indicator,
     IntoElement, KeyBinding, ListItem, ListItemSpacing, RenderOnce, Toggleable, Tooltip, div,
@@ -124,7 +124,7 @@ impl TasksModalDelegate {
 
 pub struct TasksModal {
     pub picker: Entity<Picker<TasksModalDelegate>>,
-    _subscriptions: [Subscription; 2],
+    _subscriptions: [Subscription; 1],
 }
 
 impl TasksModal {
@@ -150,16 +150,9 @@ impl TasksModal {
             )
             .when(!is_modal, |picker| picker.embedded())
         });
-        let mut _subscriptions = [
-            cx.subscribe(&picker, |_, _, _: &DismissEvent, cx| {
-                cx.emit(DismissEvent);
-            }),
-            cx.subscribe(&picker, |_, _, event: &ShowAttachModal, cx| {
-                cx.emit(ShowAttachModal {
-                    debug_config: event.debug_config.clone(),
-                });
-            }),
-        ];
+        let _subscriptions = [cx.subscribe(&picker, |_, _, _: &DismissEvent, cx| {
+            cx.emit(DismissEvent);
+        })];
 
         Self {
             picker,
@@ -184,7 +177,7 @@ impl TasksModal {
         };
         let mut new_candidates = used_tasks;
         new_candidates.extend(lsp_tasks);
-        // todo(debugger): We're always adding lsp tasks here even if prefer_lsp is false
+        // TODO: We're always adding lsp tasks here even if prefer_lsp is false
         // We should move the filter to new_candidates instead of on current
         // and add a test for this
         new_candidates.extend(current_resolved_tasks.into_iter().filter(|(task_kind, _)| {
@@ -215,13 +208,7 @@ impl Render for TasksModal {
     }
 }
 
-pub struct ShowAttachModal {
-    pub debug_config: DebugScenario,
-}
-
 impl EventEmitter<DismissEvent> for TasksModal {}
-impl EventEmitter<ShowAttachModal> for TasksModal {}
-impl EventEmitter<ShowAttachModal> for Picker<TasksModalDelegate> {}
 
 impl Focusable for TasksModal {
     fn focus_handle(&self, cx: &gpui::App) -> gpui::FocusHandle {
@@ -326,7 +313,7 @@ impl PickerDelegate for TasksModalDelegate {
                                             .map(move |(_, task)| (kind.clone(), task))
                                     },
                                 ));
-                                // todo(debugger): We're always adding lsp tasks here even if prefer_lsp is false
+                                // TODO: We're always adding lsp tasks here even if prefer_lsp is false
                                 // We should move the filter to new_candidates instead of on current
                                 // and add a test for this
                                 new_candidates.extend(current.into_iter().filter(

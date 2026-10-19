@@ -450,22 +450,6 @@ impl ActivityIndicator {
             }
         }
 
-        if let Some(session) = self
-            .project
-            .read(cx)
-            .dap_store()
-            .read(cx)
-            .sessions()
-            .find(|s| !s.read(cx).is_started())
-        {
-            return Some(Content {
-                icon: ActivityIcon::LoadingSpinner,
-                message: format!("Debug: {}", session.read(cx).adapter()),
-                tooltip_message: session.read(cx).label().map(|label| label.to_string()),
-                on_click: None,
-            });
-        }
-
         let current_job = self
             .project
             .read(cx)

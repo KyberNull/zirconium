@@ -537,14 +537,6 @@ fn template_and_validate_json_snippets(
                     }
                 }
             }
-            "debug" => {
-                if !snippet_json_fixed.starts_with('[') || !snippet_json_fixed.ends_with(']') {
-                    snippet_json_fixed.insert(0, '[');
-                    snippet_json_fixed.push_str("\n]");
-                }
-
-                settings::parse_json_with_comments::<task::DebugTaskFile>(&snippet_json_fixed)?;
-            }
             "tasks" => {
                 if !snippet_json_fixed.starts_with('[') || !snippet_json_fixed.ends_with(']') {
                     snippet_json_fixed.insert(0, '[');

@@ -24,7 +24,6 @@ use assets::Assets;
 use breadcrumbs::Breadcrumbs;
 use client::zed_urls;
 use collections::VecDeque;
-use debugger_ui::debugger_panel::DebugPanel;
 use editor::{Editor, MultiBuffer};
 use extension_host::ExtensionStore;
 use feature_flags::{FeatureFlagAppExt as _, PanicFeatureFlag};
@@ -56,10 +55,7 @@ use migrator::migrate_keymap;
 use onboarding::multibuffer_hint::MultibufferHint;
 pub use open_listener::*;
 use outline_panel::OutlinePanel;
-use paths::{
-    local_debug_file_relative_path, local_settings_file_relative_path,
-    local_tasks_file_relative_path,
-};
+use paths::{local_settings_file_relative_path, local_tasks_file_relative_path};
 use project::{
     DirectoryLister, DisableAiSettings, ProjectItem,
     project_settings::{SettingsObserver, SettingsObserverEvent},
@@ -73,8 +69,8 @@ use search::project_search::ProjectSearchBar;
 use settings::{
     BaseKeymap, DEFAULT_KEYMAP_PATH, DefaultOpenBehavior, InvalidSettingsError, KeybindSource,
     KeymapFile, KeymapFileLoadResult, MigrationStatus, SPECIFIC_OVERRIDES_KEYMAP_PATH, Settings,
-    SettingsFile, SettingsStore, VIM_KEYMAP_PATH, initial_local_debug_tasks_content,
-    initial_project_settings_content, initial_tasks_content, update_settings_file,
+    SettingsFile, SettingsStore, VIM_KEYMAP_PATH, initial_project_settings_content,
+    initial_tasks_content, update_settings_file,
 };
 use sidebar::Sidebar;
 #[cfg(debug_assertions)]
@@ -136,8 +132,6 @@ actions!(
         OpenProjectSettingsFile,
         /// Opens the tasks panel.
         OpenTasks,
-        /// Opens debug tasks configuration.
-        OpenDebugTasks,
         /// Shows the default semantic token rules (read-only).
         ShowDefaultSemanticTokenRules,
         /// Resets the application database.
@@ -278,16 +272,6 @@ pub fn init(cx: &mut App) {
             open_settings_file(
                 paths::tasks_file(),
                 || settings::initial_tasks_content().as_ref().into(),
-                window,
-                cx,
-            );
-        });
-    })
-    .on_action(|_: &OpenDebugTasks, cx| {
-        with_active_or_new_workspace(cx, |_, window, cx| {
-            open_settings_file(
-                paths::debug_scenarios_file(),
-                || settings::initial_debug_tasks_content().as_ref().into(),
                 window,
                 cx,
             );
@@ -779,7 +763,6 @@ fn initialize_panels(window: &mut Window, cx: &mut Context<Workspace>) -> Task<a
         let outline_panel = OutlinePanel::load(workspace_handle.clone(), cx.clone());
         let terminal_panel = TerminalPanel::load(workspace_handle.clone(), cx.clone());
         let git_panel = GitPanel::load(workspace_handle.clone(), cx.clone());
-        let debug_panel = DebugPanel::load(workspace_handle.clone(), cx);
 
         async fn add_panel_when_ready(
             panel_task: impl Future<Output = anyhow::Result<Entity<impl workspace::Panel>>> + 'static,
@@ -801,7 +784,6 @@ fn initialize_panels(window: &mut Window, cx: &mut Context<Workspace>) -> Task<a
             add_panel_when_ready(outline_panel, workspace_handle.clone(), cx.clone()),
             add_panel_when_ready(terminal_panel, workspace_handle.clone(), cx.clone()),
             add_panel_when_ready(git_panel, workspace_handle.clone(), cx.clone()),
-            add_panel_when_ready(debug_panel, workspace_handle.clone(), cx.clone()),
             initialize_agent_panel(workspace_handle, cx.clone()).map(|r| r.log_err()),
         );
 
@@ -1290,7 +1272,7 @@ fn register_actions(
         .register_action(open_project_settings_file)
         .register_action(open_project_tasks_file)
         .register_action(open_worktree_setup_tasks_file)
-        .register_action(open_project_debug_tasks_file)
+
         .register_action(
             |workspace: &mut Workspace,
              _: &zed_actions::project_panel::ToggleFocus,
@@ -1484,8 +1466,6 @@ fn initialize_pane(
             toolbar.add_item(project_search_bar, window, cx);
             let lsp_log_item = cx.new(|_| LspLogToolbarItemView::new());
             toolbar.add_item(lsp_log_item, window, cx);
-            let dap_log_item = cx.new(|_| debugger_tools::DapLogToolbarItemView::new());
-            toolbar.add_item(dap_log_item, window, cx);
             let acp_tools_item = cx.new(|_| acp_tools::AcpToolsToolbarItemView::new());
             toolbar.add_item(acp_tools_item, window, cx);
             let telemetry_log_item =
@@ -2062,11 +2042,6 @@ fn init_global_config_error_notifications(cx: &mut App) {
                         window.dispatch_action(OpenTasks.boxed_clone(), cx)
                     })
                 }
-                SettingsObserverEvent::GlobalDebugScenariosUpdated(result) => {
-                    (result, "debug scenarios", |window, cx| {
-                        window.dispatch_action(OpenDebugTasks.boxed_clone(), cx)
-                    })
-                }
                 _ => return,
             };
             let id = NotificationId::Named(format!("invalid-global-{file_kind}-file").into());
@@ -2585,23 +2560,6 @@ fn open_worktree_setup_tasks_file(
         })?
     })
     .detach_and_log_err(cx);
-}
-
-fn open_project_debug_tasks_file(
-    workspace: &mut Workspace,
-    _: &zed_actions::OpenProjectDebugTasks,
-    window: &mut Window,
-    cx: &mut Context<Workspace>,
-) {
-    if let Some(task) = open_local_file(
-        workspace,
-        local_debug_file_relative_path(),
-        initial_local_debug_tasks_content(),
-        window,
-        cx,
-    ) {
-        task.detach_and_log_err(cx);
-    }
 }
 
 fn open_local_file(
@@ -5606,8 +5564,6 @@ mod tests {
         use workspace::ActivatePreviousPane;
         // From the JetBrains keymap
         use workspace::ActivatePreviousItem;
-        // From the VSCode keymap
-        use debugger_ui::Start;
 
         app_state
             .fs
@@ -5713,23 +5669,6 @@ mod tests {
             .unwrap();
 
         executor.run_until_parked();
-
-        window
-            .update(cx, |_, _, cx| {
-                workspace.update(cx, |workspace, cx| {
-                    workspace.register_action(|_, _: &Start, _window, _cx| {});
-                    cx.notify();
-                });
-            })
-            .unwrap();
-        executor.run_until_parked();
-
-        assert_key_bindings_for(
-            window.into(),
-            cx,
-            vec![("backspace", &ActionB), ("f5", &Start)],
-            line!(),
-        );
     }
 
     #[gpui::test]
@@ -5843,145 +5782,6 @@ mod tests {
         cx.update(|cx| {
             // Make sure it doesn't panic.
             KeymapFile::generate_json_schema_for_registered_actions(cx);
-        });
-    }
-
-    /// Checks that action namespaces are the expected set. The purpose of this is to prevent typos
-    /// and let you know when introducing a new namespace.
-    #[gpui::test]
-    async fn test_action_namespaces(cx: &mut gpui::TestAppContext) {
-        use itertools::Itertools;
-
-        init_keymap_test(cx);
-        cx.update(|cx| {
-            let all_actions = cx.all_action_names();
-
-            let mut actions_without_namespace = Vec::new();
-            let all_namespaces = all_actions
-                .iter()
-                .filter_map(|action_name| {
-                    let namespace = action_name
-                        .split("::")
-                        .collect::<Vec<_>>()
-                        .into_iter()
-                        .rev()
-                        .skip(1)
-                        .rev()
-                        .join("::");
-                    if namespace.is_empty() {
-                        actions_without_namespace.push(*action_name);
-                    }
-                    if &namespace == "test_only" || &namespace == "stories" {
-                        None
-                    } else {
-                        Some(namespace)
-                    }
-                })
-                .sorted()
-                .dedup()
-                .collect::<Vec<_>>();
-            assert_eq!(actions_without_namespace, Vec::<&str>::new());
-
-            let expected_namespaces = vec![
-                "action",
-                "activity_indicator",
-                "agent",
-                "agents_sidebar",
-                "app_menu",
-                "assistant",
-                "assistant2",
-                "auto_update",
-                "branch_picker",
-                "bedrock",
-                "branches",
-                "buffer_search",
-                "cli",
-                "client",
-                "collab",
-                "command_palette",
-                "console",
-                "context_server",
-                "copilot",
-                "copilot_edit_predictions",
-                "debug_panel",
-                "debugger",
-                "dev",
-                "diagnostics",
-                "edit_prediction",
-                "editor",
-                "encoding_selector",
-                "feedback",
-                "file_finder",
-                "git",
-                "git_graph",
-                "git_onboarding",
-                "git_panel",
-                "git_picker",
-                "go_to_line",
-                "highlights_tree_view",
-                "icon_theme_selector",
-                "image_viewer",
-                "inline_assistant",
-                "journal",
-                "keymap_editor",
-                "keystroke_input",
-                "language_selector",
-                "welcome",
-                "line_ending_selector",
-                "lsp_tool",
-                "markdown",
-                "menu",
-                "multi_workspace",
-                "new_process_modal",
-                "notebook",
-                "onboarding",
-                "outline",
-                "outline_panel",
-                "pane",
-                "panel",
-                "picker",
-                "project_panel",
-                "project_search",
-                "project_symbols",
-                "projects",
-                "recent_projects",
-                "remote_debug",
-                "repl",
-                "search",
-                "settings_editor",
-                "settings_profile_selector",
-                "skill_creator",
-                "snippets",
-                "stash_picker",
-                "svg",
-                "syntax_tree_view",
-                "tab_switcher",
-                "tabular_data",
-                "task",
-                "terminal",
-                "terminal_panel",
-                "text_finder",
-                "theme",
-                "theme_selector",
-                "toast",
-                "variable_list",
-                "vim",
-                "window",
-                "workspace",
-                "worktree_picker",
-                "zed",
-                "zed_actions",
-                "zed_predict_onboarding",
-                "zeta",
-            ];
-            assert_eq!(
-                all_namespaces,
-                expected_namespaces
-                    .into_iter()
-                    .map(|namespace| namespace.to_string())
-                    .sorted()
-                    .collect::<Vec<_>>()
-            );
         });
     }
 
@@ -6198,11 +5998,6 @@ mod tests {
             repl::init(app_state.fs.clone(), cx);
             repl::notebook::init(cx);
             tasks_ui::init(cx);
-            project::debugger::breakpoint_store::BreakpointStore::init(
-                &app_state.client.clone().into(),
-            );
-            project::debugger::dap_store::DapStore::init(&app_state.client.clone().into(), cx);
-            debugger_ui::init(cx);
             initialize_workspace(app_state.clone(), cx);
             search::init(cx);
             lsp_locations::init(cx);

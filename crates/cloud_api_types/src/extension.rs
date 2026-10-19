@@ -41,6 +41,7 @@ pub enum ExtensionProvides {
     IconThemes,
     Grammars,
     LanguageServers,
+    /// Deprecated
     DebugAdapters,
     ContextServers,
     /// Deprecated
@@ -57,6 +58,7 @@ impl ExtensionProvides {
         matches!(
             self,
             ExtensionProvides::AgentServers
+                | ExtensionProvides::DebugAdapters
                 | ExtensionProvides::SlashCommands
                 | ExtensionProvides::IndexedDocsProviders
         )

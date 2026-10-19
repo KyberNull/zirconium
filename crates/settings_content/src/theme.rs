@@ -745,11 +745,6 @@ pub struct ThemeColorsContent {
     #[serde(rename = "icon.accent")]
     pub icon_accent: Option<ThemeColor>,
 
-    /// Color used to accent some of the debuggers elements
-    /// Only accent breakpoint & breakpoint related symbols right now
-    #[serde(rename = "debugger.accent")]
-    pub debugger_accent: Option<ThemeColor>,
-
     #[serde(rename = "status_bar.background")]
     pub status_bar_background: Option<ThemeColor>,
 
@@ -868,10 +863,6 @@ pub struct ThemeColorsContent {
 
     #[serde(rename = "editor.highlighted_line.background")]
     pub editor_highlighted_line_background: Option<ThemeColor>,
-
-    /// Background of active line of debugger
-    #[serde(rename = "editor.debugger_active_line.background")]
-    pub editor_debugger_active_line_background: Option<ThemeColor>,
 
     /// Text Color. Used for the text of the line number in the editor gutter.
     #[serde(rename = "editor.line_number")]

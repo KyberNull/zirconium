@@ -106,14 +106,9 @@
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # developer-tools-team
-# Terminal, REPL, tasks, debugger, DAP, git integration
+# Terminal, REPL, tasks, git integration
 # ═══════════════════════════════════════════════════════════════════════════════
 
-/crates/dap/ @zed-industries/developer-tools-team
-/crates/dap_adapters/ @zed-industries/developer-tools-team
-/crates/debug_adapter_extension/ @zed-industries/developer-tools-team
-/crates/debugger_tools/ @zed-industries/developer-tools-team
-/crates/debugger_ui/ @zed-industries/developer-tools-team
 /crates/git/ @zed-industries/developer-tools-team
 # SUGGESTED: Review needed - based on Anthony Eid (4 commits)
 /crates/git_graph/ @zed-industries/developer-tools-team

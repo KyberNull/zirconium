@@ -10,7 +10,6 @@ TypeScript and TSX support are available natively in Zed.
 - Tree-sitter: [tree-sitter/tree-sitter-typescript](https://github.com/tree-sitter/tree-sitter-typescript)
 - Language Server: [yioneko/vtsls](https://github.com/yioneko/vtsls)
 - Alternate Language Server: [typescript-language-server/typescript-language-server](https://github.com/typescript-language-server/typescript-language-server)
-- Debug Adapter: [vscode-js-debug](https://github.com/microsoft/vscode-js-debug)
 
 <!--
 TBD: Document the difference between Language servers
@@ -234,52 +233,6 @@ You can override the default code lens settings in your `settings.json`:
 }
 ```
 
-## Debugging
-
-Zed supports debugging TypeScript code out of the box with `vscode-js-debug`.
-The following can be debugged without writing additional configuration:
-
-- Tasks from `package.json`
-- Tests written using several popular frameworks (Jest, Mocha, Vitest, Jasmine, Bun, Node)
-
-Run {#action debugger::Start} ({#kb debugger::Start}) to see a contextual list of these predefined debug tasks.
-
-> **Note:** Bun test is automatically detected when `@types/bun` is present in `package.json`.
-
-> **Note:** Node test is automatically detected when `@types/node` is present in `package.json` (requires Node.js 20+).
-
-As for all languages, configurations from `.vscode/launch.json` are also available for debugging in Zed.
-
-If your use-case isn't covered by any of these, you can take full control by adding debug configurations to `.zed/debug.json`. See below for example configurations.
-
-### Configuring JavaScript debug tasks
-
-JavaScript debugging is more complicated than for other languages because there are two different environments: Node.js and the browser. `vscode-js-debug` exposes a `type` field, that you can use to specify the environment, either `node` or `chrome`.
-
-- [vscode-js-debug configuration documentation](https://github.com/microsoft/vscode-js-debug/blob/main/OPTIONS.md)
-
-### Attach debugger to a server running in web browser (`npx serve`)
-
-Given an externally-run web server (e.g., with `npx serve` or `npx live-server`) one can attach to it and open it with a browser.
-
-```json [debug]
-[
-  {
-    "label": "Launch Chrome (TypeScript)",
-    "adapter": "JavaScript",
-    "type": "chrome",
-    "request": "launch",
-    "url": "http://localhost:5500",
-    "program": "$ZED_FILE",
-    "webRoot": "${ZED_WORKTREE_ROOT}",
-    "build": {
-      "command": "npx",
-      "args": ["tsc"]
-    },
-    "skipFiles": ["<node_internals>/**"]
-  }
-]
-```
 
 ## See also
 

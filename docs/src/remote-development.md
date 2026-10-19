@@ -7,8 +7,8 @@ description: Use remote development in Zed to edit code over SSH with local UI p
 
 Remote Development lets you edit code on a remote server while running Zed locally. The UI stays responsive because it runs on your machine, while language servers, tasks, and terminals run on the server.
 
-For day-to-day workflows, pair remote development with [Tasks](./tasks.md),
-[Terminal](./terminal.md), and [Debugger](./debugger.md).
+For day-to-day workflows, pair remote development with [Tasks](./tasks.md)
+and [Terminal](./terminal.md).
 
 ## Overview
 
@@ -276,8 +276,8 @@ Note that we deliberately disallow some options (for example `-t` or `-T`) that 
 
 ## See also
 
-- [Running & Testing](./running-testing.md): Run tasks, terminal commands, and
-  debugger sessions while you work remotely.
+- [Running & Testing](./running-testing.md): Run tasks and terminal commands
+  while you work remotely.
 - [Git Worktrees](./git.md#git-worktrees): Create and switch between linked
   Git worktrees. Zed supports the worktree picker in remote projects when the
   remote connection is active.

@@ -6,7 +6,6 @@
 //!
 //! Inlay examples in Zed:
 //! * inlay hints, received from LSP
-//! * inline values, shown in the debugger
 //! * inline predictions, showing the Zeta/Copilot/etc. predictions
 //! * document color values, if configured to be displayed as inlays
 //! * ... anything else, potentially.
@@ -99,14 +98,6 @@ impl Inlay {
         }
     }
 
-    pub fn debugger<T: Into<Rope>>(id: usize, position: Anchor, text: T) -> Self {
-        Self {
-            id: InlayId::DebuggerValue(id),
-            position,
-            content: InlayContent::Text(text.into()),
-        }
-    }
-
     pub fn repl_result<T: Into<Rope>>(id: usize, position: Anchor, text: T) -> Self {
         Self {
             id: InlayId::ReplResult(id),
@@ -181,16 +172,6 @@ impl Editor {
 
     pub fn inline_values_enabled(&self) -> bool {
         self.inline_value_cache.enabled
-    }
-
-    #[cfg(any(test, feature = "test-support"))]
-    pub fn inline_value_inlays(&self, cx: &gpui::App) -> Vec<Inlay> {
-        self.display_map
-            .read(cx)
-            .current_inlays()
-            .filter(|inlay| matches!(inlay.id, InlayId::DebuggerValue(_)))
-            .cloned()
-            .collect()
     }
 
     #[cfg(any(test, feature = "test-support"))]

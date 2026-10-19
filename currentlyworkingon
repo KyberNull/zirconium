@@ -1,0 +1,1 @@
+Work on removing collab crate dependency on DAP and debugger ui. Also look into how dap::init() works.

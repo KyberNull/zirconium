@@ -72,7 +72,6 @@ pub(crate) fn settings_data(cx: &App) -> Vec<SettingsPage> {
         search_and_files_page(),
         window_and_layout_page(),
         panels_page(),
-        debugger_page(),
         terminal_page(),
         version_control_page(),
         audio_page(),
@@ -3936,7 +3935,7 @@ fn search_and_files_page() -> SettingsPage {
 }
 
 fn window_and_layout_page() -> SettingsPage {
-    fn status_bar_section() -> [SettingsPageItem; 11] {
+    fn status_bar_section() -> [SettingsPageItem; 10] {
         [
             SettingsPageItem::SectionHeader("Status Bar"),
             SettingsPageItem::SettingItem(SettingItem {
@@ -4093,20 +4092,6 @@ fn window_and_layout_page() -> SettingsPage {
                             .search
                             .get_or_insert_default()
                             .button = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Debugger Button",
-                description: "Show the debugger button in the status bar.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("debugger.button"),
-                    pick: |settings_content| settings_content.debugger.as_ref()?.button.as_ref(),
-                    write: |settings_content, value, _| {
-                        settings_content.debugger.get_or_insert_default().button = value;
                     },
                 }),
                 metadata: None,
@@ -6409,26 +6394,6 @@ fn panels_page() -> SettingsPage {
         ]
     }
 
-    fn debugger_panel_section() -> [SettingsPageItem; 2] {
-        [
-            SettingsPageItem::SectionHeader("Debugger Panel"),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Debugger Panel Dock",
-                description: "The dock position of the debug panel.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("debugger.dock"),
-                    pick: |settings_content| settings_content.debugger.as_ref()?.dock.as_ref(),
-                    write: |settings_content, value, _| {
-                        settings_content.debugger.get_or_insert_default().dock = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-        ]
-    }
-
     fn agent_panel_section() -> [SettingsPageItem; 7] {
         [
             SettingsPageItem::SectionHeader("Agent Panel"),
@@ -6574,128 +6539,8 @@ fn panels_page() -> SettingsPage {
             terminal_panel_section(),
             outline_panel_section(),
             git_panel_section(),
-            debugger_panel_section(),
             agent_panel_section(),
         ],
-    }
-}
-
-fn debugger_page() -> SettingsPage {
-    fn general_section() -> [SettingsPageItem; 6] {
-        [
-            SettingsPageItem::SectionHeader("General"),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Stepping Granularity",
-                description: "Determines the stepping granularity for debug operations.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("debugger.stepping_granularity"),
-                    pick: |settings_content| {
-                        settings_content
-                            .debugger
-                            .as_ref()?
-                            .stepping_granularity
-                            .as_ref()
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .debugger
-                            .get_or_insert_default()
-                            .stepping_granularity = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Save Breakpoints",
-                description: "Whether breakpoints should be reused across Zed sessions.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("debugger.save_breakpoints"),
-                    pick: |settings_content| {
-                        settings_content
-                            .debugger
-                            .as_ref()?
-                            .save_breakpoints
-                            .as_ref()
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .debugger
-                            .get_or_insert_default()
-                            .save_breakpoints = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Timeout",
-                description: "Time in milliseconds until timeout error when connecting to a TCP debug adapter.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("debugger.timeout"),
-                    pick: |settings_content| settings_content.debugger.as_ref()?.timeout.as_ref(),
-                    write: |settings_content, value, _| {
-                        settings_content.debugger.get_or_insert_default().timeout = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Log DAP Communications",
-                description: "Whether to log messages between active debug adapters and Zed.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("debugger.log_dap_communications"),
-                    pick: |settings_content| {
-                        settings_content
-                            .debugger
-                            .as_ref()?
-                            .log_dap_communications
-                            .as_ref()
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .debugger
-                            .get_or_insert_default()
-                            .log_dap_communications = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Format DAP Log Messages",
-                description: "Whether to format DAP messages when adding them to debug adapter logger.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("debugger.format_dap_log_messages"),
-                    pick: |settings_content| {
-                        settings_content
-                            .debugger
-                            .as_ref()?
-                            .format_dap_log_messages
-                            .as_ref()
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .debugger
-                            .get_or_insert_default()
-                            .format_dap_log_messages = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-        ]
-    }
-
-    SettingsPage {
-        title: "Debugger",
-        items: concat_sections![general_section()],
     }
 }
 
@@ -9885,7 +9730,7 @@ fn language_settings_data() -> Box<[SettingsPageItem]> {
         ]
     }
 
-    fn miscellaneous_section() -> [SettingsPageItem; 7] {
+    fn miscellaneous_section() -> [SettingsPageItem; 6] {
         [
             SettingsPageItem::SectionHeader("Miscellaneous"),
             SettingsPageItem::SettingItem(SettingItem {
@@ -9905,33 +9750,6 @@ fn language_settings_data() -> Box<[SettingsPageItem]> {
                         })
                     },
                 }),
-                metadata: None,
-                files: USER | PROJECT,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Debuggers",
-                description: "Preferred debuggers for this language.",
-                field: Box::new(
-                    SettingField {
-                        organization_override: None,
-                        json_path: Some("languages.$(language).debuggers"),
-                        pick: |settings_content| {
-                            language_settings_field(settings_content, |language| {
-                                language.debuggers.as_ref()
-                            })
-                        },
-                        write: |settings_content, value, _| {
-                            language_settings_field_mut(
-                                settings_content,
-                                value,
-                                |language, value| {
-                                    language.debuggers = value;
-                                },
-                            )
-                        },
-                    }
-                    .unimplemented(),
-                ),
                 metadata: None,
                 files: USER | PROJECT,
             }),
@@ -10438,39 +10256,6 @@ fn non_editor_language_settings_data() -> Box<[SettingsPageItem]> {
         ]
     }
 
-    fn debugger_section() -> [SettingsPageItem; 2] {
-        [
-            SettingsPageItem::SectionHeader("Debuggers"),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Debuggers",
-                description: "Preferred debuggers for this language.",
-                field: Box::new(
-                    SettingField {
-                        organization_override: None,
-                        json_path: Some("languages.$(language).debuggers"),
-                        pick: |settings_content| {
-                            language_settings_field(settings_content, |language| {
-                                language.debuggers.as_ref()
-                            })
-                        },
-                        write: |settings_content, value, _| {
-                            language_settings_field_mut(
-                                settings_content,
-                                value,
-                                |language, value| {
-                                    language.debuggers = value;
-                                },
-                            )
-                        },
-                    }
-                    .unimplemented(),
-                ),
-                metadata: None,
-                files: USER | PROJECT,
-            }),
-        ]
-    }
-
     fn prettier_section() -> [SettingsPageItem; 5] {
         [
             SettingsPageItem::SectionHeader("Prettier"),
@@ -10574,7 +10359,6 @@ fn non_editor_language_settings_data() -> Box<[SettingsPageItem]> {
     concat_sections!(
         lsp_section(),
         lsp_completions_section(),
-        debugger_section(),
         prettier_section(),
     )
 }

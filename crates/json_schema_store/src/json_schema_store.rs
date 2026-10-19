@@ -48,8 +48,7 @@ static ACTION_SCHEMA_CACHE: LazyLock<RwLock<HashMap<String, String>>> =
 // Runtime cache for dynamic schemas that depend on runtime state:
 // - "settings": depends on installed fonts, themes, languages, LSP adapters (extensions can add these)
 // - "settings/lsp/*": depends on LSP adapter initialization options
-// - "debug_tasks": depends on DAP adapters (extensions can add these)
-// Cache is invalidated via notify_schema_changed() when extensions or DAP registry change.
+// Cache is invalidated via notify_schema_changed() when extensions change.
 static DYNAMIC_SCHEMA_CACHE: LazyLock<RwLock<HashMap<String, String>>> =
     LazyLock::new(|| RwLock::new(HashMap::default()));
 
@@ -79,13 +78,6 @@ pub fn init(cx: &mut App) {
         })
         .detach();
     }
-
-    cx.observe_global::<dap::DapRegistry>(move |cx| {
-        cx.update_global::<SchemaStore, _>(|schema_store, cx| {
-            schema_store.notify_schema_changed(ChangedSchemas::DebugTasks, cx);
-        });
-    })
-    .detach();
 }
 
 #[derive(Default)]
@@ -97,7 +89,6 @@ impl gpui::Global for SchemaStore {}
 
 enum ChangedSchemas {
     Settings,
-    DebugTasks,
 }
 
 impl SchemaStore {
@@ -112,12 +103,8 @@ impl SchemaStore {
                         uri == project_settings_uri || uri.starts_with(settings_uri_prefix)
                     })
                     .map(|(url, _)| url)
-                    .collect()
+                    .collect::<Vec<_>>()
             }
-            ChangedSchemas::DebugTasks => DYNAMIC_SCHEMA_CACHE
-                .write()
-                .remove_entry(&format!("{SCHEMA_URI_PREFIX}debug_tasks"))
-                .map_or_else(Vec::new, |(uri, _)| vec![uri]),
         };
 
         if uris_to_invalidate.is_empty() {
@@ -404,12 +391,6 @@ async fn resolve_dynamic_schema(
             inject_feature_flags_schema(&mut schema);
             schema
         }
-        "debug_tasks" => {
-            let adapter_schemas = cx.read_global::<dap::DapRegistry, _>(|dap_registry, _| {
-                dap_registry.adapters_schema()
-            });
-            task::DebugTaskFile::generate_json_schema(&adapter_schemas)
-        }
         "keymap" => cx.update(settings::KeymapFile::generate_json_schema_for_registered_actions),
         "action" => {
             let normalized_action_name = rest.context("No Action name provided")?;
@@ -472,13 +453,6 @@ pub fn all_schema_file_associations(
                 paths::local_tasks_file_relative_path()
             ],
             "url": format!("{SCHEMA_URI_PREFIX}tasks"),
-        },
-        {
-            "fileMatch": [
-                schema_file_match(paths::debug_scenarios_file()),
-                paths::local_debug_file_relative_path()
-            ],
-            "url": format!("{SCHEMA_URI_PREFIX}debug_tasks"),
         },
         {
             "fileMatch": [

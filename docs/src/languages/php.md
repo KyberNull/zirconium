@@ -168,35 +168,6 @@ Zed supports syntax highlighting for PHPDoc comments.
 
 - Tree-sitter: [claytonrcarter/tree-sitter-phpdoc](https://github.com/claytonrcarter/tree-sitter-phpdoc)
 
-## Debugging
-
-The PHP extension provides a debug adapter for PHP via Xdebug. There are several ways to use it:
-
-```json
-[
-  {
-    "label": "PHP: Listen to Xdebug",
-    "adapter": "Xdebug",
-    "request": "launch",
-    "port": 9003
-  },
-  {
-    "label": "PHP: Debug this test",
-    "adapter": "Xdebug",
-    "request": "launch",
-    "program": "vendor/bin/phpunit",
-    "args": ["--filter", "$ZED_SYMBOL"]
-  }
-]
-```
-
-These are common troubleshooting tips, in case you run into issues:
-
-- Ensure that you have Xdebug installed for the version of PHP you're running.
-- Ensure that Xdebug is configured to run in `debug` mode.
-- Ensure that Xdebug is actually starting a debugging session.
-- Ensure that the host and port match between Xdebug and Zed.
-- Look at the diagnostics log by using the `xdebug_info()` function in the page you're trying to debug.
 
 ## Using the Tailwind CSS Language Server with PHP
 

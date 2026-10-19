@@ -191,11 +191,3 @@ pub fn initial_tasks_content() -> Cow<'static, str> {
 pub fn initial_worktree_setup_tasks_content() -> Cow<'static, str> {
     asset_str::<SettingsAssets>("settings/initial_worktree_setup_tasks.json")
 }
-
-pub fn initial_debug_tasks_content() -> Cow<'static, str> {
-    asset_str::<SettingsAssets>("settings/initial_debug_tasks.json")
-}
-
-pub fn initial_local_debug_tasks_content() -> Cow<'static, str> {
-    asset_str::<SettingsAssets>("settings/initial_local_debug_tasks.json")
-}

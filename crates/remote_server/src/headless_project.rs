@@ -19,7 +19,6 @@ use project::{
     agent_server_store::AgentServerStore,
     buffer_store::{BufferStore, BufferStoreEvent},
     context_server_store::ContextServerStore,
-    debugger::{breakpoint_store::BreakpointStore, dap_store::DapStore},
     git_store::GitStore,
     image_store::ImageId,
     lsp_store::log_store::{self, GlobalLogStore, LanguageServerKind, LogKind},
@@ -45,7 +44,6 @@ use std::{
     },
     time::Instant,
 };
-use sysinfo::{ProcessRefreshKind, RefreshKind, System, UpdateKind};
 use util::{ResultExt, paths::PathStyle, rel_path::RelPath};
 use worktree::Worktree;
 
@@ -56,8 +54,6 @@ pub struct HeadlessProject {
     pub buffer_store: Entity<BufferStore>,
     pub lsp_store: Entity<LspStore>,
     pub task_store: Entity<TaskStore>,
-    pub dap_store: Entity<DapStore>,
-    pub breakpoint_store: Entity<BreakpointStore>,
     pub agent_server_store: Entity<AgentServerStore>,
     pub context_server_store: Entity<ContextServerStore>,
     pub settings_observer: Entity<SettingsObserver>,
@@ -102,7 +98,6 @@ impl HeadlessProject {
         init_worktree_trust: bool,
         cx: &mut Context<Self>,
     ) -> Self {
-        debug_adapter_extension::init(proxy.clone(), cx);
         languages::init(languages.clone(), fs.clone(), node_runtime.clone(), cx);
 
         let worktree_store = cx.new(|cx| {
@@ -138,30 +133,6 @@ impl HeadlessProject {
             let mut buffer_store = BufferStore::local(worktree_store.clone(), cx);
             buffer_store.shared(REMOTE_SERVER_PROJECT_ID, session.clone(), cx);
             buffer_store
-        });
-
-        let breakpoint_store = cx.new(|_| {
-            let mut breakpoint_store =
-                BreakpointStore::local(worktree_store.clone(), buffer_store.clone());
-            breakpoint_store.shared(REMOTE_SERVER_PROJECT_ID, session.clone());
-
-            breakpoint_store
-        });
-
-        let dap_store = cx.new(|cx| {
-            let mut dap_store = DapStore::new_local(
-                http_client.clone(),
-                node_runtime.clone(),
-                fs.clone(),
-                environment.clone(),
-                toolchain_store.read(cx).as_language_toolchain_store(),
-                worktree_store.clone(),
-                breakpoint_store.clone(),
-                true,
-                cx,
-            );
-            dap_store.shared(REMOTE_SERVER_PROJECT_ID, session.clone(), cx);
-            dap_store
         });
 
         let git_store = cx.new(|cx| {
@@ -282,8 +253,6 @@ impl HeadlessProject {
         session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &lsp_store);
         session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &task_store);
         session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &toolchain_store);
-        session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &dap_store);
-        session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &breakpoint_store);
         session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &settings_observer);
         session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &git_store);
         session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &agent_server_store);
@@ -293,7 +262,6 @@ impl HeadlessProject {
         session.add_request_handler(cx.weak_entity(), Self::handle_get_path_metadata);
         session.add_request_handler(cx.weak_entity(), Self::handle_shutdown_remote_server);
         session.add_request_handler(cx.weak_entity(), Self::handle_ping);
-        session.add_request_handler(cx.weak_entity(), Self::handle_get_processes);
         session.add_request_handler(cx.weak_entity(), Self::handle_get_remote_profiling_data);
 
         session.add_entity_request_handler(Self::handle_add_worktree);
@@ -332,9 +300,6 @@ impl HeadlessProject {
         LspStore::init(&session);
         TaskStore::init(Some(&session));
         ToolchainStore::init(&session);
-        DapStore::init(&session, cx);
-        // todo(debugger): Re init breakpoint store when we set it up for collab
-        BreakpointStore::init(&session);
         GitStore::init(&session);
         AgentServerStore::init_headless(&session);
         ContextServerStore::init_headless(&session);
@@ -348,8 +313,6 @@ impl HeadlessProject {
             buffer_store,
             lsp_store,
             task_store,
-            dap_store,
-            breakpoint_store,
             agent_server_store,
             context_server_store,
             languages,
@@ -1226,41 +1189,6 @@ impl HeadlessProject {
     ) -> Result<proto::Ack> {
         log::debug!("Received ping from client");
         Ok(proto::Ack {})
-    }
-
-    async fn handle_get_processes(
-        _this: Entity<Self>,
-        _envelope: TypedEnvelope<proto::GetProcesses>,
-        _cx: AsyncApp,
-    ) -> Result<proto::GetProcessesResponse> {
-        let mut processes = Vec::new();
-        let refresh_kind = RefreshKind::nothing().with_processes(
-            ProcessRefreshKind::nothing()
-                .without_tasks()
-                .with_cmd(UpdateKind::Always),
-        );
-
-        for process in System::new_with_specifics(refresh_kind)
-            .processes()
-            .values()
-        {
-            let name = process.name().to_string_lossy().into_owned();
-            let command = process
-                .cmd()
-                .iter()
-                .map(|s| s.to_string_lossy().into_owned())
-                .collect::<Vec<_>>();
-
-            processes.push(proto::ProcessInfo {
-                pid: process.pid().as_u32(),
-                name,
-                command,
-            });
-        }
-
-        processes.sort_by_key(|p| p.name.clone());
-
-        Ok(proto::GetProcessesResponse { processes })
     }
 
     async fn handle_get_remote_profiling_data(

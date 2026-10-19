@@ -74,9 +74,6 @@ enable = false
 "/community/feedback.html" = "/community-links"
 "/conversations.html" = "/community-links"
 
-# Debugger
-"/debuggers.html" = "/docs/debugger.html"
-
 # MCP
 "/assistant/model-context-protocolCitedby.html" = "/docs/ai/mcp.html"
 "/context-servers.html" = "/docs/ai/mcp.html"

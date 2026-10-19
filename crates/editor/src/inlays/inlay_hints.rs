@@ -262,8 +262,7 @@ impl Editor {
         cx: &mut Context<Self>,
     ) {
         self.inline_value_cache.enabled = !self.inline_value_cache.enabled;
-
-        self.refresh_inline_values(cx);
+        cx.notify();
     }
 
     pub fn toggle_inlay_hints(

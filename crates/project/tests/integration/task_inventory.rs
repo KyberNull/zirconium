@@ -4,7 +4,6 @@ use paths::tasks_file;
 use pretty_assertions::assert_eq;
 use serde_json::json;
 use settings::SettingsLocation;
-use std::path::Path;
 use std::sync::Arc;
 use util::rel_path::rel_path;
 
@@ -297,115 +296,6 @@ async fn test_task_list_sorting(cx: &mut TestAppContext) {
             "3_task".to_string(),
             "10_hello".to_string(),
         ],
-    );
-}
-
-#[gpui::test]
-async fn test_reloading_debug_scenarios(cx: &mut TestAppContext) {
-    init_test(cx);
-    let inventory = cx.update(|cx| Inventory::new(cx));
-    inventory.update(cx, |inventory, _| {
-        inventory
-            .update_file_based_scenarios(
-                TaskSettingsLocation::Global(Path::new("")),
-                Some(
-                    r#"
-                        [{
-                            "label": "test scenario",
-                            "adapter": "CodeLLDB",
-                            "request": "launch",
-                            "program": "wowzer",
-                        }]
-                        "#,
-                ),
-            )
-            .unwrap();
-    });
-
-    let (_, scenario) = inventory
-        .update(cx, |this, cx| {
-            this.list_debug_scenarios(&TaskContexts::default(), vec![], vec![], false, cx)
-        })
-        .await
-        .1
-        .first()
-        .unwrap()
-        .clone();
-
-    inventory.update(cx, |this, _| {
-        this.scenario_scheduled(scenario.clone(), Default::default(), None, None);
-    });
-
-    assert_eq!(
-        inventory
-            .update(cx, |this, cx| {
-                this.list_debug_scenarios(&Default::default(), vec![], vec![], false, cx)
-            })
-            .await
-            .0
-            .first()
-            .unwrap()
-            .clone()
-            .0,
-        scenario
-    );
-
-    inventory.update(cx, |this, _| {
-        this.update_file_based_scenarios(
-            TaskSettingsLocation::Global(Path::new("")),
-            Some(
-                r#"
-                        [{
-                            "label": "test scenario",
-                            "adapter": "Delve",
-                            "request": "launch",
-                            "program": "wowzer",
-                        }]
-                        "#,
-            ),
-        )
-        .unwrap();
-    });
-
-    assert_eq!(
-        inventory
-            .update(cx, |this, cx| {
-                this.list_debug_scenarios(&Default::default(), vec![], vec![], false, cx)
-            })
-            .await
-            .0
-            .first()
-            .unwrap()
-            .0
-            .adapter,
-        "Delve",
-    );
-
-    inventory.update(cx, |this, _| {
-        this.update_file_based_scenarios(
-            TaskSettingsLocation::Global(Path::new("")),
-            Some(
-                r#"
-                        [{
-                            "label": "testing scenario",
-                            "adapter": "Delve",
-                            "request": "launch",
-                            "program": "wowzer",
-                        }]
-                        "#,
-            ),
-        )
-        .unwrap();
-    });
-
-    assert!(
-        inventory
-            .update(cx, |this, cx| {
-                this.list_debug_scenarios(&TaskContexts::default(), vec![], vec![], false, cx)
-            })
-            .await
-            .0
-            .is_empty(),
     );
 }
 

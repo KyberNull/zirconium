@@ -310,12 +310,6 @@ pub fn tasks_file() -> &'static PathBuf {
     TASKS_FILE.get_or_init(|| config_dir().join("tasks.json"))
 }
 
-/// Returns the path to the `debug.json` file.
-pub fn debug_scenarios_file() -> &'static PathBuf {
-    static DEBUG_SCENARIOS_FILE: OnceLock<PathBuf> = OnceLock::new();
-    DEBUG_SCENARIOS_FILE.get_or_init(|| config_dir().join("debug.json"))
-}
-
 /// Returns the path to the user-global `AGENTS.md` file.
 ///
 /// This file holds personal agent instructions that apply to every project the
@@ -443,14 +437,6 @@ pub fn languages_dir() -> &'static PathBuf {
     LANGUAGES_DIR.get_or_init(|| data_dir().join("languages"))
 }
 
-/// Returns the path to the debug adapters directory
-///
-/// This is where debug adapters are downloaded to for DAPs that are built-in to Zed.
-pub fn debug_adapters_dir() -> &'static PathBuf {
-    static DEBUG_ADAPTERS_DIR: OnceLock<PathBuf> = OnceLock::new();
-    DEBUG_ADAPTERS_DIR.get_or_init(|| data_dir().join("debug_adapters"))
-}
-
 /// Returns the path to the external agents directory
 ///
 /// This is where agent servers are downloaded to
@@ -514,27 +500,8 @@ pub fn local_vscode_tasks_file_relative_path() -> &'static RelPath {
     *CACHED
 }
 
-pub fn debug_task_file_name() -> &'static str {
-    "debug.json"
-}
-
 pub fn task_file_name() -> &'static str {
     "tasks.json"
-}
-
-/// Returns the relative path to a `debug.json` file within a project.
-/// .zed/debug.json
-pub fn local_debug_file_relative_path() -> &'static RelPath {
-    static CACHED: LazyLock<&'static RelPath> =
-        LazyLock::new(|| RelPath::from_unix_str(".zed/debug.json").unwrap());
-    *CACHED
-}
-
-/// Returns the relative path to a `.vscode/launch.json` file within a project.
-pub fn local_vscode_launch_file_relative_path() -> &'static RelPath {
-    static CACHED: LazyLock<&'static RelPath> =
-        LazyLock::new(|| RelPath::from_unix_str(".vscode/launch.json").unwrap());
-    *CACHED
 }
 
 pub fn user_ssh_config_file() -> PathBuf {

@@ -1,11 +1,9 @@
 //! Baseline interface of Tasks in Zed: all tasks in Zed are intended to use those for implementing their own logic.
 
 mod adapter_schema;
-mod debug_format;
 mod serde_helpers;
 pub mod static_source;
 mod task_template;
-mod vscode_debug_format;
 mod vscode_format;
 
 use anyhow::Context as _;
@@ -18,17 +16,12 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 pub use adapter_schema::{AdapterSchema, AdapterSchemas};
-pub use debug_format::{
-    AttachRequest, BuildTaskDefinition, DebugRequest, DebugScenario, DebugTaskFile, LaunchRequest,
-    Request, TcpArgumentsTemplate, ZedDebugConfig,
-};
 pub use task_template::{
-    DebugArgsRequest, HideStrategy, RevealStrategy, SaveStrategy, TaskHook, TaskTemplate,
-    TaskTemplates, substitute_variables_in_map, substitute_variables_in_str,
+    HideStrategy, RevealStrategy, SaveStrategy, TaskHook, TaskTemplate, TaskTemplates,
+    substitute_variables_in_map, substitute_variables_in_str,
 };
 pub use util::shell::{Shell, ShellKind};
 pub use util::shell_builder::ShellBuilder;
-pub use vscode_debug_format::VsCodeDebugTaskFile;
 pub use vscode_format::VsCodeTaskFile;
 pub use zed_actions::RevealTarget;
 
@@ -417,28 +410,6 @@ impl EnvVariableReplacer {
         }
     }
 
-    fn with_commands(
-        mut self,
-        commands: impl IntoIterator<Item = (VsCodeCommand, ZedEnvVariable)>,
-    ) -> Self {
-        self.commands = commands.into_iter().collect();
-        self
-    }
-
-    fn replace_value(&self, input: serde_json::Value) -> serde_json::Value {
-        match input {
-            serde_json::Value::String(s) => serde_json::Value::String(self.replace(&s)),
-            serde_json::Value::Array(arr) => {
-                serde_json::Value::Array(arr.into_iter().map(|v| self.replace_value(v)).collect())
-            }
-            serde_json::Value::Object(obj) => serde_json::Value::Object(
-                obj.into_iter()
-                    .map(|(k, v)| (self.replace(&k), self.replace_value(v)))
-                    .collect(),
-            ),
-            _ => input,
-        }
-    }
     // Replaces occurrences of VsCode-specific environment variables with Zed equivalents.
     fn replace(&self, input: &str) -> String {
         shellexpand::env_with_context_no_errors(&input, |var: &str| {
