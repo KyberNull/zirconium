@@ -24,11 +24,9 @@ use indoc::indoc;
 use language::{
     BracketPair, BracketPairConfig,
     Capability::ReadWrite,
-    ContextLocation, ContextProvider, FakeLspAdapter, IndentGuideSettings, LanguageConfig,
-    LanguageMatcher, LanguageName, LanguageQueries, LanguageToolchainStore, PLAIN_TEXT, Point,
-    language_settings::{
-        CompletionSettingsContent, FormatterList, LanguageSettingsContent, LspInsertMode,
-    },
+    ContextLocation, ContextProvider, IndentGuideSettings, LanguageConfig, LanguageMatcher,
+    LanguageName, LanguageQueries, LanguageToolchainStore, PLAIN_TEXT, Point,
+    language_settings::{CompletionSettingsContent, FormatterList, LanguageSettingsContent},
     tree_sitter_python,
 };
 use language_settings::Formatter;
@@ -15606,16 +15604,6 @@ async fn test_format_selections_action_hidden_without_range_capable_formatter(
     let project = Project::test(fs, [path!("/").as_ref()], cx).await;
     let language_registry = project.read_with(cx, |project, _| project.languages().clone());
     language_registry.add(rust_lang());
-    let _ = language_registry.register_fake_lsp(
-        "Rust",
-        FakeLspAdapter {
-            capabilities: lsp::ServerCapabilities {
-                document_range_formatting_provider: Some(lsp::OneOf::Left(true)),
-                ..lsp::ServerCapabilities::default()
-            },
-            ..FakeLspAdapter::default()
-        },
-    );
 
     let buffer = project
         .update(cx, |project, cx| {
@@ -15789,8 +15777,6 @@ async fn test_word_completions_usually_skip_digits(cx: &mut TestAppContext) {
     init_test(cx, |language_settings| {
         language_settings.defaults.completions = Some(CompletionSettingsContent {
             words_min_length: Some(0),
-            lsp: Some(false),
-            lsp_insert_mode: Some(LspInsertMode::Insert),
             ..Default::default()
         });
     });
@@ -15852,7 +15838,6 @@ async fn test_word_completions_do_not_show_before_threshold(cx: &mut TestAppCont
         language_settings.defaults.completions = Some(CompletionSettingsContent {
             words: Some(WordsCompletionMode::Enabled),
             words_min_length: Some(3),
-            lsp_insert_mode: Some(LspInsertMode::Insert),
             ..Default::default()
         });
     });
@@ -15921,7 +15906,6 @@ async fn test_word_completions_disabled(cx: &mut TestAppContext) {
         language_settings.defaults.completions = Some(CompletionSettingsContent {
             words: Some(WordsCompletionMode::Enabled),
             words_min_length: Some(0),
-            lsp_insert_mode: Some(LspInsertMode::Insert),
             ..Default::default()
         });
     });
@@ -15964,7 +15948,6 @@ async fn test_word_completions_disabled_with_no_provider(cx: &mut TestAppContext
         language_settings.defaults.completions = Some(CompletionSettingsContent {
             words: Some(WordsCompletionMode::Disabled),
             words_min_length: Some(0),
-            lsp_insert_mode: Some(LspInsertMode::Insert),
             ..Default::default()
         });
     });
@@ -18050,15 +18033,6 @@ async fn test_document_format_with_prettier(cx: &mut TestAppContext) {
         settings.defaults.prettier.get_or_insert_default().allowed = Some(true);
     });
 
-    let test_plugin = "test_plugin";
-    let _ = language_registry.register_fake_lsp(
-        "TypeScript",
-        FakeLspAdapter {
-            prettier_plugins: vec![test_plugin],
-            ..Default::default()
-        },
-    );
-
     let prettier_format_suffix = project::TEST_PRETTIER_FORMAT_SUFFIX;
     let buffer = project
         .update(cx, |project, cx| {
@@ -18144,15 +18118,6 @@ async fn test_document_format_with_prettier_explicit_language(cx: &mut TestAppCo
     update_test_language_settings(cx, &|settings| {
         settings.defaults.prettier.get_or_insert_default().allowed = Some(true);
     });
-
-    let test_plugin = "test_plugin";
-    let _ = language_registry.register_fake_lsp(
-        "TypeScript",
-        FakeLspAdapter {
-            prettier_plugins: vec![test_plugin],
-            ..Default::default()
-        },
-    );
 
     let prettier_format_suffix = project::TEST_PRETTIER_FORMAT_SUFFIX;
     let buffer = project
@@ -18244,15 +18209,6 @@ async fn test_range_format_with_prettier(cx: &mut TestAppContext) {
         settings.defaults.prettier.get_or_insert_default().allowed = Some(true);
     });
 
-    let test_plugin = "test_plugin";
-    let _ = language_registry.register_fake_lsp(
-        "TypeScript",
-        FakeLspAdapter {
-            prettier_plugins: vec![test_plugin],
-            ..Default::default()
-        },
-    );
-
     let prettier_range_format_suffix = project::TEST_PRETTIER_RANGE_FORMAT_SUFFIX;
     let buffer = project
         .update(cx, |project, cx| {
@@ -18324,15 +18280,6 @@ async fn test_range_format_with_prettier_explicit_language(cx: &mut TestAppConte
     update_test_language_settings(cx, &|settings| {
         settings.defaults.prettier.get_or_insert_default().allowed = Some(true);
     });
-
-    let test_plugin = "test_plugin";
-    let _ = language_registry.register_fake_lsp(
-        "TypeScript",
-        FakeLspAdapter {
-            prettier_plugins: vec![test_plugin],
-            ..Default::default()
-        },
-    );
 
     let prettier_range_format_suffix = project::TEST_PRETTIER_RANGE_FORMAT_SUFFIX;
     let buffer = project

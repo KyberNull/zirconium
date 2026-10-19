@@ -83,8 +83,8 @@ pub use edit_prediction_types::Direction;
 pub use edit_prediction_types::EditPredictionRequestTrigger;
 pub use editor_settings::{
     CompletionDetailAlignment, CompletionMenuItemKind, CurrentLineHighlight, DiffViewStyle,
-    EditorSettings, EditorSettingsScrollbarProxy, OpenResultsIn, ScrollBeyondLastLine,
-    ScrollbarAxes, SearchSettings, ShowMinimap, ui_scrollbar_settings_from_raw,
+    EditorSettings, EditorSettingsScrollbarProxy, ScrollBeyondLastLine, ScrollbarAxes,
+    SearchSettings, ShowMinimap, ui_scrollbar_settings_from_raw,
 };
 pub use element::{
     CursorLayout, EditorElement, HighlightedRange, HighlightedRangeLine, PointForPosition,
@@ -160,8 +160,7 @@ use language::{
     OutlineItem, Point, Selection, SelectionGoal, TextObject, TransactionId, TreeSitterOptions,
     WordsQuery,
     language_settings::{
-        self, AllLanguageSettings, LanguageSettings, LspInsertMode, RewrapBehavior,
-        WordsCompletionMode, all_language_settings,
+        self, LanguageSettings, RewrapBehavior, WordsCompletionMode, all_language_settings,
     },
     point_to_lsp, text_diff_with_options,
 };
@@ -510,11 +509,6 @@ impl Default for EditorStyle {
 }
 
 pub fn make_inlay_hints_style(cx: &App) -> HighlightStyle {
-    let show_background = AllLanguageSettings::get_global(cx)
-        .defaults
-        .inlay_hints
-        .show_background;
-
     let mut style = cx
         .theme()
         .syntax()
@@ -525,15 +519,7 @@ pub fn make_inlay_hints_style(cx: &App) -> HighlightStyle {
         style.color = Some(cx.theme().status().hint);
     }
 
-    if !show_background {
-        style.background_color = None;
-        return style;
-    }
-
-    if style.background_color.is_none() {
-        style.background_color = Some(cx.theme().status().hint_background);
-    }
-
+    style.background_color = None;
     style
 }
 
@@ -9264,7 +9250,6 @@ impl Editor {
 
 fn process_completion_for_edit(
     completion: &Completion,
-    intent: CompletionIntent,
     buffer: &Entity<Buffer>,
     cursor_position: &text::Anchor,
     cx: &mut Context<Editor>,
@@ -9300,93 +9285,7 @@ fn process_completion_for_edit(
         (None, completion.new_text.clone())
     };
 
-    let mut range_to_replace = {
-        let replace_range = &completion.replace_range;
-        if let CompletionSource::Lsp {
-            insert_range: Some(insert_range),
-            ..
-        } = &completion.source
-        {
-            debug_assert_eq!(
-                insert_range.start, replace_range.start,
-                "insert_range and replace_range should start at the same position"
-            );
-            debug_assert!(
-                insert_range
-                    .start
-                    .cmp(cursor_position, &buffer_snapshot)
-                    .is_le(),
-                "insert_range should start before or at cursor position"
-            );
-            debug_assert!(
-                replace_range
-                    .start
-                    .cmp(cursor_position, &buffer_snapshot)
-                    .is_le(),
-                "replace_range should start before or at cursor position"
-            );
-
-            let should_replace = match intent {
-                CompletionIntent::CompleteWithInsert => false,
-                CompletionIntent::CompleteWithReplace => true,
-                CompletionIntent::Complete | CompletionIntent::Compose => {
-                    let insert_mode = LanguageSettings::for_buffer(&buffer, cx)
-                        .completions
-                        .lsp_insert_mode;
-                    match insert_mode {
-                        LspInsertMode::Insert => false,
-                        LspInsertMode::Replace => true,
-                        LspInsertMode::ReplaceSubsequence => {
-                            let mut text_to_replace = buffer.chars_for_range(
-                                buffer.anchor_before(replace_range.start)
-                                    ..buffer.anchor_after(replace_range.end),
-                            );
-                            let mut current_needle = text_to_replace.next();
-                            for haystack_ch in completion.label.text.chars() {
-                                if let Some(needle_ch) = current_needle
-                                    && haystack_ch.eq_ignore_ascii_case(&needle_ch)
-                                {
-                                    current_needle = text_to_replace.next();
-                                }
-                            }
-                            current_needle.is_none()
-                        }
-                        LspInsertMode::ReplaceSuffix => {
-                            if replace_range
-                                .end
-                                .cmp(cursor_position, &buffer_snapshot)
-                                .is_gt()
-                            {
-                                let range_after_cursor = *cursor_position..replace_range.end;
-                                let text_after_cursor = buffer
-                                    .text_for_range(
-                                        buffer.anchor_before(range_after_cursor.start)
-                                            ..buffer.anchor_after(range_after_cursor.end),
-                                    )
-                                    .collect::<String>()
-                                    .to_ascii_lowercase();
-                                completion
-                                    .label
-                                    .text
-                                    .to_ascii_lowercase()
-                                    .ends_with(&text_after_cursor)
-                            } else {
-                                true
-                            }
-                        }
-                    }
-                }
-            };
-
-            if should_replace {
-                replace_range.clone()
-            } else {
-                insert_range.clone()
-            }
-        } else {
-            replace_range.clone()
-        }
-    };
+    let mut range_to_replace = completion.replace_range.clone();
 
     if range_to_replace
         .end

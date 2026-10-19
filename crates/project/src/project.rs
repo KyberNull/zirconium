@@ -80,10 +80,10 @@ use gpui::{
 };
 use language::{
     Buffer, BufferEditSource, BufferEvent, Capability, CodeLabel, CursorShape, DiskState, Language,
-    LanguageName, LanguageRegistry, PointUtf16, Toolchain, ToolchainMetadata, ToolchainScope,
-    Unclipped, language_settings::InlayHintKind, proto::split_operations,
+    LanguageName, LanguageRegistry, Toolchain, ToolchainMetadata, ToolchainScope,
+    proto::split_operations,
 };
-use lsp::{CompletionItemKind, DocumentHighlightKind, InsertTextMode, LanguageServerId};
+use lsp::{CompletionItemKind, InsertTextMode, LanguageServerId};
 pub use manifest_tree::ManifestProvidersStore;
 use node_runtime::NodeRuntime;
 use parking_lot::Mutex;
@@ -391,14 +391,6 @@ impl ProjectPath {
     }
 }
 
-#[derive(Debug, Default)]
-pub enum PrepareRenameResponse {
-    Success(Range<Anchor>),
-    OnlyUnpreparedRenameSupported,
-    #[default]
-    InvalidPosition,
-}
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum InlayId {
     EditPrediction(usize),
@@ -423,7 +415,6 @@ impl InlayId {
 pub struct InlayHint {
     pub position: language::Anchor,
     pub label: InlayHintLabel,
-    pub kind: Option<InlayHintKind>,
     pub padding_left: bool,
     pub padding_right: bool,
     pub tooltip: Option<InlayHintTooltip>,
@@ -685,70 +676,6 @@ impl CompletionDisplayOptions {
     }
 }
 
-/// A code action provided by a language server.
-#[derive(Clone, Debug, PartialEq)]
-pub struct CodeAction {
-    /// The id of the language server that produced this code action.
-    pub server_id: LanguageServerId,
-    /// The range of the buffer where this code action is applicable.
-    pub range: Range<Anchor>,
-    /// The raw code action provided by the language server.
-    /// Can be either an action or a command.
-    pub lsp_action: LspAction,
-    /// Whether the action needs to be resolved using the language server.
-    pub resolved: bool,
-}
-
-/// An action sent back by a language server.
-#[derive(Clone, Debug, PartialEq)]
-pub enum LspAction {
-    /// An action with the full data, may have a command or may not.
-    /// May require resolving.
-    Action(Box<lsp::CodeAction>),
-    /// A command data to run as an action.
-    Command(lsp::Command),
-    /// A code lens data to run as an action.
-    CodeLens(lsp::CodeLens),
-}
-
-impl LspAction {
-    pub fn title(&self) -> &str {
-        match self {
-            Self::Action(action) => &action.title,
-            Self::Command(command) => &command.title,
-            Self::CodeLens(lens) => lens
-                .command
-                .as_ref()
-                .map(|command| command.title.as_str())
-                .unwrap_or("Unknown command"),
-        }
-    }
-
-    pub fn action_kind(&self) -> Option<lsp::CodeActionKind> {
-        match self {
-            Self::Action(action) => action.kind.clone(),
-            Self::Command(_) => Some(lsp::CodeActionKind::new("command")),
-            Self::CodeLens(_) => Some(lsp::CodeActionKind::new("code lens")),
-        }
-    }
-
-    pub fn edit(&self) -> Option<&lsp::WorkspaceEdit> {
-        match self {
-            Self::Action(action) => action.edit.as_ref(),
-            Self::Command(_) => None,
-            Self::CodeLens(_) => None,
-        }
-    }
-
-    pub fn command(&self) -> Option<&lsp::Command> {
-        match self {
-            Self::Action(action) => action.command.as_ref(),
-            Self::Command(command) => Some(command),
-            Self::CodeLens(lens) => lens.command.as_ref(),
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ResolveState {
     Resolved,
@@ -795,27 +722,6 @@ pub struct MarkupContent {
     pub value: String,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct LocationLink {
-    pub origin: Option<Location>,
-    pub target: Location,
-}
-
-#[derive(Debug)]
-pub struct DocumentHighlight {
-    pub range: Range<language::Anchor>,
-    pub kind: DocumentHighlightKind,
-}
-
-#[derive(Clone, Debug)]
-pub struct DocumentSymbol {
-    pub name: String,
-    pub kind: language::SymbolKind,
-    pub range: Range<Unclipped<PointUtf16>>,
-    pub selection_range: Range<Unclipped<PointUtf16>>,
-    pub children: Vec<DocumentSymbol>,
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct HoverBlock {
     pub text: String,
@@ -827,19 +733,6 @@ pub enum HoverBlockKind {
     PlainText,
     Markdown,
     Code { language: String },
-}
-
-#[derive(Debug, Clone)]
-pub struct Hover {
-    pub contents: Vec<HoverBlock>,
-    pub range: Option<Range<language::Anchor>>,
-    pub language: Option<Arc<Language>>,
-}
-
-impl Hover {
-    pub fn is_empty(&self) -> bool {
-        self.contents.iter().all(|block| block.text.is_empty())
-    }
 }
 
 enum EntitySubscription {
@@ -855,50 +748,6 @@ enum EntitySubscription {
 pub struct DirectoryItem {
     pub path: PathBuf,
     pub is_dir: bool,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct DocumentColor {
-    pub lsp_range: lsp::Range,
-    pub color: lsp::Color,
-    pub resolved: bool,
-    pub color_presentations: Vec<ColorPresentation>,
-}
-
-impl Eq for DocumentColor {}
-
-impl std::hash::Hash for DocumentColor {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.lsp_range.hash(state);
-        self.color.red.to_bits().hash(state);
-        self.color.green.to_bits().hash(state);
-        self.color.blue.to_bits().hash(state);
-        self.color.alpha.to_bits().hash(state);
-        self.resolved.hash(state);
-        self.color_presentations.hash(state);
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ColorPresentation {
-    pub label: SharedString,
-    pub text_edit: Option<lsp::TextEdit>,
-    pub additional_text_edits: Vec<lsp::TextEdit>,
-}
-
-impl std::hash::Hash for ColorPresentation {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.label.hash(state);
-        if let Some(ref edit) = self.text_edit {
-            edit.range.hash(state);
-            edit.new_text.hash(state);
-        }
-        self.additional_text_edits.len().hash(state);
-        for edit in &self.additional_text_edits {
-            edit.range.hash(state);
-            edit.new_text.hash(state);
-        }
-    }
 }
 
 #[derive(Clone)]
@@ -999,36 +848,6 @@ impl DirectoryLister {
 }
 
 pub const CURRENT_PROJECT_FEATURES: &[&str] = &["new-style-anchors"];
-
-/// An LSP diagnostics associated with a certain language server.
-#[derive(Clone, Debug, Default)]
-pub enum LspPullDiagnostics {
-    #[default]
-    Default,
-    Response {
-        /// The id of the language server that produced diagnostics.
-        server_id: LanguageServerId,
-        /// URI of the resource,
-        uri: lsp::Uri,
-        /// The ID provided by the dynamic registration that produced diagnostics.
-        registration_id: Option<SharedString>,
-        /// The diagnostics produced by this language server.
-        diagnostics: PulledDiagnostics,
-    },
-}
-
-#[derive(Clone, Debug)]
-pub enum PulledDiagnostics {
-    Unchanged {
-        /// An ID the current pulled batch for this file.
-        /// If given, can be used to query workspace diagnostics partially.
-        result_id: SharedString,
-    },
-    Changed {
-        result_id: Option<SharedString>,
-        diagnostics: Vec<lsp::Diagnostic>,
-    },
-}
 
 /// Whether to disable all AI features in Zed.
 ///

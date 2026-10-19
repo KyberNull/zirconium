@@ -1480,7 +1480,6 @@ mod tests {
                     padding_left: false,
                     padding_right: false,
                     tooltip: None,
-                    kind: None,
                     resolve_state: ResolveState::Resolved,
                 },
             )
@@ -1500,7 +1499,6 @@ mod tests {
                     padding_left: true,
                     padding_right: true,
                     tooltip: None,
-                    kind: None,
                     resolve_state: ResolveState::Resolved,
                 },
             )
@@ -1520,7 +1518,6 @@ mod tests {
                     padding_left: false,
                     padding_right: false,
                     tooltip: None,
-                    kind: None,
                     resolve_state: ResolveState::Resolved,
                 },
             )
@@ -1540,7 +1537,6 @@ mod tests {
                     padding_left: true,
                     padding_right: true,
                     tooltip: None,
-                    kind: None,
                     resolve_state: ResolveState::Resolved,
                 },
             )
@@ -1563,7 +1559,6 @@ mod tests {
                     padding_left: true,
                     padding_right: true,
                     tooltip: None,
-                    kind: None,
                     resolve_state: ResolveState::Resolved,
                 },
             )

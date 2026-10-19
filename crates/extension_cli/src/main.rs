@@ -14,7 +14,6 @@ use extension::extension_builder::{CompileExtensionOptions, ExtensionBuilder};
 use extension::{ExtensionManifest, ExtensionSnippets};
 use language::LanguageConfig;
 use reqwest_client::ReqwestClient;
-use settings_content::SemanticTokenRules;
 use snippet_provider::file_to_snippets;
 use snippet_provider::format::VsSnippetsFile;
 use task::TaskTemplates;
@@ -425,9 +424,6 @@ fn test_languages(
             match file_name {
                 LanguageConfig::FILE_NAME => {
                     // Loaded above
-                }
-                SemanticTokenRules::FILE_NAME => {
-                    let _token_rules = SemanticTokenRules::load(&file_path)?;
                 }
                 TaskTemplates::FILE_NAME => {
                     let task_file_content = std::fs::read(&file_path).with_context(|| {

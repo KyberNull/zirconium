@@ -11,7 +11,7 @@ use gpui::{
 };
 use language::{
     Bias, Buffer, BufferSnapshot, CodeLabel, LanguageRegistry, Point, ToOffset, ToPoint,
-    language_settings::{self, InlayHintKind},
+    language_settings::{self},
 };
 use markdown::{Markdown, MarkdownStyle};
 use project::{
@@ -362,7 +362,6 @@ impl RatePredictionsModal {
                         &InlayHint {
                             position: start_hint_position,
                             label: InlayHintLabel::String("╭─ editable region start\n".into()),
-                            kind: Some(InlayHintKind::Parameter),
                             padding_left: false,
                             padding_right: false,
                             tooltip: None,
@@ -375,7 +374,6 @@ impl RatePredictionsModal {
                         &InlayHint {
                             position: end_hint_position,
                             label: InlayHintLabel::String("\n╰─ editable region end".into()),
-                            kind: Some(InlayHintKind::Parameter),
                             padding_left: false,
                             padding_right: false,
                             tooltip: None,

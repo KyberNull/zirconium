@@ -28,7 +28,7 @@ use gpui::{
     Focusable, Image, ImageFormat, KeyContext, SharedString, Subscription, Task, TaskExt,
     TextStyle, WeakEntity,
 };
-use language::{Buffer, language_settings::InlayHintKind};
+use language::Buffer;
 use parking_lot::RwLock;
 use project::AgentId;
 use project::{
@@ -664,7 +664,6 @@ impl MessageEditor {
             &InlayHint {
                 position: snapshot.anchor_to_buffer_anchor(hint_pos)?.0,
                 label: InlayHintLabel::String(hint),
-                kind: Some(InlayHintKind::Parameter),
                 padding_left: false,
                 padding_right: false,
                 tooltip: None,

@@ -1,5 +1,4 @@
-use crate::{Diagnostic, RelatedInformation, RelatedLocation, range_to_lsp};
-use anyhow::Result;
+use crate::{Diagnostic, RelatedInformation};
 use collections::HashMap;
 use lsp::LanguageServerId;
 use serde::Serialize;
@@ -148,43 +147,7 @@ pub struct Summary {
     count: usize,
 }
 
-impl DiagnosticEntry<PointUtf16> {
-    /// Returns a raw LSP diagnostic used to provide diagnostic context to LSP
-    /// codeAction request. `uri` names the file this entry belongs to, which the
-    /// related information of that same file is reported against.
-    pub fn to_lsp_diagnostic_stub(&self, uri: &lsp::Uri) -> Result<lsp::Diagnostic> {
-        let range = range_to_lsp(self.range.clone())?;
-
-        let mut related_information = None;
-        if let Some(information) = &self.related_information {
-            let mut locations = Vec::with_capacity(information.len());
-            for information in information.iter() {
-                locations.push(lsp::DiagnosticRelatedInformation {
-                    location: match &information.location {
-                        RelatedLocation::InBuffer(range) => lsp::Location {
-                            uri: uri.clone(),
-                            range: range_to_lsp(range.clone())?,
-                        },
-                        RelatedLocation::InAnotherFile(location) => location.clone(),
-                    },
-                    message: information.message.clone(),
-                });
-            }
-            related_information = Some(locations);
-        }
-
-        Ok(lsp::Diagnostic {
-            range,
-            code: self.diagnostic.code.clone(),
-            severity: Some(self.diagnostic.severity),
-            source: self.diagnostic.source.clone(),
-            message: self.diagnostic.message.clone(),
-            data: self.diagnostic.data.clone(),
-            related_information,
-            ..Default::default()
-        })
-    }
-}
+impl DiagnosticEntry<PointUtf16> {}
 
 impl DiagnosticSet {
     /// Constructs a [DiagnosticSet] from a sequence of entries, ordered by

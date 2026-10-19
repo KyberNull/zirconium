@@ -720,7 +720,7 @@ impl Editor {
             new_text,
             snippet,
             replace_range,
-        } = process_completion_for_edit(&completion, intent, &buffer_handle, &initial_position, cx);
+        } = process_completion_for_edit(&completion, &buffer_handle, &initial_position, cx);
 
         let buffer = buffer_handle.read(cx).snapshot();
         let newest_selection = self.selections.newest_anchor();

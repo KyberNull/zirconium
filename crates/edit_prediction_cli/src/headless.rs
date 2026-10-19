@@ -70,8 +70,7 @@ pub fn init(cx: &mut App) -> EpAppState {
         cx.background_executor().clone(),
     ));
 
-    let mut languages = LanguageRegistry::new(cx.background_executor().clone());
-    languages.set_language_server_download_dir(paths::languages_dir().clone());
+    let languages = LanguageRegistry::new(cx.background_executor().clone());
     let languages = Arc::new(languages);
 
     let user_store = cx.new(|cx| UserStore::new(client.clone(), cx));

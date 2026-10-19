@@ -219,9 +219,6 @@ pub struct SettingsContent {
     /// Default: VSCode
     pub base_keymap: Option<BaseKeymapContent>,
 
-    /// Configuration for Diagnostics-related features.
-    pub diagnostics: Option<DiagnosticsSettingsContent>,
-
     /// Configuration for Git-related features
     pub git: Option<GitSettings>,
 

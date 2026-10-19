@@ -1,7 +1,7 @@
 use super::*;
 use crate::Buffer;
 use clock::ReplicaId;
-use collections::BTreeMap;
+use collections::{BTreeMap, HashMap};
 use futures::FutureExt as _;
 use futures_lite::future::yield_now;
 use gpui::{App, AppContext as _, BorrowAppContext, Entity};
@@ -14,6 +14,7 @@ use regex::RegexBuilder;
 use settings::SettingsStore;
 use settings::{AllLanguageSettingsContent, LanguageSettingsContent};
 use std::collections::BTreeSet;
+use std::mem;
 use std::{
     env,
     ops::Range,

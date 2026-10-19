@@ -33,8 +33,7 @@ use crate::editorconfig_store::EditorconfigStore;
 
 use crate::{
     ActiveSettingsProfileName, FileTypeMap, FontFamilyName, IconThemeName, LanguageSettingsContent,
-    LanguageToSettingsMap, LspSettings, LspSettingsMap, SemanticTokenRules, ThemeName,
-    UserSettingsContentExt, VsCodeSettings, WorktreeId,
+    LanguageToSettingsMap, ThemeName, UserSettingsContentExt, VsCodeSettings, WorktreeId,
     settings_content::{
         ExtendingSet, ExtensionsSettingsContent, ProfileBase, ProjectSettingsContent,
         RootUserSettings, SettingsContent, UserSettingsContent, merge_from::MergeFrom,
@@ -42,8 +41,6 @@ use crate::{
 };
 
 use settings_json::{infer_json_indent_size, update_value_in_json_text};
-
-pub const LSP_SETTINGS_SCHEMA_URL_PREFIX: &str = "zed://schemas/settings/lsp/";
 
 pub trait SettingsKey: 'static + Send + Sync {
     /// The name of a key within the JSON file from which this setting should
@@ -151,8 +148,6 @@ pub struct SettingsStore {
     extension_settings: Option<Box<SettingsContent>>,
     server_settings: Option<Box<SettingsContent>>,
 
-    language_semantic_token_rules: HashMap<SharedString, SemanticTokenRules>,
-
     merged_settings: Rc<SettingsContent>,
 
     last_user_settings_content: Option<String>,
@@ -243,11 +238,6 @@ impl LocalSettingsPath {
 
 impl Global for SettingsStore {}
 
-#[derive(Default)]
-pub struct DefaultSemanticTokenRules(pub SemanticTokenRules);
-
-impl gpui::Global for DefaultSemanticTokenRules {}
-
 #[doc(hidden)]
 #[derive(Debug)]
 pub struct SettingValue<T> {
@@ -276,7 +266,6 @@ pub struct SettingsJsonSchemaParams<'a> {
     pub font_names: &'a [String],
     pub theme_names: &'a [SharedString],
     pub icon_theme_names: &'a [SharedString],
-    pub lsp_adapter_names: &'a [String],
     pub action_names: &'a [&'a str],
     pub action_documentation: &'a HashMap<&'a str, &'a str>,
     pub deprecations: &'a HashMap<&'a str, &'a str>,
@@ -285,25 +274,12 @@ pub struct SettingsJsonSchemaParams<'a> {
 
 impl SettingsStore {
     pub fn new(cx: &mut App, default_settings: &str) -> Self {
-        Self::new_with_semantic_tokens(cx, default_settings)
-    }
-
-    pub fn new_with_semantic_tokens(cx: &mut App, default_settings: &str) -> Self {
         let default_settings = Self::parse_default_settings(default_settings).unwrap();
         Self::from_settings_content(cx, default_settings)
     }
 
     fn from_settings_content(cx: &mut App, default_settings: SettingsContent) -> Self {
         let (setting_file_updates_tx, mut setting_file_updates_rx) = mpsc::unbounded();
-        if !cx.has_global::<DefaultSemanticTokenRules>() {
-            cx.set_global::<DefaultSemanticTokenRules>(
-                crate::parse_json_with_comments::<SemanticTokenRules>(
-                    &crate::default_semantic_token_rules(),
-                )
-                .map(DefaultSemanticTokenRules)
-                .unwrap_or_default(),
-            );
-        }
         let default_settings: Rc<SettingsContent> = default_settings.into();
         let mut this = Self {
             setting_values: Default::default(),
@@ -312,7 +288,6 @@ impl SettingsStore {
             server_settings: None,
             user_settings: None,
             extension_settings: None,
-            language_semantic_token_rules: HashMap::default(),
 
             merged_settings: default_settings,
             last_user_settings_content: None,
@@ -994,41 +969,6 @@ impl SettingsStore {
         Ok(())
     }
 
-    /// Sets language-specific semantic token rules.
-    ///
-    /// These rules are registered by language modules (e.g. the Rust language module)
-    /// or by third-party extensions (via `semantic_token_rules.json` in their language
-    /// directories). They are stored separately from the global rules and are only
-    /// applied to buffers of the matching language by the `SemanticTokenStylizer`.
-    ///
-    /// This triggers a settings recomputation so that observers (e.g. `LspStore`)
-    /// are notified and can invalidate cached stylizers.
-    pub fn set_language_semantic_token_rules(
-        &mut self,
-        language: SharedString,
-        rules: SemanticTokenRules,
-        cx: &mut App,
-    ) {
-        self.language_semantic_token_rules.insert(language, rules);
-        self.recompute_values(None, cx);
-    }
-
-    /// Removes language-specific semantic token rules for the given language.
-    ///
-    /// This should be called when an extension that registered rules for a language
-    /// is unloaded. Triggers a settings recomputation so that observers (e.g.
-    /// `LspStore`) are notified and can invalidate cached stylizers.
-    pub fn remove_language_semantic_token_rules(&mut self, language: &str, cx: &mut App) {
-        self.language_semantic_token_rules.remove(language);
-        self.recompute_values(None, cx);
-    }
-
-    /// Returns the language-specific semantic token rules for the given language,
-    /// if any have been registered.
-    pub fn language_semantic_token_rules(&self, language: &str) -> Option<&SemanticTokenRules> {
-        self.language_semantic_token_rules.get(language)
-    }
-
     /// Add or remove a set of local settings via a JSON string.
     pub fn set_local_settings(
         &mut self,
@@ -1199,54 +1139,6 @@ impl SettingsStore {
                     "errorMessage": "No language with this name is installed.",
                     "properties": params.language_names.iter().map(|name| (name.clone(), file_type_patterns_ref.clone())).collect::<serde_json::Map<_, _>>(),
                     "additionalProperties": file_type_patterns_ref.clone()
-                })
-            });
-        }
-
-        generator.subschema_for::<LspSettings>();
-
-        let lsp_settings_definition = generator
-            .definitions()
-            .get("LspSettings")
-            .expect("LspSettings should be defined")
-            .clone();
-
-        if !params.lsp_adapter_names.is_empty() {
-            replace_subschema::<LspSettingsMap>(generator, || {
-                let mut lsp_properties = serde_json::Map::new();
-
-                for adapter_name in params.lsp_adapter_names {
-                    let mut base_lsp_settings = lsp_settings_definition
-                        .as_object()
-                        .expect("LspSettings should be an object")
-                        .clone();
-
-                    if let Some(properties) = base_lsp_settings.get_mut("properties") {
-                        if let Some(properties_object) = properties.as_object_mut() {
-                            properties_object.insert(
-                            "initialization_options".to_string(),
-                            serde_json::json!({
-                                "$ref": format!("{LSP_SETTINGS_SCHEMA_URL_PREFIX}{adapter_name}/initialization_options")
-                            }),
-                        );
-                            properties_object.insert(
-                            "settings".to_string(),
-                            serde_json::json!({
-                                "$ref": format!("{LSP_SETTINGS_SCHEMA_URL_PREFIX}{adapter_name}/settings")
-                            }),
-                        );
-                        }
-                    }
-
-                    lsp_properties.insert(
-                        adapter_name.clone(),
-                        serde_json::Value::Object(base_lsp_settings),
-                    );
-                }
-
-                json_schema!({
-                    "type": "object",
-                    "properties": lsp_properties
                 })
             });
         }
@@ -3078,116 +2970,6 @@ mod tests {
     }
 
     #[gpui::test]
-    fn test_lsp_settings_schema_generation(cx: &mut App) {
-        SettingsStore::test(cx);
-
-        let schema = SettingsStore::json_schema(&SettingsJsonSchemaParams {
-            language_names: &["Rust".to_string(), "TypeScript".to_string()],
-            font_names: &["Zed Mono".to_string()],
-            theme_names: &["One Dark".into()],
-            icon_theme_names: &["Zed Icons".into()],
-            lsp_adapter_names: &[
-                "rust-analyzer".to_string(),
-                "typescript-language-server".to_string(),
-            ],
-            action_names: &[],
-            action_documentation: &HashMap::default(),
-            deprecations: &HashMap::default(),
-            deprecation_messages: &HashMap::default(),
-        });
-
-        let properties = schema
-            .pointer("/$defs/LspSettingsMap/properties")
-            .expect("LspSettingsMap should have properties")
-            .as_object()
-            .unwrap();
-
-        assert!(properties.contains_key("rust-analyzer"));
-        assert!(properties.contains_key("typescript-language-server"));
-
-        let init_options_ref = properties
-            .get("rust-analyzer")
-            .unwrap()
-            .pointer("/properties/initialization_options/$ref")
-            .expect("initialization_options should have a $ref")
-            .as_str()
-            .unwrap();
-
-        assert_eq!(
-            init_options_ref,
-            "zed://schemas/settings/lsp/rust-analyzer/initialization_options"
-        );
-
-        let settings_ref = properties
-            .get("rust-analyzer")
-            .unwrap()
-            .pointer("/properties/settings/$ref")
-            .expect("settings should have a $ref")
-            .as_str()
-            .unwrap();
-
-        assert_eq!(
-            settings_ref,
-            "zed://schemas/settings/lsp/rust-analyzer/settings"
-        );
-    }
-
-    #[gpui::test]
-    fn test_lsp_project_settings_schema_generation(cx: &mut App) {
-        SettingsStore::test(cx);
-
-        let schema = SettingsStore::project_json_schema(&SettingsJsonSchemaParams {
-            language_names: &["Rust".to_string(), "TypeScript".to_string()],
-            font_names: &["Zed Mono".to_string()],
-            theme_names: &["One Dark".into()],
-            icon_theme_names: &["Zed Icons".into()],
-            lsp_adapter_names: &[
-                "rust-analyzer".to_string(),
-                "typescript-language-server".to_string(),
-            ],
-            action_names: &[],
-            action_documentation: &HashMap::default(),
-            deprecations: &HashMap::default(),
-            deprecation_messages: &HashMap::default(),
-        });
-
-        let properties = schema
-            .pointer("/$defs/LspSettingsMap/properties")
-            .expect("LspSettingsMap should have properties")
-            .as_object()
-            .unwrap();
-
-        assert!(properties.contains_key("rust-analyzer"));
-        assert!(properties.contains_key("typescript-language-server"));
-
-        let init_options_ref = properties
-            .get("rust-analyzer")
-            .unwrap()
-            .pointer("/properties/initialization_options/$ref")
-            .expect("initialization_options should have a $ref")
-            .as_str()
-            .unwrap();
-
-        assert_eq!(
-            init_options_ref,
-            "zed://schemas/settings/lsp/rust-analyzer/initialization_options"
-        );
-
-        let settings_ref = properties
-            .get("rust-analyzer")
-            .unwrap()
-            .pointer("/properties/settings/$ref")
-            .expect("settings should have a $ref")
-            .as_str()
-            .unwrap();
-
-        assert_eq!(
-            settings_ref,
-            "zed://schemas/settings/lsp/rust-analyzer/settings"
-        );
-    }
-
-    #[gpui::test]
     fn test_file_types_schema_generation(cx: &mut App) {
         SettingsStore::test(cx);
 
@@ -3196,7 +2978,6 @@ mod tests {
             font_names: &["Zed Mono".to_string()],
             theme_names: &["One Dark".into()],
             icon_theme_names: &["Zed Icons".into()],
-            lsp_adapter_names: &[],
             action_names: &[],
             action_documentation: &HashMap::default(),
             deprecations: &HashMap::default(),
@@ -3232,7 +3013,6 @@ mod tests {
             font_names: &["Zed Mono".to_string()],
             theme_names: &["One Dark".into()],
             icon_theme_names: &["Zed Icons".into()],
-            lsp_adapter_names: &["rust-analyzer".to_string()],
             action_names: &[],
             action_documentation: &HashMap::default(),
             deprecations: &HashMap::default(),

@@ -75,8 +75,7 @@ message RejoinedProject {
   uint64 id = 1;
   repeated WorktreeMetadata worktrees = 2;
   repeated Collaborator collaborators = 3;
-  repeated LanguageServer language_servers = 4;
-  repeated string language_server_capabilities = 5;
+  reserved 4, 5;
 }
 
 message LeaveRoom {}
@@ -207,12 +206,10 @@ message JoinProjectResponse {
   uint32 replica_id = 1;
   repeated WorktreeMetadata worktrees = 2;
   repeated Collaborator collaborators = 3;
-  repeated LanguageServer language_servers = 4;
-  repeated string language_server_capabilities = 8;
   ChannelRole role = 6;
   bool windows_paths = 9;
   repeated string features = 10;
-  reserved 7;
+  reserved 4, 7, 8;
 }
 
 message LeaveProject {

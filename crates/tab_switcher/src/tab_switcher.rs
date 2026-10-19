@@ -2,14 +2,12 @@
 mod tab_switcher_tests;
 
 use collections::{HashMap, HashSet};
-use editor::items::{
-    entry_diagnostic_aware_icon_decoration_and_color, entry_git_aware_label_color,
-};
+use editor::items::entry_git_aware_label_color;
 use fuzzy_nucleo::StringMatchCandidate;
 use gpui::{
     Action, AnyElement, App, Context, DismissEvent, Entity, EntityId, EventEmitter, FocusHandle,
-    Focusable, Modifiers, ModifiersChangedEvent, MouseButton, MouseUpEvent, ParentElement, Point,
-    Render, Styled, Task, TaskExt, WeakEntity, Window, actions, rems,
+    Focusable, Modifiers, ModifiersChangedEvent, MouseButton, MouseUpEvent, ParentElement, Render,
+    Styled, Task, TaskExt, WeakEntity, Window, actions, rems,
 };
 use picker::{Picker, PickerDelegate};
 use project::Project;
@@ -17,14 +15,11 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use settings::Settings;
 use std::{cmp::Reverse, sync::Arc};
-use ui::{
-    DecoratedIcon, IconDecoration, IconDecorationKind, ListItem, ListItemSpacing, Tooltip,
-    prelude::*,
-};
+use ui::{DecoratedIcon, ListItem, ListItemSpacing, Tooltip, prelude::*};
 use util::ResultExt;
 use workspace::{
     Event as WorkspaceEvent, ModalView, Pane, SaveIntent, Workspace,
-    item::{ItemHandle, ItemSettings, ShowDiagnostics, TabContentParams},
+    item::{ItemHandle, ItemSettings, TabContentParams},
     pane::{render_item_indicator, tab_details},
 };
 
@@ -267,7 +262,6 @@ impl TabMatch {
     ) -> Option<DecoratedIcon> {
         let icon = self.item.tab_icon(window, cx)?;
         let item_settings = ItemSettings::get_global(cx);
-        let show_diagnostics = item_settings.show_diagnostics;
         let git_status_color = item_settings
             .git_status
             .then(|| {
@@ -289,44 +283,7 @@ impl TabMatch {
             .flatten();
         let colored_icon = icon.color(git_status_color.unwrap_or_default());
 
-        let most_severe_diagnostic_level = if show_diagnostics == ShowDiagnostics::Off {
-            None
-        } else {
-            let buffer_store = project.read(cx).buffer_store().read(cx);
-            let buffer = self
-                .item
-                .project_path(cx)
-                .and_then(|path| buffer_store.get_by_path(&path))
-                .map(|buffer| buffer.read(cx));
-            buffer.and_then(|buffer| {
-                buffer
-                    .buffer_diagnostics(None)
-                    .iter()
-                    .map(|diagnostic_entry| diagnostic_entry.diagnostic.severity)
-                    .min()
-            })
-        };
-
-        let decorations =
-            entry_diagnostic_aware_icon_decoration_and_color(most_severe_diagnostic_level)
-                .filter(|(d, _)| {
-                    *d != IconDecorationKind::Triangle
-                        || show_diagnostics != ShowDiagnostics::Errors
-                })
-                .map(|(icon, color)| {
-                    let knockout_item_color = if selected {
-                        cx.theme().colors().element_selected
-                    } else {
-                        cx.theme().colors().element_background
-                    };
-                    IconDecoration::new(icon, knockout_item_color, cx)
-                        .color(color.color(cx))
-                        .position(Point {
-                            x: px(-2.),
-                            y: px(-2.),
-                        })
-                });
-        Some(DecoratedIcon::new(colored_icon, decorations))
+        Some(DecoratedIcon::new(colored_icon, None))
     }
 }
 

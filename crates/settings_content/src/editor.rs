@@ -38,11 +38,6 @@ pub struct EditorSettingsContent {
     ///
     /// Default: true
     pub rounded_selection: Option<bool>,
-    /// The debounce delay before querying highlights from the language
-    /// server based on the current cursor location.
-    ///
-    /// Default: 75
-    pub lsp_highlight_debounce: Option<DelayMs>,
     /// Whether to show the informational hover box when moving the mouse
     /// over symbols in the editor.
     ///
@@ -181,21 +176,6 @@ pub struct EditorSettingsContent {
     #[schemars(range(min = 0, max = 106))]
     pub minimum_contrast_for_highlights: Option<MinimumContrast>,
 
-    /// Whether to follow-up empty go to definition responses from the language server or not.
-    /// `FindAllReferences` allows to look up references of the same symbol instead.
-    /// `None` disables the fallback.
-    ///
-    /// Default: FindAllReferences
-    pub go_to_definition_fallback: Option<GoToDefinitionFallback>,
-
-    /// Where to show LSP results that can contain multiple locations
-    /// (Go to Definition, Go to Implementation, Find All References). A single
-    /// result always opens directly. Individual actions can override this with
-    /// their `open_results_in` argument.
-    ///
-    /// Default: multi_buffer
-    pub lsp_results_location: Option<OpenResultsIn>,
-
     /// How to scroll the target into view when navigating to a definition or reference
     /// (e.g. Go to Definition, Go to Type Definition, Find All References).
     ///
@@ -217,27 +197,9 @@ pub struct EditorSettingsContent {
     /// Default: warning
     pub diagnostics_max_severity: Option<DiagnosticSeverityContent>,
 
-    /// Whether to show code action button at start of buffer line.
-    ///
-    /// Default: true
-    pub inline_code_actions: Option<bool>,
-
     /// Drag and drop related settings
     pub drag_and_drop_selection: Option<DragAndDropSelectionContent>,
 
-    /// Whether and how to display code lenses from language servers.
-    ///
-    /// Default: "off"
-    pub code_lens: Option<CodeLens>,
-
-    /// How to render LSP `textDocument/documentColor` colors in the editor.
-    ///
-    /// Default: [`DocumentColorsRenderMode::Inlay`]
-    pub lsp_document_colors: Option<DocumentColorsRenderMode>,
-    /// Whether to query and display LSP `textDocument/documentLink` links in the editor.
-    ///
-    /// Default: true
-    pub lsp_document_links: Option<bool>,
     /// When to show the scrollbar in the completion menu.
     /// This setting can take four values:
     ///
@@ -539,74 +501,6 @@ pub struct GutterContent {
     pub git_gutter_width: Option<GitGutterWidth>,
 }
 
-/// Whether to display code lenses from language servers above code elements.
-#[derive(
-    Copy,
-    Clone,
-    Debug,
-    Default,
-    Serialize,
-    Deserialize,
-    PartialEq,
-    Eq,
-    JsonSchema,
-    MergeFrom,
-    strum::VariantArray,
-    strum::VariantNames,
-)]
-#[serde(rename_all = "snake_case")]
-pub enum CodeLens {
-    /// Do not query and display code lenses.
-    #[default]
-    Off,
-    /// Display code lenses from language servers above code elements.
-    On,
-    /// Display code lenses in the code action menu.
-    Menu,
-}
-
-impl CodeLens {
-    pub fn enabled(&self) -> bool {
-        self != &Self::Off
-    }
-
-    pub fn inline(&self) -> bool {
-        *self == Self::On
-    }
-
-    pub fn show_in_menu(&self) -> bool {
-        *self == Self::Menu
-    }
-}
-
-/// How to render LSP `textDocument/documentColor` colors in the editor.
-#[derive(
-    Debug,
-    Clone,
-    Copy,
-    Default,
-    Serialize,
-    Deserialize,
-    JsonSchema,
-    MergeFrom,
-    PartialEq,
-    Eq,
-    strum::VariantArray,
-    strum::VariantNames,
-)]
-#[serde(rename_all = "snake_case")]
-pub enum DocumentColorsRenderMode {
-    /// Do not query and render document colors.
-    None,
-    /// Render document colors as inlay hints near the color text.
-    #[default]
-    Inlay,
-    /// Draw a border around the color text.
-    Border,
-    /// Draw a background behind the color text.
-    Background,
-}
-
 #[derive(
     Copy,
     Clone,
@@ -846,54 +740,6 @@ pub enum CursorShape {
     Underline,
     /// A box drawn around the following character
     Hollow,
-}
-
-/// What to do when go to definition yields no results.
-#[derive(
-    Copy,
-    Clone,
-    Debug,
-    Default,
-    Serialize,
-    Deserialize,
-    PartialEq,
-    Eq,
-    JsonSchema,
-    MergeFrom,
-    strum::VariantArray,
-    strum::VariantNames,
-)]
-#[serde(rename_all = "snake_case")]
-pub enum GoToDefinitionFallback {
-    /// Disables the fallback.
-    None,
-    /// Looks up references of the same symbol instead.
-    #[default]
-    FindAllReferences,
-}
-
-/// Where to show LSP results that can contain multiple locations.
-#[derive(
-    Copy,
-    Clone,
-    Debug,
-    Default,
-    Serialize,
-    Deserialize,
-    PartialEq,
-    Eq,
-    JsonSchema,
-    MergeFrom,
-    strum::VariantArray,
-    strum::VariantNames,
-)]
-#[serde(rename_all = "snake_case")]
-pub enum OpenResultsIn {
-    /// Open the results in a multibuffer.
-    #[default]
-    MultiBuffer,
-    /// Open the results in a filterable picker.
-    Picker,
 }
 
 /// How to scroll the target into view when navigating to a definition or reference.

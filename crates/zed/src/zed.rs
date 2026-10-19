@@ -129,8 +129,6 @@ actions!(
         OpenProjectSettingsFile,
         /// Opens the tasks panel.
         OpenTasks,
-        /// Shows the default semantic token rules (read-only).
-        ShowDefaultSemanticTokenRules,
         /// Resets the application database.
         ResetDatabase,
         /// Shows all hidden windows.
@@ -269,18 +267,6 @@ pub fn init(cx: &mut App) {
             open_settings_file(
                 paths::tasks_file(),
                 || settings::initial_tasks_content().as_ref().into(),
-                window,
-                cx,
-            );
-        });
-    })
-    .on_action(|_: &ShowDefaultSemanticTokenRules, cx| {
-        with_active_or_new_workspace(cx, |workspace, window, cx| {
-            open_bundled_file(
-                workspace,
-                settings::default_semantic_token_rules(),
-                "Default Semantic Token Rules",
-                "JSONC",
                 window,
                 cx,
             );

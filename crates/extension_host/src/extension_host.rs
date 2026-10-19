@@ -30,7 +30,7 @@ use futures::{
 };
 use gpui::{
     App, AppContext as _, AsyncApp, Context, Entity, EventEmitter, Global, Task, TaskExt,
-    UpdateGlobal as _, WeakEntity, actions,
+    WeakEntity, actions,
 };
 use http_client::{AsyncBody, HttpClient, HttpClientWithUrl};
 use language::{
@@ -42,7 +42,7 @@ use project::ContextProviderWithTasks;
 use release_channel::ReleaseChannel;
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use settings::{SemanticTokenRules, Settings, SettingsStore};
+use settings::Settings;
 use std::ops::RangeInclusive;
 use std::str::FromStr;
 use std::sync::LazyLock;
@@ -1248,15 +1248,6 @@ impl ExtensionStore {
         self.proxy
             .remove_languages(&languages_to_remove, &grammars_to_remove);
 
-        // Remove semantic token rules for languages being unloaded.
-        if !languages_to_remove.is_empty() {
-            SettingsStore::update_global(cx, |store, cx| {
-                for language in &languages_to_remove {
-                    store.remove_language_semantic_token_rules(language.as_ref(), cx);
-                }
-            });
-        }
-
         let mut grammars_to_add = Vec::new();
         let mut themes_to_add = Vec::new();
         let mut icon_themes_to_add = Vec::new();
@@ -1307,21 +1298,12 @@ impl ExtensionStore {
             .iter()
             .filter(|(_, entry)| extensions_to_load.contains(&entry.extension))
             .collect::<Vec<_>>();
-        let mut semantic_token_rules_to_add: Vec<(LanguageName, SemanticTokenRules)> = Vec::new();
         for (language_name, language) in languages_to_add {
             let mut language_path = self.installed_dir.clone();
             language_path.extend([
                 Path::new(language.extension.as_ref()),
                 language.path.as_path(),
             ]);
-
-            // Load semantic token rules if present in the language directory.
-            let rules_path = language_path.join(SemanticTokenRules::FILE_NAME);
-            if std::fs::exists(&rules_path).is_ok_and(|exists| exists)
-                && let Some(rules) = SemanticTokenRules::load(&rules_path).log_err()
-            {
-                semantic_token_rules_to_add.push((language_name.clone(), rules));
-            }
 
             self.proxy.register_language(
                 language_name.clone(),
@@ -1339,15 +1321,6 @@ impl ExtensionStore {
                     }
                 }),
             );
-        }
-
-        // Register semantic token rules for newly loaded extension languages.
-        if !semantic_token_rules_to_add.is_empty() {
-            SettingsStore::update_global(cx, |store, cx| {
-                for (language_name, rules) in semantic_token_rules_to_add {
-                    store.set_language_semantic_token_rules(language_name.0.clone(), rules, cx);
-                }
-            });
         }
 
         let fs = self.fs.clone();

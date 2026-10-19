@@ -698,9 +698,7 @@ pub fn execute_run(
             let node_runtime =
                 NodeRuntime::new(http_client.clone(), shell_env_loaded_rx, node_settings_rx);
 
-            let mut languages = LanguageRegistry::new(cx.background_executor().clone());
-            languages.set_language_server_download_dir(paths::languages_dir().clone());
-            let languages = Arc::new(languages);
+            let languages = Arc::new(LanguageRegistry::new(cx.background_executor().clone()));
 
             HeadlessProject::new(
                 HeadlessAppState {

@@ -529,8 +529,7 @@ fn main() {
 
         let client = Client::production(cx);
         cx.set_http_client(client.http_client());
-        let mut languages = LanguageRegistry::new(cx.background_executor().clone());
-        languages.set_language_server_download_dir(paths::languages_dir().clone());
+        let languages = LanguageRegistry::new(cx.background_executor().clone());
         let languages = Arc::new(languages);
         let (mut tx, rx) = watch::channel(None);
         cx.observe_global::<SettingsStore>(move |cx| {

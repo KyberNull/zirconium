@@ -10,7 +10,6 @@ use futures::{FutureExt as _, io::BufReader};
 use gpui::BackgroundExecutor;
 use language::LanguageName;
 use language::language_settings::AllLanguageSettings;
-use project::project_settings::ProjectSettings;
 use semver::Version;
 use std::{
     path::{Path, PathBuf},
@@ -454,24 +453,11 @@ impl ExtensionImports for WasmState {
                             tab_size: settings.tab_size,
                         })?)
                     }
-                    "lsp" => {
-                        let settings = key
-                            .and_then(|key| {
-                                ProjectSettings::get(location, cx)
-                                    .lsp
-                                    .get(&::lsp::LanguageServerName(key.into()))
-                            })
-                            .cloned()
-                            .unwrap_or_default();
-                        Ok(serde_json::to_string(&settings::LspSettings {
-                            binary: settings.binary.map(|binary| settings::BinarySettings {
-                                path: binary.path,
-                                arguments: binary.arguments,
-                            }),
-                            settings: settings.settings,
-                            initialization_options: settings.initialization_options,
-                        })?)
-                    }
+                    "lsp" => Ok(serde_json::to_string(&settings::LspSettings {
+                        binary: None,
+                        settings: None,
+                        initialization_options: None,
+                    })?),
                     _ => {
                         bail!("Unknown settings category: {}", category);
                     }
