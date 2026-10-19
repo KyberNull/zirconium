@@ -332,6 +332,8 @@ message Envelope {
     GetCodeLensResponse get_code_lens_response = 324;
     RefreshCodeLens refresh_code_lens = 325;
 
+    reserved 326, 327, 339 to 342, 348, 369 to 370;
+
     UpdateRepository update_repository = 328;
     RemoveRepository remove_repository = 329;
 
