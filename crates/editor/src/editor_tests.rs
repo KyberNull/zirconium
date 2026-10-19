@@ -20928,6 +20928,8 @@ async fn test_active_indent_guide_single_line(cx: &mut TestAppContext) {
         });
     });
 
+    cx.run_until_parked();
+
     assert_indent_guides(
         0..3,
         vec![indent_guide(buffer_id, 1, 1, 0)],
@@ -21022,6 +21024,8 @@ async fn test_active_indent_guide_empty_line(cx: &mut TestAppContext) {
         });
     });
 
+    cx.run_until_parked();
+
     assert_indent_guides(
         0..5,
         vec![indent_guide(buffer_id, 1, 3, 0)],
@@ -21047,6 +21051,8 @@ async fn test_active_indent_guide_non_matching_indent(cx: &mut TestAppContext) {
             s.select_ranges([Point::new(1, 0)..Point::new(1, 0)])
         });
     });
+
+    cx.run_until_parked();
 
     assert_indent_guides(
         0..3,
