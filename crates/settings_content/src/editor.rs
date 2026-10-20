@@ -478,10 +478,6 @@ pub struct GutterContent {
     ///
     /// Default: 4
     pub min_line_number_digits: Option<usize>,
-    /// Whether to show runnable buttons in the gutter.
-    ///
-    /// Default: true
-    pub runnables: Option<bool>,
     /// Whether to show breakpoints in the gutter.
     ///
     /// Default: true

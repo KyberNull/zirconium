@@ -59,7 +59,6 @@
       "cmd-e": "file_finder::Toggle",
       "cmd-shift-o": "file_finder::Toggle",
       "cmd-shift-n": "file_finder::Toggle",
-      "alt-enter": "editor::ToggleCodeActions",
       "ctrl-space": "editor::ShowCompletions",
       "cmd-j": "editor::Hover",
       "cmd-\\": "assistant::InlineAssist",

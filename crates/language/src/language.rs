@@ -18,7 +18,6 @@ mod manifest;
 pub mod modeline;
 mod outline;
 pub mod proto;
-mod runnable;
 mod syntax_map;
 mod task_context;
 mod text_diff;
@@ -45,8 +44,8 @@ pub use language_core::{
     BracketsPatternConfig, CodeLabel, CodeLabelBuilder, DecreaseIndentConfig, Grammar, GrammarId,
     HighlightsConfig, IndentConfig, InjectionConfig, InjectionPatternConfig, JsxTagAutoCloseConfig,
     LanguageConfig, LanguageConfigOverride, LanguageId, LanguageMatcher, OrderedListConfig,
-    OutlineConfig, Override, OverrideConfig, OverrideEntry, RedactionConfig, RunnableCapture,
-    RunnableConfig, SoftWrap, Symbol, TaskListConfig, TextObject, TextObjectConfig,
+    OutlineConfig, Override, OverrideConfig, OverrideEntry, RedactionConfig,
+    SoftWrap, Symbol, TaskListConfig, TextObject, TextObjectConfig,
     WrapCharactersConfig, default_true, deserialize_regex, deserialize_regex_vec,
     regex_json_schema, regex_vec_json_schema, serialize_regex,
 };
@@ -55,7 +54,6 @@ pub use manifest::{ManifestDelegate, ManifestName, ManifestProvider, ManifestQue
 pub use modeline::{ModelineSettings, parse_modeline};
 use parking_lot::Mutex;
 use regex::Regex;
-pub use runnable::{ResolvedRunnable, RunnableMatchCapture, RunnableRange, RunnableResolver};
 use std::{
     fmt::Debug,
     hash::Hash,
@@ -64,7 +62,6 @@ use std::{
     sync::{Arc, LazyLock},
 };
 use syntax_map::{QueryCursorHandle, SyntaxSnapshot};
-use task::RunnableTag;
 pub use task_context::{ContextLocation, ContextProvider};
 pub use text_diff::{
     DiffOptions, apply_diff_patch, apply_reversed_diff_patch, char_diff, line_diff, text_diff,
@@ -279,10 +276,6 @@ impl Language {
 
     pub fn with_highlights_query(self, source: &str) -> Result<Self> {
         self.with_grammar_query(|grammar| grammar.with_highlights_query(source))
-    }
-
-    pub fn with_runnable_query(self, source: &str) -> Result<Self> {
-        self.with_grammar_query(|grammar| grammar.with_runnable_query(source))
     }
 
     pub fn with_outline_query(self, source: &str) -> Result<Self> {

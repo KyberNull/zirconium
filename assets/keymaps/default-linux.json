@@ -575,7 +575,6 @@
       "ctrl-k ctrl-j": "editor::UnfoldAll",
       "ctrl-space": "editor::ShowCompletions",
       "ctrl-shift-space": "editor::ShowWordCompletions",
-      "ctrl-.": "editor::ToggleCodeActions",
       "ctrl-k r": "editor::RevealInFileManager",
       "ctrl-k p": "editor::CopyPath",
       "ctrl-\\": "pane::SplitRight",
@@ -823,13 +822,7 @@
     },
   },
   {
-    "context": "Editor && showing_code_actions",
-    "bindings": {
-      "enter": "editor::ConfirmCodeAction",
-    },
-  },
-  {
-    "context": "Editor && (showing_code_actions || showing_completions)",
+    "context": "Editor && showing_completions",
     "bindings": {
       "ctrl-p": "editor::ContextMenuPrevious",
       "up": "editor::ContextMenuPrevious",
