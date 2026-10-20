@@ -370,6 +370,10 @@ message Envelope {
   }
 
   reserved 87 to 88;
+  reserved 326 to 327;
+  reserved 339 to 342;
+  reserved 348;
+  reserved 369 to 370;
   reserved 90;
   reserved 102 to 103;
   reserved 158 to 161;
