@@ -1,5 +1,4 @@
 use crate::wasm_host::wit::since_v0_6_0::slash_command::SlashCommandOutputSection;
-use crate::wasm_host::wit::{CompletionKind, CompletionLabelDetails, InsertTextFormat, SymbolKind};
 use crate::wasm_host::{WasmState, wit::ToWasmtimeResult};
 use ::http_client::{AsyncBody, HttpRequestExt};
 use ::settings::{Settings, WorktreeId};
@@ -7,13 +6,11 @@ use anyhow::{Context as _, Result, bail};
 use async_compression::futures::bufread::GzipDecoder;
 use async_tar::Archive;
 use async_trait::async_trait;
-use extension::{
-    ExtensionLanguageServerProxy, KeyValueStoreDelegate, ProjectDelegate, WorktreeDelegate,
-};
+use extension::{KeyValueStoreDelegate, ProjectDelegate, WorktreeDelegate};
 use futures::{AsyncReadExt, lock::Mutex};
 use futures::{FutureExt as _, io::BufReader};
 use gpui::BackgroundExecutor;
-use language::{BinaryStatus, LanguageName, language_settings::AllLanguageSettings};
+use language::{LanguageName, language_settings::AllLanguageSettings};
 use project::project_settings::ProjectSettings;
 use semver::Version;
 use std::{
@@ -109,114 +106,6 @@ impl From<CodeLabelSpanLiteral> for extension::CodeLabelSpanLiteral {
         Self {
             text: value.text,
             highlight_name: value.highlight_name,
-        }
-    }
-}
-
-impl From<extension::Completion> for Completion {
-    fn from(value: extension::Completion) -> Self {
-        Self {
-            label: value.label,
-            label_details: value.label_details.map(Into::into),
-            detail: value.detail,
-            kind: value.kind.map(Into::into),
-            insert_text_format: value.insert_text_format.map(Into::into),
-        }
-    }
-}
-
-impl From<extension::CompletionLabelDetails> for CompletionLabelDetails {
-    fn from(value: extension::CompletionLabelDetails) -> Self {
-        Self {
-            detail: value.detail,
-            description: value.description,
-        }
-    }
-}
-
-impl From<extension::CompletionKind> for CompletionKind {
-    fn from(value: extension::CompletionKind) -> Self {
-        match value {
-            extension::CompletionKind::Text => Self::Text,
-            extension::CompletionKind::Method => Self::Method,
-            extension::CompletionKind::Function => Self::Function,
-            extension::CompletionKind::Constructor => Self::Constructor,
-            extension::CompletionKind::Field => Self::Field,
-            extension::CompletionKind::Variable => Self::Variable,
-            extension::CompletionKind::Class => Self::Class,
-            extension::CompletionKind::Interface => Self::Interface,
-            extension::CompletionKind::Module => Self::Module,
-            extension::CompletionKind::Property => Self::Property,
-            extension::CompletionKind::Unit => Self::Unit,
-            extension::CompletionKind::Value => Self::Value,
-            extension::CompletionKind::Enum => Self::Enum,
-            extension::CompletionKind::Keyword => Self::Keyword,
-            extension::CompletionKind::Snippet => Self::Snippet,
-            extension::CompletionKind::Color => Self::Color,
-            extension::CompletionKind::File => Self::File,
-            extension::CompletionKind::Reference => Self::Reference,
-            extension::CompletionKind::Folder => Self::Folder,
-            extension::CompletionKind::EnumMember => Self::EnumMember,
-            extension::CompletionKind::Constant => Self::Constant,
-            extension::CompletionKind::Struct => Self::Struct,
-            extension::CompletionKind::Event => Self::Event,
-            extension::CompletionKind::Operator => Self::Operator,
-            extension::CompletionKind::TypeParameter => Self::TypeParameter,
-            extension::CompletionKind::Other(value) => Self::Other(value),
-        }
-    }
-}
-
-impl From<extension::InsertTextFormat> for InsertTextFormat {
-    fn from(value: extension::InsertTextFormat) -> Self {
-        match value {
-            extension::InsertTextFormat::PlainText => Self::PlainText,
-            extension::InsertTextFormat::Snippet => Self::Snippet,
-            extension::InsertTextFormat::Other(value) => Self::Other(value),
-        }
-    }
-}
-
-impl From<extension::Symbol> for Symbol {
-    fn from(value: extension::Symbol) -> Self {
-        Self {
-            kind: value.kind.into(),
-            name: value.name,
-            container_name: value.container_name,
-        }
-    }
-}
-
-impl From<extension::SymbolKind> for SymbolKind {
-    fn from(value: extension::SymbolKind) -> Self {
-        match value {
-            extension::SymbolKind::File => Self::File,
-            extension::SymbolKind::Module => Self::Module,
-            extension::SymbolKind::Namespace => Self::Namespace,
-            extension::SymbolKind::Package => Self::Package,
-            extension::SymbolKind::Class => Self::Class,
-            extension::SymbolKind::Method => Self::Method,
-            extension::SymbolKind::Property => Self::Property,
-            extension::SymbolKind::Field => Self::Field,
-            extension::SymbolKind::Constructor => Self::Constructor,
-            extension::SymbolKind::Enum => Self::Enum,
-            extension::SymbolKind::Interface => Self::Interface,
-            extension::SymbolKind::Function => Self::Function,
-            extension::SymbolKind::Variable => Self::Variable,
-            extension::SymbolKind::Constant => Self::Constant,
-            extension::SymbolKind::String => Self::String,
-            extension::SymbolKind::Number => Self::Number,
-            extension::SymbolKind::Boolean => Self::Boolean,
-            extension::SymbolKind::Array => Self::Array,
-            extension::SymbolKind::Object => Self::Object,
-            extension::SymbolKind::Key => Self::Key,
-            extension::SymbolKind::Null => Self::Null,
-            extension::SymbolKind::EnumMember => Self::EnumMember,
-            extension::SymbolKind::Struct => Self::Struct,
-            extension::SymbolKind::Event => Self::Event,
-            extension::SymbolKind::Operator => Self::Operator,
-            extension::SymbolKind::TypeParameter => Self::TypeParameter,
-            extension::SymbolKind::Other(value) => Self::Other(value),
         }
     }
 }
@@ -681,25 +570,6 @@ impl ExtensionImports for WasmState {
                             preferred_line_length: settings.preferred_line_length,
                         })?)
                     }
-                    "lsp" => {
-                        let settings = key
-                            .and_then(|key| {
-                                ProjectSettings::get(location, cx)
-                                    .lsp
-                                    .get(&::lsp::LanguageServerName::from_proto(key))
-                            })
-                            .cloned()
-                            .unwrap_or_default();
-                        Ok(serde_json::to_string(&settings::LspSettings {
-                            binary: settings.binary.map(|binary| settings::CommandSettings {
-                                path: binary.path,
-                                arguments: binary.arguments,
-                                env: binary.env.map(|env| env.into_iter().collect()),
-                            }),
-                            settings: settings.settings,
-                            initialization_options: settings.initialization_options,
-                        })?)
-                    }
                     "context_servers" => {
                         let settings = key
                             .and_then(|key| {
@@ -752,20 +622,9 @@ impl ExtensionImports for WasmState {
 
     async fn set_language_server_installation_status(
         &mut self,
-        server_name: String,
-        status: LanguageServerInstallationStatus,
+        _server_name: String,
+        _status: LanguageServerInstallationStatus,
     ) -> wasmtime::Result<()> {
-        let status = match status {
-            LanguageServerInstallationStatus::CheckingForUpdate => BinaryStatus::CheckingForUpdate,
-            LanguageServerInstallationStatus::Downloading => BinaryStatus::Downloading,
-            LanguageServerInstallationStatus::None => BinaryStatus::None,
-            LanguageServerInstallationStatus::Failed(error) => BinaryStatus::Failed { error },
-        };
-
-        self.host
-            .proxy
-            .update_language_server_status(::lsp::LanguageServerName(server_name.into()), status);
-
         Ok(())
     }
 

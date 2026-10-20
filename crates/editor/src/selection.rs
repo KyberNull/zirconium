@@ -1599,7 +1599,6 @@ impl Editor {
         self.select_syntax_node_history.try_clear();
         self.invalidate_autoclose_regions(&selection_anchors, buffer);
         self.snippet_stack.invalidate(&selection_anchors, buffer);
-        self.take_rename(false, window, cx);
 
         let newest_selection = self.selections.newest_anchor();
         let new_cursor_position = newest_selection.head();
@@ -1616,10 +1615,6 @@ impl Editor {
         }
 
         if local {
-            if let Some((anchor, _)) = buffer.anchor_to_buffer_anchor(new_cursor_position) {
-                self.register_buffer(anchor.buffer_id, cx);
-            }
-
             let mut context_menu = self.context_menu.borrow_mut();
             let completion_menu = match context_menu.as_ref() {
                 Some(CodeContextMenu::Completions(menu)) => Some(menu),
@@ -1664,10 +1659,6 @@ impl Editor {
             }
 
             hide_hover(self, cx);
-
-            self.refresh_code_actions_for_selection(window, cx);
-            self.refresh_document_highlights(cx);
-            refresh_linked_ranges(self, window, cx);
 
             self.refresh_selected_text_highlights(&display_map, false, window, cx);
             self.refresh_matching_bracket_highlights(&display_map, cx);
@@ -1757,10 +1748,6 @@ impl Editor {
             let old_cursor_position = &state.old_cursor_position;
 
             self.selections_did_change(true, old_cursor_position, state.effects, window, cx);
-
-            if self.should_open_signature_help_automatically(old_cursor_position, cx) {
-                self.show_signature_help_auto(window, cx);
-            }
         }
     }
 

@@ -1,6 +1,6 @@
 ---
 title: Markdown
-description: "Configure Markdown language support in Zed, including language servers, formatting, and debugging."
+description: "Configure Markdown language support in Zed, including formatting and syntax highlighting."
 ---
 
 # Markdown
@@ -8,7 +8,6 @@ description: "Configure Markdown language support in Zed, including language ser
 Markdown support is available natively in Zed.
 
 - Tree-sitter: [tree-sitter-markdown](https://github.com/tree-sitter-grammars/tree-sitter-markdown)
-- Language Server: N/A
 
 ## Syntax Highlighting Code Blocks
 

@@ -16,14 +16,13 @@ use language::{
     Buffer, ContextLocation, ContextProvider, File, Language, LanguageToolchainStore, Location,
     language_settings::LanguageSettings,
 };
-use lsp::{LanguageServerId, LanguageServerName};
 use paths::task_file_name;
 use settings::{InvalidSettingsError, parse_json_with_comments};
 use task::{
-    ResolvedTask, TaskContext, TaskHook, TaskId, TaskTemplate,
-    TaskTemplates, TaskVariables, VariableName,
+    ResolvedTask, TaskContext, TaskHook, TaskId, TaskTemplate, TaskTemplates, TaskVariables,
+    VariableName,
 };
-use text::{BufferId, Point, ToPoint};
+use text::{Point, ToPoint};
 use util::{NumericPrefixWithSuffix, ResultExt as _, post_inc, rel_path::RelPath};
 use worktree::WorktreeId;
 
@@ -142,11 +141,6 @@ pub enum TaskSourceKind {
     },
     /// Languages-specific tasks coming from extensions.
     Language { name: SharedString },
-    /// Language-specific tasks coming from LSP servers.
-    Lsp {
-        language_name: SharedString,
-        server: LanguageServerId,
-    },
 }
 
 /// A collection of task contexts, derived from the current state of the workspace.
@@ -160,7 +154,6 @@ pub struct TaskContexts {
     pub active_worktree_context: Option<(WorktreeId, TaskContext)>,
     /// If there are multiple worktrees in the workspace, all non-active ones are included here.
     pub other_worktree_contexts: Vec<(WorktreeId, TaskContext)>,
-    pub lsp_task_sources: HashMap<LanguageServerName, Vec<BufferId>>,
     pub latest_selection: Option<text::Anchor>,
 }
 
@@ -269,10 +262,6 @@ impl TaskSourceKind {
                 format!("{id_base}_{id}_{}", directory_in_worktree.as_unix_str())
             }
             Self::Language { name } => format!("language_{name}"),
-            Self::Lsp {
-                server,
-                language_name,
-            } => format!("lsp_{language_name}_{server}"),
         }
     }
 }
@@ -769,7 +758,6 @@ fn task_lru_comparator(
 
 pub fn task_source_kind_preference(kind: &TaskSourceKind) -> u32 {
     match kind {
-        TaskSourceKind::Lsp { .. } => 0,
         TaskSourceKind::Language { .. } => 1,
         TaskSourceKind::UserInput => 2,
         TaskSourceKind::Worktree { .. } => 3,

@@ -7,8 +7,6 @@ use anyhow::{Context as _, Result, anyhow, bail};
 use cloud_api_types::ExtensionProvides;
 use collections::{BTreeMap, BTreeSet, HashMap};
 use fs::Fs;
-use language::LanguageName;
-use lsp::LanguageServerName;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use util::rel_path::RelPathBuf;
@@ -103,8 +101,6 @@ pub struct ExtensionManifest {
     #[serde(default)]
     pub grammars: BTreeMap<Arc<str>, GrammarManifestEntry>,
     #[serde(default)]
-    pub language_servers: BTreeMap<LanguageServerName, LanguageServerManifestEntry>,
-    #[serde(default)]
     pub context_servers: BTreeMap<Arc<str>, ContextServerManifestEntry>,
     #[serde(default)]
     pub slash_commands: BTreeMap<Arc<str>, SlashCommandManifestEntry>,
@@ -134,10 +130,6 @@ impl ExtensionManifest {
 
         if !self.grammars.is_empty() {
             provides.insert(ExtensionProvides::Grammars);
-        }
-
-        if !self.language_servers.is_empty() {
-            provides.insert(ExtensionProvides::LanguageServers);
         }
 
         if !self.context_servers.is_empty() {
@@ -170,27 +162,6 @@ impl ExtensionManifest {
         }
 
         Ok(())
-    }
-
-    pub fn allow_remote_load(&self) -> bool {
-        self.remote_load().is_some()
-    }
-
-    pub fn remote_load(&self) -> Option<RemoteLoad<'_>> {
-        (!self.language_servers.is_empty()).then_some(RemoteLoad { manifest: self })
-    }
-}
-
-pub struct RemoteLoad<'a> {
-    manifest: &'a ExtensionManifest,
-}
-
-impl RemoteLoad<'_> {
-    pub fn language_dependencies(&self) -> impl Iterator<Item = LanguageName> + '_ {
-        self.manifest
-            .language_servers
-            .values()
-            .flat_map(|language_server_config| language_server_config.languages())
     }
 }
 
@@ -299,38 +270,6 @@ pub struct GrammarManifestEntry {
     pub path: Option<String>,
 }
 
-#[derive(Clone, Default, PartialEq, Eq, Debug, Deserialize, Serialize)]
-pub struct LanguageServerManifestEntry {
-    /// Deprecated in favor of `languages`.
-    #[serde(default)]
-    language: Option<LanguageName>,
-    /// The list of languages this language server should work with.
-    #[serde(default)]
-    languages: Vec<LanguageName>,
-    #[serde(default)]
-    pub language_ids: HashMap<LanguageName, String>,
-    #[serde(default)]
-    pub code_action_kinds: Option<Vec<lsp::CodeActionKind>>,
-}
-
-impl LanguageServerManifestEntry {
-    /// Returns the list of languages for the language server.
-    ///
-    /// Prefer this over accessing the `language` or `languages` fields directly,
-    /// as we currently support both.
-    ///
-    /// We can replace this with just field access for the `languages` field once
-    /// we have removed `language`.
-    pub fn languages(&self) -> impl IntoIterator<Item = LanguageName> + '_ {
-        let language = if self.languages.is_empty() {
-            self.language.clone()
-        } else {
-            None
-        };
-        self.languages.iter().cloned().chain(language)
-    }
-}
-
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct ContextServerManifestEntry {}
 
@@ -412,7 +351,6 @@ fn manifest_from_old_manifest(
             .into_keys()
             .map(|grammar_name| (grammar_name, Default::default()))
             .collect(),
-        language_servers: Default::default(),
         context_servers: BTreeMap::default(),
         slash_commands: BTreeMap::default(),
         snippets: None,
@@ -441,7 +379,6 @@ mod tests {
             icon_themes: vec![],
             languages: vec![],
             grammars: BTreeMap::default(),
-            language_servers: BTreeMap::default(),
             context_servers: BTreeMap::default(),
             slash_commands: BTreeMap::default(),
             snippets: None,

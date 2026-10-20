@@ -1,4 +1,4 @@
-use std::{borrow::Cow, num::NonZeroU32};
+use std::num::NonZeroU32;
 
 use collections::{HashMap, HashSet};
 use schemars::JsonSchema;
@@ -6,9 +6,7 @@ use serde::{Deserialize, Serialize};
 use settings_macros::{MergeFrom, with_fallible_options};
 use std::sync::Arc;
 
-use crate::{
-    DelayMs, DocumentFoldingRanges, DocumentSymbols, ExtendingSet, SemanticTokens, merge_from,
-};
+use crate::{DelayMs, ExtendingSet, merge_from};
 
 /// The state of the modifier keys at some point in time
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, MergeFrom)]
@@ -58,9 +56,7 @@ impl merge_from::MergeFrom for AllLanguageSettingsContent {
         // all default language-specific settings.
         self.defaults.merge_from(&other.defaults);
         for language_settings in self.languages.0.values_mut() {
-            let language_servers = language_settings.language_servers.take();
             language_settings.merge_from(&other.defaults);
-            language_settings.language_servers = language_servers;
         }
 
         // A user's language-specific settings override default language-specific settings.
@@ -69,7 +65,6 @@ impl merge_from::MergeFrom for AllLanguageSettingsContent {
                 existing.merge_from(&user_language_settings);
             } else {
                 let mut new_settings = self.defaults.clone();
-                new_settings.language_servers = None;
                 new_settings.merge_from(&user_language_settings);
 
                 self.languages.0.insert(language_name.clone(), new_settings);
@@ -441,65 +436,6 @@ pub enum SoftWrap {
     Bounded,
 }
 
-pub const REST_OF_LANGUAGE_SERVERS: &str = "...";
-
-#[derive(Clone, Debug, PartialEq, Eq, JsonSchema)]
-#[schemars(with = "String")]
-pub struct ConfiguredLanguageServer {
-    pub name: Arc<str>,
-    pub disabled: bool,
-}
-
-impl ConfiguredLanguageServer {
-    const DISABLED_CHAR: char = '!';
-
-    pub fn new(name: impl Into<Arc<str>>) -> Self {
-        Self {
-            name: name.into(),
-            disabled: false,
-        }
-    }
-
-    pub fn new_disabled(name: impl Into<Arc<str>>) -> Self {
-        Self {
-            name: name.into(),
-            disabled: true,
-        }
-    }
-}
-
-impl From<&str> for ConfiguredLanguageServer {
-    fn from(value: &str) -> Self {
-        match value.strip_prefix(Self::DISABLED_CHAR) {
-            Some(name) => Self::new_disabled(name),
-            None => Self::new(value),
-        }
-    }
-}
-
-impl Serialize for ConfiguredLanguageServer {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        if self.disabled {
-            serializer.collect_str(&format_args!("{}{}", Self::DISABLED_CHAR, self.name))
-        } else {
-            serializer.serialize_str(&self.name)
-        }
-    }
-}
-
-impl<'de> Deserialize<'de> for ConfiguredLanguageServer {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let value = Cow::<'de, str>::deserialize(deserializer)?;
-        Ok(Self::from(value.as_ref()))
-    }
-}
-
 /// The settings for a particular language.
 #[with_fallible_options]
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, JsonSchema, MergeFrom)]
@@ -579,45 +515,6 @@ pub struct LanguageSettingsContent {
     pub prettier: Option<PrettierSettingsContent>,
     /// Whether to automatically close JSX tags.
     pub jsx_tag_auto_close: Option<JsxTagAutoCloseSettingsContent>,
-    /// Whether to use language servers to provide code intelligence.
-    ///
-    /// Default: true
-    pub enable_language_server: Option<bool>,
-    /// The list of language servers to use (or disable) for this language.
-    ///
-    /// This array should consist of language server IDs, as well as the following
-    /// special tokens:
-    /// - `"!<language_server_id>"` - A language server ID prefixed with a `!` will be disabled.
-    /// - `"..."` - A placeholder to refer to the **rest** of the registered language servers for this language.
-    ///
-    /// Default: ["..."]
-    pub language_servers: Option<Vec<ConfiguredLanguageServer>>,
-    /// Controls how semantic tokens from language servers are used for syntax highlighting.
-    ///
-    /// Options:
-    /// - "off": Do not request semantic tokens from language servers.
-    /// - "combined": Use LSP semantic tokens together with tree-sitter highlighting.
-    /// - "full": Use LSP semantic tokens exclusively, replacing tree-sitter highlighting.
-    ///
-    /// Default: "off"
-    pub semantic_tokens: Option<SemanticTokens>,
-    /// Controls whether folding ranges from language servers are used instead of
-    /// tree-sitter and indent-based folding.
-    ///
-    /// Options:
-    /// - "off": Use tree-sitter and indent-based folding (default).
-    /// - "on": Use LSP folding wherever possible, falling back to tree-sitter and indent-based folding when no results were returned by the server.
-    ///
-    /// Default: "off"
-    pub document_folding_ranges: Option<DocumentFoldingRanges>,
-    /// Controls the source of document symbols used for outlines and breadcrumbs.
-    ///
-    /// Options:
-    /// - "off": Use tree-sitter queries to compute document symbols (default).
-    /// - "on": Use the language server's `textDocument/documentSymbol` LSP response. When enabled, tree-sitter is not used for document symbols.
-    ///
-    /// Default: "off"
-    pub document_symbols: Option<DocumentSymbols>,
     /// Controls where the `editor::Rewrap` action is allowed for this language.
     ///
     /// Note: This setting has no effect in Vim mode, as rewrap is already
@@ -655,8 +552,6 @@ pub struct LanguageSettingsContent {
     ///
     /// Default: true
     pub indent_list_on_tab: Option<bool>,
-    /// Inlay hint related settings.
-    pub inlay_hints: Option<InlayHintSettingsContent>,
     /// Whether to automatically type closing characters for you. For example,
     /// when you type '(', Zed will automatically add a closing ')' at the correct position.
     ///
@@ -675,21 +570,6 @@ pub struct LanguageSettingsContent {
     ///
     /// Default: false
     pub always_treat_brackets_as_autoclosed: Option<bool>,
-    /// Whether to use additional LSP queries to format (and amend) the code after
-    /// every "trigger" symbol input, defined by LSP server capabilities.
-    ///
-    /// Default: true
-    pub use_on_type_format: Option<bool>,
-    /// Which code actions to run on save before the formatter.
-    /// These are not run if formatting is off.
-    ///
-    /// Default: {} (or {"source.organizeImports": true} for Go).
-    pub code_actions_on_format: Option<HashMap<String, bool>>,
-    /// Whether to perform linked edits of associated ranges, if the language server supports it.
-    /// For example, when editing opening <html> tag, the contents of the closing </html> tag will be edited as well.
-    ///
-    /// Default: true
-    pub linked_edits: Option<bool>,
     /// Controls automatic indentation behavior when typing.
     ///
     /// - "syntax_aware": Adjusts indentation based on syntax context (default)
@@ -803,88 +683,6 @@ pub struct JsxTagAutoCloseSettingsContent {
     pub enabled: Option<bool>,
 }
 
-/// The settings for inlay hints.
-#[with_fallible_options]
-#[derive(Clone, Default, Debug, Serialize, Deserialize, JsonSchema, MergeFrom, PartialEq, Eq)]
-pub struct InlayHintSettingsContent {
-    /// Global switch to toggle hints on and off.
-    ///
-    /// Default: false
-    pub enabled: Option<bool>,
-    /// Global switch to toggle inline values on and off when debugging.
-    ///
-    /// Default: true
-    pub show_value_hints: Option<bool>,
-    /// Whether type hints should be shown.
-    ///
-    /// Default: true
-    pub show_type_hints: Option<bool>,
-    /// Whether parameter hints should be shown.
-    ///
-    /// Default: true
-    pub show_parameter_hints: Option<bool>,
-    /// Whether other hints should be shown.
-    ///
-    /// Default: true
-    pub show_other_hints: Option<bool>,
-    /// Whether to show a background for inlay hints.
-    ///
-    /// If set to `true`, the background will use the `hint.background` color
-    /// from the current theme.
-    ///
-    /// Default: false
-    pub show_background: Option<bool>,
-    /// Whether or not to debounce inlay hints updates after buffer edits.
-    ///
-    /// Set to 0 to disable debouncing.
-    ///
-    /// Default: 700
-    pub edit_debounce_ms: Option<u64>,
-    /// Whether or not to debounce inlay hints updates after buffer scrolls.
-    ///
-    /// Set to 0 to disable debouncing.
-    ///
-    /// Default: 50
-    pub scroll_debounce_ms: Option<u64>,
-    /// Toggles inlay hints (hides or shows) when the user presses the modifiers specified.
-    /// If only a subset of the modifiers specified is pressed, hints are not toggled.
-    /// If no modifiers are specified, this is equivalent to `null`.
-    ///
-    /// Default: null
-    pub toggle_on_modifiers_press: Option<ModifiersContent>,
-}
-
-/// The kind of an inlay hint.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum InlayHintKind {
-    /// An inlay hint for a type.
-    Type,
-    /// An inlay hint for a parameter.
-    Parameter,
-}
-
-impl InlayHintKind {
-    /// Returns the [`InlayHintKind`]fromthe given name.
-    ///
-    /// Returns `None` if `name` does not match any of the expected
-    /// string representations.
-    pub fn from_name(name: &str) -> Option<Self> {
-        match name {
-            "type" => Some(InlayHintKind::Type),
-            "parameter" => Some(InlayHintKind::Parameter),
-            _ => None,
-        }
-    }
-
-    /// Returns the name of this [`InlayHintKind`].
-    pub fn name(&self) -> &'static str {
-        match self {
-            InlayHintKind::Type => "type",
-            InlayHintKind::Parameter => "parameter",
-        }
-    }
-}
-
 /// Controls how completions are processed for this language.
 #[with_fallible_options]
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, JsonSchema, MergeFrom, Default)]
@@ -900,46 +698,6 @@ pub struct CompletionSettingsContent {
     ///
     /// Default: 3
     pub words_min_length: Option<u32>,
-    /// Whether to fetch LSP completions or not.
-    ///
-    /// Default: true
-    pub lsp: Option<bool>,
-    /// When fetching LSP completions, determines how long to wait for a response of a particular server.
-    /// When set to 0, waits indefinitely.
-    ///
-    /// Default: 0
-    pub lsp_fetch_timeout_ms: Option<u64>,
-    /// Controls how LSP completions are inserted.
-    ///
-    /// Default: "replace_suffix"
-    pub lsp_insert_mode: Option<LspInsertMode>,
-}
-
-#[derive(
-    Copy,
-    Clone,
-    Debug,
-    Serialize,
-    Deserialize,
-    PartialEq,
-    Eq,
-    JsonSchema,
-    MergeFrom,
-    strum::VariantArray,
-    strum::VariantNames,
-)]
-#[serde(rename_all = "snake_case")]
-pub enum LspInsertMode {
-    /// Replaces text before the cursor, using the `insert` range described in the LSP specification.
-    Insert,
-    /// Replaces text before and after the cursor, using the `replace` range described in the LSP specification.
-    Replace,
-    /// Behaves like `"replace"` if the text that would be replaced is a subsequence of the completion text,
-    /// and like `"insert"` otherwise.
-    ReplaceSubsequence,
-    /// Behaves like `"replace"` if the text after the cursor is a suffix of the completion, and like
-    /// `"insert"` otherwise.
-    ReplaceSuffix,
 }
 
 /// Controls how document's words are completed.
@@ -1205,14 +963,6 @@ pub struct LanguageTaskSettingsContent {
     /// Extra task variables to set for a particular language.
     pub variables: Option<HashMap<String, String>>,
     pub enabled: Option<bool>,
-    /// Use LSP tasks over Zed language extension ones.
-    /// If no LSP tasks are returned due to error/timeout or regular execution,
-    /// Zed language extension tasks will be used instead.
-    ///
-    /// Other Zed tasks will still be shown:
-    /// * Zed task from either of the task config file
-    /// * Zed task from history (e.g. one-off task was spawned before)
-    pub prefer_lsp: Option<bool>,
 }
 
 /// Map from language name to settings.
@@ -1287,7 +1037,7 @@ pub enum IndentGuideBackgroundColoring {
 #[cfg(test)]
 mod test {
 
-    use crate::{ParseStatus, fallible_options, merge_from::MergeFrom};
+    use crate::{ParseStatus, fallible_options};
 
     use super::*;
 
@@ -1356,272 +1106,6 @@ mod test {
         let raw_auto = "{\"formatter\": {}}";
         let (_, result) = fallible_options::parse_json::<LanguageSettingsContent>(raw_auto);
         assert!(matches!(result, ParseStatus::Failed { .. }));
-    }
-
-    #[test]
-    fn test_configured_language_server_serialization() {
-        let enabled = ConfiguredLanguageServer::new("rust-analyzer");
-        let disabled = ConfiguredLanguageServer::new_disabled("rust-analyzer");
-
-        assert_eq!(
-            serde_json::to_string(&enabled).expect("enabled server should serialize"),
-            "\"rust-analyzer\""
-        );
-        assert_eq!(
-            serde_json::to_string(&disabled).expect("disabled server should serialize"),
-            "\"!rust-analyzer\""
-        );
-        assert_eq!(
-            serde_json::from_str::<ConfiguredLanguageServer>("\"rust-analyzer\"")
-                .expect("enabled server should deserialize"),
-            enabled
-        );
-        assert_eq!(
-            serde_json::from_str::<ConfiguredLanguageServer>("\"!rust-analyzer\"")
-                .expect("disabled server should deserialize"),
-            disabled
-        );
-    }
-
-    #[test]
-    fn test_language_servers_merge_keeps_per_language_lists_pure() {
-        let default_typescript_servers = vec![
-            ConfiguredLanguageServer::new_disabled("typescript-language-server"),
-            ConfiguredLanguageServer::new("vtsls"),
-            ConfiguredLanguageServer::new(REST_OF_LANGUAGE_SERVERS),
-        ];
-        let mut base = AllLanguageSettingsContent {
-            defaults: LanguageSettingsContent {
-                language_servers: Some(vec![REST_OF_LANGUAGE_SERVERS.into()]),
-                ..LanguageSettingsContent::default()
-            },
-            languages: LanguageToSettingsMap(
-                [(
-                    "TypeScript".into(),
-                    LanguageSettingsContent {
-                        language_servers: Some(default_typescript_servers.clone()),
-                        ..LanguageSettingsContent::default()
-                    },
-                )]
-                .into_iter()
-                .collect(),
-            ),
-            ..AllLanguageSettingsContent::default()
-        };
-
-        let user = AllLanguageSettingsContent {
-            defaults: LanguageSettingsContent {
-                language_servers: Some(vec!["!vtsls".into(), REST_OF_LANGUAGE_SERVERS.into()]),
-                ..LanguageSettingsContent::default()
-            },
-            ..AllLanguageSettingsContent::default()
-        };
-        base.merge_from(&user);
-        assert_eq!(
-            base.languages.0["TypeScript"].language_servers.as_ref(),
-            Some(&default_typescript_servers),
-            "a global list must not rewrite per-language lists"
-        );
-        assert_eq!(
-            base.defaults.language_servers.as_ref(),
-            Some(&vec![
-                ConfiguredLanguageServer::new_disabled("vtsls"),
-                ConfiguredLanguageServer::new(REST_OF_LANGUAGE_SERVERS),
-            ])
-        );
-
-        let project = AllLanguageSettingsContent {
-            languages: LanguageToSettingsMap(
-                [(
-                    "TypeScript".into(),
-                    LanguageSettingsContent {
-                        language_servers: Some(vec![
-                            "vtsls".into(),
-                            REST_OF_LANGUAGE_SERVERS.into(),
-                        ]),
-                        ..LanguageSettingsContent::default()
-                    },
-                )]
-                .into_iter()
-                .collect(),
-            ),
-            ..AllLanguageSettingsContent::default()
-        };
-        base.merge_from(&project);
-        assert_eq!(
-            base.languages.0["TypeScript"].language_servers.as_ref(),
-            Some(&vec![
-                ConfiguredLanguageServer::new("vtsls"),
-                ConfiguredLanguageServer::new(REST_OF_LANGUAGE_SERVERS),
-            ]),
-            "a per-language list must replace the older one wholesale"
-        );
-    }
-
-    #[test]
-    fn test_language_servers_merge_no_per_language_config_stays_unset() {
-        let mut base = AllLanguageSettingsContent {
-            defaults: LanguageSettingsContent {
-                language_servers: Some(vec![REST_OF_LANGUAGE_SERVERS.into()]),
-                ..LanguageSettingsContent::default()
-            },
-            languages: LanguageToSettingsMap(
-                [(
-                    "Rust".into(),
-                    LanguageSettingsContent {
-                        tab_size: Some(std::num::NonZeroU32::new(4).unwrap()),
-                        ..LanguageSettingsContent::default()
-                    },
-                )]
-                .into_iter()
-                .collect(),
-            ),
-            ..AllLanguageSettingsContent::default()
-        };
-
-        let user = AllLanguageSettingsContent {
-            defaults: LanguageSettingsContent {
-                language_servers: Some(vec!["!eslint".into(), REST_OF_LANGUAGE_SERVERS.into()]),
-                ..LanguageSettingsContent::default()
-            },
-            ..AllLanguageSettingsContent::default()
-        };
-
-        base.merge_from(&user);
-
-        assert_eq!(
-            base.languages.0["Rust"].language_servers, None,
-            "languages without their own list must not get a stale copy of the global one"
-        );
-        assert_eq!(
-            base.defaults.language_servers.as_ref(),
-            Some(&vec![
-                ConfiguredLanguageServer::new_disabled("eslint"),
-                ConfiguredLanguageServer::new(REST_OF_LANGUAGE_SERVERS),
-            ])
-        );
-    }
-
-    #[test]
-    fn test_language_servers_merge_user_per_language_overrides() {
-        let mut base = AllLanguageSettingsContent {
-            defaults: LanguageSettingsContent {
-                language_servers: Some(vec![REST_OF_LANGUAGE_SERVERS.into()]),
-                ..LanguageSettingsContent::default()
-            },
-            languages: LanguageToSettingsMap(
-                [(
-                    "TypeScript".into(),
-                    LanguageSettingsContent {
-                        language_servers: Some(vec![
-                            "!typescript-language-server".into(),
-                            "vtsls".into(),
-                            REST_OF_LANGUAGE_SERVERS.into(),
-                        ]),
-                        ..LanguageSettingsContent::default()
-                    },
-                )]
-                .into_iter()
-                .collect(),
-            ),
-            ..AllLanguageSettingsContent::default()
-        };
-
-        let user = AllLanguageSettingsContent {
-            defaults: LanguageSettingsContent {
-                language_servers: Some(vec!["!eslint".into(), REST_OF_LANGUAGE_SERVERS.into()]),
-                ..LanguageSettingsContent::default()
-            },
-            languages: LanguageToSettingsMap(
-                [(
-                    "TypeScript".into(),
-                    LanguageSettingsContent {
-                        language_servers: Some(vec![
-                            "deno".into(),
-                            "!vtsls".into(),
-                            REST_OF_LANGUAGE_SERVERS.into(),
-                        ]),
-                        ..LanguageSettingsContent::default()
-                    },
-                )]
-                .into_iter()
-                .collect(),
-            ),
-            ..AllLanguageSettingsContent::default()
-        };
-
-        base.merge_from(&user);
-
-        let ts_servers = base.languages.0["TypeScript"]
-            .language_servers
-            .as_ref()
-            .unwrap();
-        assert_eq!(
-            ts_servers,
-            &vec![
-                ConfiguredLanguageServer::new("deno"),
-                ConfiguredLanguageServer::new_disabled("vtsls"),
-                ConfiguredLanguageServer::new(REST_OF_LANGUAGE_SERVERS),
-            ]
-        );
-    }
-
-    #[test]
-    fn test_user_per_language_config_overrides_default_disables() {
-        let mut base = AllLanguageSettingsContent {
-            defaults: LanguageSettingsContent {
-                language_servers: Some(vec![REST_OF_LANGUAGE_SERVERS.into()]),
-                ..LanguageSettingsContent::default()
-            },
-            languages: LanguageToSettingsMap(
-                [(
-                    "TypeScript".into(),
-                    LanguageSettingsContent {
-                        language_servers: Some(vec![
-                            "!typescript-language-server".into(),
-                            "vtsls".into(),
-                            REST_OF_LANGUAGE_SERVERS.into(),
-                        ]),
-                        ..LanguageSettingsContent::default()
-                    },
-                )]
-                .into_iter()
-                .collect(),
-            ),
-            ..AllLanguageSettingsContent::default()
-        };
-
-        let user = AllLanguageSettingsContent {
-            languages: LanguageToSettingsMap(
-                [(
-                    "TypeScript".into(),
-                    LanguageSettingsContent {
-                        language_servers: Some(vec![
-                            "typescript-language-server".into(),
-                            REST_OF_LANGUAGE_SERVERS.into(),
-                        ]),
-                        ..LanguageSettingsContent::default()
-                    },
-                )]
-                .into_iter()
-                .collect(),
-            ),
-            ..AllLanguageSettingsContent::default()
-        };
-
-        base.merge_from(&user);
-
-        let ts_servers = base.languages.0["TypeScript"]
-            .language_servers
-            .as_ref()
-            .unwrap();
-        assert_eq!(
-            ts_servers,
-            &vec![
-                ConfiguredLanguageServer::new("typescript-language-server"),
-                ConfiguredLanguageServer::new(REST_OF_LANGUAGE_SERVERS),
-            ]
-        );
     }
 
     #[test]

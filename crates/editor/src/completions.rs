@@ -136,39 +136,6 @@ impl Editor {
         }
     }
 
-    pub(super) fn is_lsp_relevant(&self, file: Option<&Arc<dyn language::File>>, cx: &App) -> bool {
-        let Some(project) = self.project() else {
-            return false;
-        };
-        let Some(buffer_file) = project::File::from_dyn(file) else {
-            return false;
-        };
-        let Some(entry_id) = buffer_file.project_entry_id() else {
-            return false;
-        };
-        let project = project.read(cx);
-        let Some(buffer_worktree) = project.worktree_for_id(buffer_file.worktree_id(cx), cx) else {
-            return false;
-        };
-        let Some(worktree_entry) = buffer_worktree.read(cx).entry_for_id(entry_id) else {
-            return false;
-        };
-        !worktree_entry.is_ignored
-    }
-
-    pub(super) fn visible_buffers(&self, cx: &mut Context<Editor>) -> Vec<Entity<Buffer>> {
-        let display_snapshot = self.display_snapshot(cx);
-        let visible_range = self.multi_buffer_visible_range(&display_snapshot, cx);
-        let multi_buffer = self.buffer().read(cx);
-        display_snapshot
-            .buffer_snapshot()
-            .range_to_buffer_ranges(visible_range)
-            .into_iter()
-            .filter(|(_, excerpt_visible_range, _)| !excerpt_visible_range.is_empty())
-            .filter_map(|(buffer_snapshot, _, _)| multi_buffer.buffer(buffer_snapshot.remote_id()))
-            .collect()
-    }
-
     pub(super) fn visible_buffer_ranges(
         &self,
         cx: &mut Context<Editor>,
@@ -190,134 +157,6 @@ impl Editor {
             .collect()
     }
 
-    pub(super) fn trigger_on_type_formatting(
-        &self,
-        input: String,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> Option<Task<Result<()>>> {
-        if input.chars().count() != 1 {
-            return None;
-        }
-
-        let project = self.project()?;
-        let position = self.selections.newest_anchor().head();
-        let (buffer, buffer_position) = self
-            .buffer
-            .read(cx)
-            .text_anchor_for_position(position, cx)?;
-
-        let settings = LanguageSettings::for_buffer_at(&buffer.read(cx), buffer_position, cx);
-        if !settings.use_on_type_format {
-            return None;
-        }
-
-        // OnTypeFormatting returns a list of edits, no need to pass them between Zed instances,
-        // hence we do LSP request & edit on host side only — add formats to host's history.
-        let push_to_lsp_host_history = true;
-        // If this is not the host, append its history with new edits.
-        let push_to_client_history = project.read(cx).is_via_collab();
-
-        let on_type_formatting = project.update(cx, |project, cx| {
-            project.on_type_format(
-                buffer.clone(),
-                buffer_position,
-                input,
-                push_to_lsp_host_history,
-                cx,
-            )
-        })?;
-
-        // Cursors are right-biased, so an edit inserting text at one drags it along. Pin a
-        // left-biased copy, keyed by the current anchor so cursors the user moves are skipped.
-        let snapshot = self.buffer.read(cx).snapshot(cx);
-        let cursors_to_pin = self
-            .selections
-            .disjoint_anchors()
-            .iter()
-            .filter(|selection| selection.start == selection.end)
-            .map(|selection| (selection.head(), snapshot.anchor_before(selection.head())))
-            .collect::<HashMap<_, _>>();
-
-        Some(cx.spawn_in(window, async move |editor, cx| {
-            if let Some(transaction) = on_type_formatting.await? {
-                let (formatted_buffer_id, formatted_ranges) = buffer.update(cx, |buffer, _| {
-                    let formatted_ranges = buffer
-                        .edited_ranges_for_transaction::<usize>(&transaction)
-                        .collect::<Vec<_>>();
-                    if push_to_client_history {
-                        buffer.push_transaction(transaction, Instant::now());
-                        buffer.finalize_last_transaction();
-                    }
-                    (buffer.remote_id(), formatted_ranges)
-                });
-                editor.update_in(cx, |editor, window, cx| {
-                    let snapshot = editor.buffer.read(cx).snapshot(cx);
-                    let pinned_cursor = |selection: &Selection<Anchor>| {
-                        if selection.start != selection.end {
-                            return None;
-                        }
-                        let head = selection.head();
-                        let &cursor = cursors_to_pin.get(&head)?;
-                        let (buffer_cursor, cursor_snapshot) =
-                            snapshot.anchor_to_buffer_anchor(cursor)?;
-                        let (buffer_head, head_snapshot) =
-                            snapshot.anchor_to_buffer_anchor(head)?;
-                        if cursor_snapshot.remote_id() != formatted_buffer_id
-                            || head_snapshot.remote_id() != formatted_buffer_id
-                        {
-                            return None;
-                        }
-                        let cursor_offset = buffer_cursor.to_offset(cursor_snapshot);
-                        let head_offset = buffer_head.to_offset(head_snapshot);
-                        if cursor_offset == head_offset {
-                            return None;
-                        }
-                        // A gap in the formatter's edits means something else, such as a user edit
-                        // while the request was in flight, moved the cursor.
-                        let mut formatted_end = cursor_offset;
-                        for range in &formatted_ranges {
-                            if range.end <= formatted_end {
-                                continue;
-                            }
-                            if range.start > formatted_end || range.end > head_offset {
-                                break;
-                            }
-                            formatted_end = range.end;
-                        }
-                        (formatted_end == head_offset).then_some(cursor)
-                    };
-
-                    let mut restored_any_cursor = false;
-                    let pinned = editor
-                        .selections
-                        .disjoint_anchors()
-                        .iter()
-                        .map(|selection| match pinned_cursor(selection) {
-                            Some(cursor) => {
-                                restored_any_cursor = true;
-                                Selection {
-                                    start: cursor,
-                                    end: cursor,
-                                    goal: SelectionGoal::None,
-                                    ..*selection
-                                }
-                            }
-                            None => *selection,
-                        })
-                        .collect();
-                    if restored_any_cursor {
-                        editor.change_selections(SelectionEffects::no_scroll(), window, cx, |s| {
-                            s.select_anchors(pinned)
-                        });
-                    }
-                    editor.refresh_document_highlights(cx);
-                })?;
-            }
-            Ok(())
-        }))
-    }
-
     pub(super) fn open_or_update_completions_menu(
         &mut self,
         requested_source: Option<CompletionsMenuSource>,
@@ -326,10 +165,6 @@ impl Editor {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if self.pending_rename.is_some() {
-            return;
-        }
-
         let completions_source = self
             .context_menu
             .borrow()
@@ -885,7 +720,7 @@ impl Editor {
             new_text,
             snippet,
             replace_range,
-        } = process_completion_for_edit(&completion, intent, &buffer_handle, &initial_position, cx);
+        } = process_completion_for_edit(&completion, &buffer_handle, &initial_position, cx);
 
         let buffer = buffer_handle.read(cx).snapshot();
         let newest_selection = self.selections.newest_anchor();
@@ -926,9 +761,7 @@ impl Editor {
             .all::<MultiBufferOffset>(&self.display_snapshot(cx));
         let mut ranges = Vec::new();
         let mut all_commit_ranges = Vec::new();
-        let mut linked_edits = LinkedEdits::new();
 
-        let text: Arc<str> = new_text.clone().into();
         for selection in &selections {
             let range = if selection.id == newest_selection.id {
                 replace_range_multibuffer.clone()
@@ -961,9 +794,6 @@ impl Editor {
                 && buffer_snapshot_2.remote_id() == buffer_snapshot.remote_id()
             {
                 all_commit_ranges.push(anchor_range.clone());
-                if !self.linked_edit_ranges.is_empty() {
-                    linked_edits.push(&self, anchor_range, text.clone(), cx);
-                }
             }
         }
 
@@ -999,7 +829,6 @@ impl Editor {
                     multi_buffer.edit(edits, auto_indent, cx);
                 });
             }
-            linked_edits.apply(cx);
             editor.refresh_edit_prediction(
                 true,
                 false,
@@ -1023,39 +852,6 @@ impl Editor {
 
         let provider = self.completion_provider.as_ref()?;
 
-        let lsp_store = self.project().map(|project| project.read(cx).lsp_store());
-        let command = lsp_store.as_ref().and_then(|lsp_store| {
-            let CompletionSource::Lsp {
-                lsp_completion,
-                server_id,
-                ..
-            } = &completion.source
-            else {
-                return None;
-            };
-            let lsp_command = lsp_completion.command.as_ref()?;
-            let available_commands = lsp_store
-                .read(cx)
-                .lsp_server_capabilities
-                .get(server_id)
-                .and_then(|server_capabilities| {
-                    server_capabilities
-                        .execute_command_provider
-                        .as_ref()
-                        .map(|options| options.commands.as_slice())
-                })?;
-            if available_commands.contains(&lsp_command.command) {
-                Some(CodeAction {
-                    server_id: *server_id,
-                    range: language::Anchor::min_min_range_for_buffer(buffer.remote_id()),
-                    lsp_action: LspAction::Command(lsp_command.clone()),
-                    resolved: false,
-                })
-            } else {
-                None
-            }
-        });
-
         drop(completion);
         let apply_edits = provider.apply_additional_edits_for_completion(
             buffer_handle.clone(),
@@ -1066,13 +862,6 @@ impl Editor {
             cx,
         );
 
-        let editor_settings = EditorSettings::get_global(cx);
-        if editor_settings.show_signature_help_after_edits || editor_settings.auto_signature_help {
-            // After the code completion is finished, users often want to know what signatures are needed.
-            // so we should automatically call signature_help
-            self.show_signature_help(&ShowSignatureHelp, window, cx);
-        }
-
         // After the code completion is finished, we should finalize the last transaction.
         // This ensure vim/helix not group the edits together.
         self.buffer
@@ -1080,26 +869,6 @@ impl Editor {
 
         Some(cx.spawn_in(window, async move |editor, cx| {
             let additional_edits_tx = apply_edits.await?;
-
-            if let Some((lsp_store, command)) = lsp_store.zip(command) {
-                let title = command.lsp_action.title().to_owned();
-                let project_transaction = lsp_store
-                    .update(cx, |lsp_store, cx| {
-                        lsp_store.apply_code_action(buffer_handle, command, false, cx)
-                    })
-                    .await
-                    .context("applying post-completion command")?;
-                if let Some(workspace) = editor.read_with(cx, |editor, _| editor.workspace())? {
-                    Self::open_project_transaction(
-                        &editor,
-                        workspace.downgrade(),
-                        project_transaction,
-                        title,
-                        cx,
-                    )
-                    .await?;
-                }
-            }
 
             if let Some(tx_id) = tx_id
                 && let Some(additional_edits_tx) = additional_edits_tx
@@ -1461,53 +1230,13 @@ fn snippet_completions(
 impl CompletionProvider for Entity<Project> {
     fn completions(
         &self,
-        buffer: &Entity<Buffer>,
-        buffer_position: text::Anchor,
-        options: CompletionContext,
+        _buffer: &Entity<Buffer>,
+        _buffer_position: text::Anchor,
+        _options: CompletionContext,
         _window: &mut Window,
-        cx: &mut Context<Editor>,
+        _cx: &mut Context<Editor>,
     ) -> Task<Result<Vec<CompletionResponse>>> {
-        self.update(cx, |project, cx| {
-            let task = project.completions(buffer, buffer_position, options, cx);
-            cx.background_spawn(task)
-        })
-    }
-
-    fn resolve_completions(
-        &self,
-        buffer: Entity<Buffer>,
-        completion_indices: Vec<usize>,
-        completions: Rc<RefCell<Box<[Completion]>>>,
-        cx: &mut Context<Editor>,
-    ) -> Task<Result<bool>> {
-        self.update(cx, |project, cx| {
-            project.lsp_store().update(cx, |lsp_store, cx| {
-                lsp_store.resolve_completions(buffer, completion_indices, completions, cx)
-            })
-        })
-    }
-
-    fn apply_additional_edits_for_completion(
-        &self,
-        buffer: Entity<Buffer>,
-        completions: Rc<RefCell<Box<[Completion]>>>,
-        completion_index: usize,
-        push_to_history: bool,
-        all_commit_ranges: Vec<Range<language::Anchor>>,
-        cx: &mut Context<Editor>,
-    ) -> Task<Result<Option<language::Transaction>>> {
-        self.update(cx, |project, cx| {
-            project.lsp_store().update(cx, |lsp_store, cx| {
-                lsp_store.apply_additional_edits_for_completion(
-                    buffer,
-                    completions,
-                    completion_index,
-                    push_to_history,
-                    all_commit_ranges,
-                    cx,
-                )
-            })
-        })
+        Task::ready(Ok(Vec::new()))
     }
 
     fn is_completion_trigger(

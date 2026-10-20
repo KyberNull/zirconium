@@ -1260,7 +1260,6 @@ impl InlaySnapshot {
             buffer_range,
             language_aware,
             highlights.text_highlights,
-            highlights.semantic_token_highlights,
             &self.buffer,
         );
 
@@ -1455,7 +1454,7 @@ mod tests {
     use crate::{
         MultiBuffer,
         display_map::{HighlightKey, InlayHighlights},
-        hover_links::InlayHighlight,
+        inlays::InlayHighlight,
     };
     use collections::HashMap;
     use gpui::{App, HighlightStyle};
@@ -1481,7 +1480,6 @@ mod tests {
                     padding_left: false,
                     padding_right: false,
                     tooltip: None,
-                    kind: None,
                     resolve_state: ResolveState::Resolved,
                 },
             )
@@ -1501,7 +1499,6 @@ mod tests {
                     padding_left: true,
                     padding_right: true,
                     tooltip: None,
-                    kind: None,
                     resolve_state: ResolveState::Resolved,
                 },
             )
@@ -1521,7 +1518,6 @@ mod tests {
                     padding_left: false,
                     padding_right: false,
                     tooltip: None,
-                    kind: None,
                     resolve_state: ResolveState::Resolved,
                 },
             )
@@ -1541,7 +1537,6 @@ mod tests {
                     padding_left: true,
                     padding_right: true,
                     tooltip: None,
-                    kind: None,
                     resolve_state: ResolveState::Resolved,
                 },
             )
@@ -1564,7 +1559,6 @@ mod tests {
                     padding_left: true,
                     padding_right: true,
                     tooltip: None,
-                    kind: None,
                     resolve_state: ResolveState::Resolved,
                 },
             )
@@ -2414,7 +2408,6 @@ mod tests {
         let highlights = crate::display_map::Highlights {
             text_highlights: None,
             inlay_highlights: Some(&inlay_highlights),
-            semantic_token_highlights: None,
             styles: crate::display_map::HighlightStyles::default(),
         };
 
@@ -2533,7 +2526,6 @@ mod tests {
             let highlights = crate::display_map::Highlights {
                 text_highlights: None,
                 inlay_highlights: Some(&inlay_highlights),
-                semantic_token_highlights: None,
                 styles: crate::display_map::HighlightStyles::default(),
             };
 

@@ -11,7 +11,7 @@ use gpui::{
 };
 use language::{
     Bias, Buffer, BufferSnapshot, CodeLabel, LanguageRegistry, Point, ToOffset, ToPoint,
-    language_settings::{self, InlayHintKind},
+    language_settings::{self},
 };
 use markdown::{Markdown, MarkdownStyle};
 use project::{
@@ -123,7 +123,6 @@ impl RatePredictionsModal {
             diff_editor: cx.new(|cx| {
                 let multibuffer = cx.new(|_| MultiBuffer::new(language::Capability::ReadOnly));
                 let mut editor = Editor::for_multibuffer(multibuffer, None, window, cx);
-                editor.disable_inline_diagnostics();
                 editor.set_expand_all_diff_hunks(cx);
                 editor.set_show_git_diff_gutter(false, cx);
                 editor
@@ -363,7 +362,6 @@ impl RatePredictionsModal {
                         &InlayHint {
                             position: start_hint_position,
                             label: InlayHintLabel::String("╭─ editable region start\n".into()),
-                            kind: Some(InlayHintKind::Parameter),
                             padding_left: false,
                             padding_right: false,
                             tooltip: None,
@@ -376,7 +374,6 @@ impl RatePredictionsModal {
                         &InlayHint {
                             position: end_hint_position,
                             label: InlayHintLabel::String("\n╰─ editable region end".into()),
-                            kind: Some(InlayHintKind::Parameter),
                             padding_left: false,
                             padding_right: false,
                             tooltip: None,
@@ -737,10 +734,8 @@ impl RatePredictionsModal {
                 let mut editor = Editor::for_multibuffer(multibuffer, None, window, cx);
                 let expected_buffer_id = expected_buffer.read(cx).remote_id();
                 editor.disable_header_for_buffer(expected_buffer_id, cx);
-                editor.disable_inline_diagnostics();
                 editor.set_expand_all_diff_hunks(cx);
                 editor.set_show_git_diff_gutter(false, cx);
-                editor.set_show_code_actions(false, cx);
                 editor.set_show_runnables(false, cx);
                 editor.set_show_bookmarks(false, cx);
                 editor.set_show_breakpoints(false, cx);
@@ -792,7 +787,6 @@ impl RatePredictionsModal {
                     editor.set_soft_wrap_mode(language_settings::SoftWrap::EditorWidth, cx);
                     editor.set_show_line_numbers(false, cx);
                     editor.set_show_git_diff_gutter(false, cx);
-                    editor.set_show_code_actions(false, cx);
                     editor.set_show_runnables(false, cx);
                     editor.set_show_bookmarks(false, cx);
                     editor.set_show_breakpoints(false, cx);

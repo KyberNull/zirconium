@@ -69,11 +69,9 @@ The following VS Code settings are automatically imported when you use **Import 
 | `editor.rulers`                             | `wrap_guides`                                  |
 | `editor.renderWhitespace`                   | `show_whitespaces`                             |
 | `editor.guides.indentation`                 | `indent_guides.enabled`                        |
-| `editor.linkedEditing`                      | `linked_edits`                                 |
 | `editor.autoSurround`                       | `use_auto_surround`                            |
 | `editor.formatOnSave`                       | `format_on_save`                               |
 | `editor.formatOnPaste`                      | `auto_indent_on_paste`                         |
-| `editor.formatOnType`                       | `use_on_type_format`                           |
 | `editor.trimAutoWhitespace`                 | `remove_trailing_whitespace_on_save`           |
 | `editor.suggestOnTriggerCharacters`         | `show_completions_on_input`                    |
 | `editor.suggest.showWords`                  | `completions.words`                            |
@@ -132,7 +130,6 @@ The following VS Code settings are automatically imported when you use **Import 
 | `explorer.compactFolders`      | `project_panel.auto_fold_dirs`      |
 | `explorer.autoReveal`          | `project_panel.auto_reveal_entries` |
 | `explorer.excludeGitIgnore`    | `project_panel.hide_gitignore`      |
-| `problems.decorations.enabled` | `project_panel.show_diagnostics`    |
 | `explorer.decorations.badges`  | `project_panel.git_status`          |
 
 **Git**

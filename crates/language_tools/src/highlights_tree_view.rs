@@ -36,8 +36,6 @@ actions!(
     [
         /// Toggles showing text highlights.
         ToggleTextHighlights,
-        /// Toggles showing semantic token highlights.
-        ToggleSemanticTokens,
         /// Toggles showing syntax token highlights.
         ToggleSyntaxTokens,
     ]
@@ -68,11 +66,6 @@ pub enum HighlightCategory {
         capture_name: SharedString,
         theme_key: Option<SharedString>,
     },
-    SemanticToken {
-        token_type: Option<SharedString>,
-        token_modifiers: Option<SharedString>,
-        theme_key: Option<SharedString>,
-    },
 }
 
 impl HighlightCategory {
@@ -87,26 +80,6 @@ impl HighlightCategory {
                 capture_name,
                 theme_key: None,
             } => format!("syntax: {capture_name}").into(),
-            HighlightCategory::SemanticToken {
-                token_type,
-                token_modifiers,
-                theme_key,
-            } => {
-                let label = match (token_type, token_modifiers) {
-                    (Some(token_type), Some(modifiers)) => {
-                        format!("semantic token: {token_type} [{modifiers}]")
-                    }
-                    (Some(token_type), None) => format!("semantic token: {token_type}"),
-                    (None, Some(modifiers)) => format!("semantic token [{modifiers}]"),
-                    (None, None) => "semantic token".to_string(),
-                };
-
-                if let Some(theme_key) = theme_key {
-                    format!("{label} \u{2192} {theme_key}").into()
-                } else {
-                    label.into()
-                }
-            }
         }
     }
 }
@@ -145,7 +118,6 @@ pub struct HighlightsTreeView {
     is_singleton: bool,
     show_text_highlights: bool,
     show_syntax_tokens: bool,
-    show_semantic_tokens: bool,
     skip_next_scroll: bool,
     refresh_task: Task<()>,
 }
@@ -161,16 +133,9 @@ struct EditorState {
     _subscription: gpui::Subscription,
 }
 
-struct SemanticHighlightEntry {
-    range: Range<Anchor>,
-    style: HighlightStyle,
-    category: HighlightCategory,
-}
-
 struct HighlightRefreshInput {
     multi_buffer_snapshot: MultiBufferSnapshot,
     text_highlights: Vec<(HighlightKey, Arc<(HighlightStyle, Vec<Range<Anchor>>)>)>,
-    semantic_highlights: Vec<SemanticHighlightEntry>,
     syntax_theme: Arc<SyntaxTheme>,
 }
 
@@ -193,7 +158,6 @@ impl HighlightsTreeView {
             is_singleton: true,
             show_text_highlights: true,
             show_syntax_tokens: true,
-            show_semantic_tokens: true,
             skip_next_scroll: false,
             refresh_task: Task::ready(()),
         };
@@ -339,83 +303,20 @@ impl HighlightsTreeView {
         let editor_state = self.editor.as_ref()?;
         let editor = editor_state.editor.read(cx);
         let display_map = editor.display_map.clone();
-        let project = editor.project().cloned()?;
         let multi_buffer = editor.buffer().clone();
         let multi_buffer_snapshot = multi_buffer.read(cx).snapshot(cx);
         let syntax_theme = cx.theme().syntax().clone();
 
-        let (text_highlights, semantic_token_highlights) =
-            display_map.update(cx, |display_map, _| {
-                let text_highlights = display_map
-                    .all_text_highlights()
-                    .map(|(key, highlights)| (*key, highlights.clone()))
-                    .collect::<Vec<_>>();
-                let semantic_token_highlights = display_map
-                    .all_semantic_token_highlights()
-                    .map(|(buffer_id, (tokens, interner))| {
-                        (*buffer_id, tokens.clone(), interner.clone())
-                    })
-                    .collect::<Vec<_>>();
-                (text_highlights, semantic_token_highlights)
-            });
-
-        let mut semantic_highlights = Vec::new();
-        project.read(cx).lsp_store().update(cx, |lsp_store, cx| {
-            for (buffer_id, tokens, interner) in semantic_token_highlights {
-                let language_name = multi_buffer
-                    .read(cx)
-                    .buffer(buffer_id)
-                    .and_then(|buffer| buffer.read(cx).language().map(|language| language.name()));
-
-                for token in tokens.iter() {
-                    let Some(stylizer) = lsp_store.get_or_create_token_stylizer(
-                        token.server_id,
-                        language_name.as_ref(),
-                        cx,
-                    ) else {
-                        continue;
-                    };
-
-                    let theme_key = stylizer
-                        .rules_for_token(token.token_type)
-                        .and_then(|rules| {
-                            rules
-                                .iter()
-                                .filter(|rule| {
-                                    rule.token_modifiers.iter().all(|modifier| {
-                                        stylizer.has_modifier(token.token_modifiers, modifier)
-                                    })
-                                })
-                                .fold(None, |theme_key, rule| {
-                                    rule.style
-                                        .iter()
-                                        .find(|style_name| {
-                                            syntax_theme.style_for_name(style_name).is_some()
-                                        })
-                                        .map(|style_name| SharedString::from(style_name.clone()))
-                                        .or(theme_key)
-                                })
-                        });
-
-                    semantic_highlights.push(SemanticHighlightEntry {
-                        range: token.range.start..token.range.end,
-                        style: interner[token.style],
-                        category: HighlightCategory::SemanticToken {
-                            token_type: stylizer.token_type_name(token.token_type).cloned(),
-                            token_modifiers: stylizer
-                                .token_modifiers(token.token_modifiers)
-                                .map(SharedString::from),
-                            theme_key,
-                        },
-                    });
-                }
-            }
+        let text_highlights = display_map.update(cx, |display_map, _| {
+            display_map
+                .all_text_highlights()
+                .map(|(key, highlights)| (*key, highlights.clone()))
+                .collect::<Vec<_>>()
         });
 
         Some(HighlightRefreshInput {
             multi_buffer_snapshot,
             text_highlights,
-            semantic_highlights,
             syntax_theme,
         })
     }
@@ -474,7 +375,6 @@ impl HighlightsTreeView {
         match entry.category {
             HighlightCategory::Text(_) => self.show_text_highlights,
             HighlightCategory::SyntaxToken { .. } => self.show_syntax_tokens,
-            HighlightCategory::SemanticToken { .. } => self.show_semantic_tokens,
         }
     }
 
@@ -849,16 +749,14 @@ impl Render for HighlightsTreeView {
                                     this.child(Label::new("All highlights are filtered out"))
                                         .child(
                                             Label::new(
-                                                "Enable text, syntax, or semantic highlights in the toolbar",
+                                                "Enable text or syntax highlights in the toolbar",
                                             )
                                             .size(LabelSize::Small),
                                         )
                                 } else {
                                     this.child(Label::new("No highlights found")).child(
-                                        Label::new(
-                                            "The editor has no text, syntax, or semantic token highlights",
-                                        )
-                                        .size(LabelSize::Small),
+                                        Label::new("The editor has no text or syntax highlights")
+                                            .size(LabelSize::Small),
                                     )
                                 }
                             } else {
@@ -917,7 +815,6 @@ impl Item for HighlightsTreeView {
             let mut clone = Self::new(self.workspace_handle.clone(), None, window, cx);
             clone.show_text_highlights = self.show_text_highlights;
             clone.show_syntax_tokens = self.show_syntax_tokens;
-            clone.show_semantic_tokens = self.show_semantic_tokens;
             clone.skip_next_scroll = false;
             if let Some(editor) = &self.editor {
                 clone.set_editor(editor.editor.clone(), window, cx)
@@ -965,18 +862,14 @@ impl HighlightsTreeToolbarItemView {
     }
 
     fn render_settings_button(&self, cx: &Context<Self>) -> PopoverMenu<ContextMenu> {
-        let (show_text, show_syntax, show_semantic) = self
+        let (show_text, show_syntax) = self
             .tree_view
             .as_ref()
             .map(|view| {
                 let v = view.read(cx);
-                (
-                    v.show_text_highlights,
-                    v.show_syntax_tokens,
-                    v.show_semantic_tokens,
-                )
+                (v.show_text_highlights, v.show_syntax_tokens)
             })
-            .unwrap_or((true, true, true));
+            .unwrap_or((true, true));
 
         let tree_view = self.tree_view.as_ref().map(|v| v.downgrade());
 
@@ -992,7 +885,6 @@ impl HighlightsTreeToolbarItemView {
             .menu(move |window, cx| {
                 let tree_view_for_text = tree_view.clone();
                 let tree_view_for_syntax = tree_view.clone();
-                let tree_view_for_semantic = tree_view.clone();
 
                 let menu = ContextMenu::build(window, cx, move |menu, _, _| {
                     menu.toggleable_entry(
@@ -1030,29 +922,6 @@ impl HighlightsTreeToolbarItemView {
                                 if let Some(view) = tree_view.as_ref() {
                                     view.update(cx, |view, cx| {
                                         view.show_syntax_tokens = !view.show_syntax_tokens;
-                                        let snapshot = view.editor.as_ref().map(|s| {
-                                            s.editor.read(cx).buffer().read(cx).snapshot(cx)
-                                        });
-                                        if let Some(snapshot) = snapshot {
-                                            view.rebuild_display_items(&snapshot, cx);
-                                        }
-                                        cx.notify();
-                                    })
-                                    .ok();
-                                }
-                            }
-                        },
-                    )
-                    .toggleable_entry(
-                        "Semantic Tokens",
-                        show_semantic,
-                        IconPosition::Start,
-                        Some(ToggleSemanticTokens.boxed_clone()),
-                        {
-                            move |_, cx| {
-                                if let Some(view) = tree_view_for_semantic.as_ref() {
-                                    view.update(cx, |view, cx| {
-                                        view.show_semantic_tokens = !view.show_semantic_tokens;
                                         let snapshot = view.editor.as_ref().map(|s| {
                                             s.editor.read(cx).buffer().read(cx).snapshot(cx)
                                         });
@@ -1125,7 +994,6 @@ fn build_highlight_entries(
     HighlightRefreshInput {
         multi_buffer_snapshot,
         text_highlights,
-        semantic_highlights,
         syntax_theme,
     }: HighlightRefreshInput,
 ) -> Vec<HighlightEntry> {
@@ -1147,23 +1015,6 @@ fn build_highlight_entries(
                 buffer_point_range,
             });
         }
-    }
-
-    for highlight in semantic_highlights {
-        let Some((range_display, buffer_id, buffer_point_range)) =
-            format_anchor_range(&highlight.range, &multi_buffer_snapshot)
-        else {
-            continue;
-        };
-
-        entries.push(HighlightEntry {
-            range: highlight.range,
-            buffer_id,
-            range_display,
-            style: highlight.style,
-            category: highlight.category,
-            buffer_point_range,
-        });
     }
 
     for excerpt_range in multi_buffer_snapshot.excerpts() {

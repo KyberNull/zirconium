@@ -330,7 +330,7 @@ impl Prettier {
 
         let server = cx
             .update(|cx| {
-                let params = server.default_initialize_params(false, false, cx);
+                let params = server.default_initialize_params(cx);
                 let configuration = lsp::DidChangeConfigurationParams {
                     settings: Default::default(),
                 };

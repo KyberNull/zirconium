@@ -12,10 +12,9 @@ use lsp::{CompletionItemKind, CompletionItemTag};
 use markdown::{CopyButtonVisibility, Markdown, MarkdownElement};
 use multi_buffer::Anchor;
 use ordered_float::OrderedFloat;
-use project::lsp_store::CompletionDocumentation;
-use project::{CodeAction, Completion, CompletionGroup, TaskSourceKind};
+use project::CompletionDocumentation;
+use project::{Completion, CompletionGroup, TaskSourceKind};
 use project::{CompletionDisplayOptions, CompletionSource};
-use task::TaskContext;
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -34,13 +33,12 @@ use ui::{
 use util::ResultExt;
 
 use crate::hover_popover::{hover_markdown_style, open_markdown_url};
+use crate::{CodeActionSource, EditorSettings};
 use crate::{
-    CodeActionProvider, CompletionId, CompletionProvider, DisplayRow, Editor, EditorStyle,
-    ResolvedTasks,
+    CompletionId, CompletionProvider, DisplayRow, Editor, EditorStyle, ResolvedTasks,
     actions::{ConfirmCodeAction, ConfirmCompletion},
     split_words, styled_runs_for_code_label,
 };
-use crate::{CodeActionSource, EditorSettings};
 use collections::{HashSet, VecDeque};
 use settings::{CompletionDetailAlignment, CompletionMenuItemKind, Settings, SnippetSortOrder};
 
@@ -1834,28 +1832,14 @@ fn exact_case_match_count(query: &str, string_match: &StringMatch) -> usize {
 }
 
 #[derive(Clone)]
-pub struct AvailableCodeAction {
-    pub action: CodeAction,
-    pub provider: Rc<dyn CodeActionProvider>,
-}
-
-#[derive(Clone)]
 pub struct CodeActionContents {
     tasks: Option<Rc<ResolvedTasks>>,
-    actions: Option<Rc<[AvailableCodeAction]>>,
-    pub(crate) context: TaskContext,
 }
 
 impl CodeActionContents {
-    pub(crate) fn new(
-        tasks: Option<ResolvedTasks>,
-        actions: Option<Rc<[AvailableCodeAction]>>,
-        context: TaskContext,
-    ) -> Self {
+    pub(crate) fn new(tasks: Option<ResolvedTasks>) -> Self {
         Self {
             tasks: tasks.map(Rc::new),
-            actions,
-            context,
         }
     }
 
@@ -1864,9 +1848,7 @@ impl CodeActionContents {
     }
 
     fn len(&self) -> usize {
-        let tasks_len = self.tasks.as_ref().map_or(0, |tasks| tasks.templates.len());
-        let code_actions_len = self.actions.as_ref().map_or(0, |actions| actions.len());
-        tasks_len + code_actions_len
+        self.tasks.as_ref().map_or(0, |tasks| tasks.templates.len())
     }
 
     pub fn is_empty(&self) -> bool {
@@ -1874,63 +1856,34 @@ impl CodeActionContents {
     }
 
     fn iter(&self) -> impl Iterator<Item = CodeActionsItem> + '_ {
-        self.tasks
-            .iter()
-            .flat_map(|tasks| {
-                tasks
-                    .templates
-                    .iter()
-                    .map(|(kind, task)| CodeActionsItem::Task(kind.clone(), task.clone()))
-            })
-            .chain(self.actions.iter().flat_map(|actions| {
-                actions.iter().map(|available| CodeActionsItem::CodeAction {
-                    action: available.action.clone(),
-                    provider: available.provider.clone(),
-                })
-            }))
+        self.tasks.iter().flat_map(|tasks| {
+            tasks
+                .templates
+                .iter()
+                .map(|(kind, task)| CodeActionsItem::Task(kind.clone(), task.clone()))
+        })
     }
 
-    pub fn get(&self, mut index: usize) -> Option<CodeActionsItem> {
-        if let Some(tasks) = &self.tasks {
-            if let Some((kind, task)) = tasks.templates.get(index) {
-                return Some(CodeActionsItem::Task(kind.clone(), task.clone()));
-            } else {
-                index -= tasks.templates.len();
-            }
-        }
-        if let Some(actions) = &self.actions {
-            if let Some(available) = actions.get(index) {
-                return Some(CodeActionsItem::CodeAction {
-                    action: available.action.clone(),
-                    provider: available.provider.clone(),
-                });
-            }
-        }
-
-        None
+    pub fn get(&self, index: usize) -> Option<CodeActionsItem> {
+        let (kind, task) = self.tasks.as_ref()?.templates.get(index)?;
+        Some(CodeActionsItem::Task(kind.clone(), task.clone()))
     }
 }
 
 #[derive(Clone)]
 pub enum CodeActionsItem {
     Task(TaskSourceKind, ResolvedTask),
-    CodeAction {
-        action: CodeAction,
-        provider: Rc<dyn CodeActionProvider>,
-    },
 }
 
 impl CodeActionsItem {
     pub fn label(&self) -> String {
         match self {
-            Self::CodeAction { action, .. } => action.lsp_action.title().to_owned(),
             Self::Task(_, task) => task.resolved_label.clone(),
         }
     }
 
     pub fn menu_label(&self) -> String {
         match self {
-            Self::CodeAction { action, .. } => action.lsp_action.title().replace("\n", ""),
             Self::Task(_, task) => task.resolved_label.replace("\n", ""),
         }
     }
@@ -2011,10 +1964,7 @@ impl CodeActionsMenu {
 
     fn origin(&self) -> ContextMenuOrigin {
         match &self.deployed_from {
-            Some(CodeActionSource::Indicator(row)) | Some(CodeActionSource::RunMenu(row)) => {
-                ContextMenuOrigin::GutterIndicator(*row)
-            }
-            Some(CodeActionSource::QuickActionBar) => ContextMenuOrigin::QuickActionBar,
+            Some(CodeActionSource::RunMenu(row)) => ContextMenuOrigin::GutterIndicator(*row),
             None => ContextMenuOrigin::Cursor,
         }
     }
@@ -2083,9 +2033,6 @@ impl CodeActionsMenu {
                 .enumerate()
                 .max_by_key(|(_, action)| match action {
                     CodeActionsItem::Task(_, task) => task.resolved_label.chars().count(),
-                    CodeActionsItem::CodeAction { action, .. } => {
-                        action.lsp_action.title().chars().count()
-                    }
                 })
                 .map(|(ix, _)| ix),
         )

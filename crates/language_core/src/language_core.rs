@@ -22,14 +22,12 @@ pub use language_config::{
 
 pub mod code_label;
 pub mod language_name;
-pub mod lsp_adapter;
 pub mod manifest;
 pub mod queries;
 pub mod toolchain;
 
 pub use code_label::{CodeLabel, CodeLabelBuilder, Symbol, SymbolKind};
 pub use language_name::{LanguageId, LanguageName};
-pub use lsp_adapter::{BinaryStatus, LanguageServerStatusUpdate, ServerHealth};
 pub use manifest::ManifestName;
 pub use queries::{LanguageQueries, QueryFile, QueryFileContents, QueryFiles};
 pub use toolchain::{Toolchain, ToolchainList, ToolchainMetadata, ToolchainScope};

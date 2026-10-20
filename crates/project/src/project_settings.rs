@@ -5,10 +5,9 @@ use fs::Fs;
 use futures::StreamExt as _;
 use git::repository::DEFAULT_WORKTREE_DIRECTORY;
 use gpui::{AsyncApp, BorrowAppContext, Context, Entity, EventEmitter, Subscription, Task};
-use lsp::{DEFAULT_LSP_REQUEST_TIMEOUT_SECS, LanguageServerName};
+use lsp::DEFAULT_LSP_REQUEST_TIMEOUT_SECS;
 use paths::{
-    EDITORCONFIG_NAME,
-    local_settings_file_relative_path, local_tasks_file_relative_path,
+    EDITORCONFIG_NAME, local_settings_file_relative_path, local_tasks_file_relative_path,
     local_vscode_tasks_file_relative_path, task_file_name,
 };
 use rpc::{
@@ -17,13 +16,10 @@ use rpc::{
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-pub use settings::BinarySettings;
 pub use settings::DirenvSettings;
-pub use settings::LspSettings;
 use settings::{
-    EditorconfigEvent, InvalidSettingsError, LocalSettingsKind,
-    LocalSettingsPath, RegisterSetting, SemanticTokenRules, Settings, SettingsLocation,
-    SettingsStore, parse_json_with_comments, watch_config_file,
+    EditorconfigEvent, InvalidSettingsError, LocalSettingsKind, LocalSettingsPath, RegisterSetting,
+    Settings, SettingsLocation, SettingsStore, parse_json_with_comments, watch_config_file,
 };
 use std::{cell::OnceCell, collections::BTreeMap, path::PathBuf, sync::Arc, time::Duration};
 use task::{TaskTemplates, VsCodeTaskFile};
@@ -38,20 +34,6 @@ use crate::{
 
 #[derive(Debug, Clone, RegisterSetting)]
 pub struct ProjectSettings {
-    /// Configuration for language servers.
-    ///
-    /// The following settings can be overridden for specific language servers:
-    /// - initialization_options
-    ///
-    /// To override settings for a language, add an entry for that language server's
-    /// name to the lsp value.
-    /// Default: null
-    // todo(settings-follow-up)
-    // We should change to use a non content type (settings::LspSettings is a content type)
-    // Note: Will either require merging with defaults, which also requires deciding where the defaults come from,
-    //       or case by case deciding which fields are optional and which are actually required.
-    pub lsp: HashMap<LanguageServerName, settings::LspSettings>,
-
     /// Common language server settings.
     pub global_lsp_settings: GlobalLspSettings,
 
@@ -60,9 +42,6 @@ pub struct ProjectSettings {
 
     /// Default timeout for context server requests in seconds.
     pub context_server_timeout: u64,
-
-    /// Configuration for Diagnostics-related features.
-    pub diagnostics: DiagnosticsSettings,
 
     /// Configuration for Git-related features
     pub git: GitSettings,
@@ -114,14 +93,10 @@ impl From<settings::NodeBinarySettings> for NodeBinarySettings {
     }
 }
 
-/// Common language server settings.
+/// Settings for the JSON-RPC clients that remain (Copilot and Prettier).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(default)]
 pub struct GlobalLspSettings {
-    /// Whether to show the LSP servers button in the status bar.
-    ///
-    /// Default: `true`
-    pub button: bool,
     /// The maximum amount of time to wait for responses from language servers, in seconds.
     /// A value of `0` will result in no timeout being applied (causing all LSP responses to wait
     /// indefinitely until completed).
@@ -129,24 +104,12 @@ pub struct GlobalLspSettings {
     ///
     /// Default: `120`
     pub request_timeout: u64,
-    /// The maximum line length a buffer may contain before language server features are disabled for the entire buffer.
-    ///
-    /// Default: `20000`
-    pub max_buffer_line_length: u32,
-    pub notifications: LspNotificationSettings,
-
-    /// Rules for highlighting semantic tokens.
-    pub semantic_token_rules: SemanticTokenRules,
 }
 
 impl Default for GlobalLspSettings {
     fn default() -> Self {
         Self {
-            button: true,
             request_timeout: DEFAULT_LSP_REQUEST_TIMEOUT_SECS,
-            max_buffer_line_length: 20_000,
-            notifications: LspNotificationSettings::default(),
-            semantic_token_rules: SemanticTokenRules::default(),
         }
     }
 }
@@ -157,24 +120,6 @@ impl GlobalLspSettings {
     /// simply call unwrap_or_default.
     pub const fn get_request_timeout(&self) -> Duration {
         Duration::from_secs(self.request_timeout)
-    }
-}
-
-#[derive(Deserialize, Serialize, Clone, PartialEq, Eq, JsonSchema, Debug)]
-#[serde(tag = "source", rename_all = "snake_case")]
-pub struct LspNotificationSettings {
-    /// Timeout in milliseconds for automatically dismissing language server notifications.
-    /// Set to 0 to disable auto-dismiss.
-    ///
-    /// Default: 5000
-    pub dismiss_timeout_ms: Option<u64>,
-}
-
-impl Default for LspNotificationSettings {
-    fn default() -> Self {
-        Self {
-            dismiss_timeout_ms: Some(5000),
-        }
     }
 }
 
@@ -612,66 +557,9 @@ impl Default for BranchPickerSettings {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct DiagnosticsSettings {
-    /// Whether to show the project diagnostics button in the status bar.
-    pub button: bool,
-
-    /// Whether or not to include warning diagnostics.
-    pub include_warnings: bool,
-
-    /// Settings for using LSP pull diagnostics mechanism in Zed.
-    pub lsp_pull_diagnostics: LspPullDiagnosticsSettings,
-
-    /// Settings for showing inline diagnostics.
-    pub inline: InlineDiagnosticsSettings,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct InlineDiagnosticsSettings {
-    /// Whether or not to show inline diagnostics
-    ///
-    /// Default: false
-    pub enabled: bool,
-    /// Whether to only show the inline diagnostics after a delay after the
-    /// last editor event.
-    ///
-    /// Default: 150
-    pub update_debounce_ms: u64,
-    /// The amount of padding between the end of the source line and the start
-    /// of the inline diagnostic in units of columns.
-    ///
-    /// Default: 4
-    pub padding: u32,
-    /// The minimum column to display inline diagnostics. This setting can be
-    /// used to horizontally align inline diagnostics at some position. Lines
-    /// longer than this value will still push diagnostics further to the right.
-    ///
-    /// Default: 0
-    pub min_column: u32,
-
-    pub max_severity: Option<DiagnosticSeverity>,
-}
-
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-pub struct LspPullDiagnosticsSettings {
-    /// Whether to pull for diagnostics or not.
-    ///
-    /// Default: true
-    pub enabled: bool,
-    /// Minimum time to wait before pulling diagnostics from the language server(s).
-    /// 0 turns the debounce off.
-    ///
-    /// Default: 50
-    pub debounce_ms: u64,
-}
-
 impl Settings for ProjectSettings {
     fn from_settings(content: &settings::SettingsContent) -> Self {
         let project = &content.project.clone();
-        let diagnostics = content.diagnostics.as_ref().unwrap();
-        let lsp_pull_diagnostics = diagnostics.lsp_pull_diagnostics.as_ref().unwrap();
-        let inline_diagnostics = diagnostics.inline.as_ref().unwrap();
 
         let git = content.git.as_ref().unwrap();
         let git_enabled = {
@@ -724,64 +612,13 @@ impl Settings for ProjectSettings {
                 .map(|(key, value)| (key, value.into()))
                 .collect(),
             context_server_timeout: project.context_server_timeout.unwrap_or(60),
-            lsp: project
-                .lsp
-                .clone()
-                .into_iter()
-                .map(|(key, value)| (LanguageServerName(key.into()), value))
-                .collect(),
             global_lsp_settings: GlobalLspSettings {
-                button: content
-                    .global_lsp_settings
-                    .as_ref()
-                    .unwrap()
-                    .button
-                    .unwrap(),
                 request_timeout: content
                     .global_lsp_settings
                     .as_ref()
                     .unwrap()
                     .request_timeout
                     .unwrap(),
-                max_buffer_line_length: content
-                    .global_lsp_settings
-                    .as_ref()
-                    .unwrap()
-                    .max_buffer_line_length
-                    .unwrap(),
-                notifications: LspNotificationSettings {
-                    dismiss_timeout_ms: content
-                        .global_lsp_settings
-                        .as_ref()
-                        .unwrap()
-                        .notifications
-                        .as_ref()
-                        .unwrap()
-                        .dismiss_timeout_ms,
-                },
-                semantic_token_rules: content
-                    .global_lsp_settings
-                    .as_ref()
-                    .unwrap()
-                    .semantic_token_rules
-                    .as_ref()
-                    .unwrap()
-                    .clone(),
-            },
-            diagnostics: DiagnosticsSettings {
-                button: diagnostics.button.unwrap(),
-                include_warnings: diagnostics.include_warnings.unwrap(),
-                lsp_pull_diagnostics: LspPullDiagnosticsSettings {
-                    enabled: lsp_pull_diagnostics.enabled.unwrap(),
-                    debounce_ms: lsp_pull_diagnostics.debounce_ms.unwrap().0,
-                },
-                inline: InlineDiagnosticsSettings {
-                    enabled: inline_diagnostics.enabled.unwrap(),
-                    update_debounce_ms: inline_diagnostics.update_debounce_ms.unwrap().0,
-                    padding: inline_diagnostics.padding.unwrap(),
-                    min_column: inline_diagnostics.min_column.unwrap(),
-                    max_severity: inline_diagnostics.max_severity.map(Into::into),
-                },
             },
             git: git_settings,
             node: content.node.clone().unwrap().into(),
@@ -1212,7 +1049,9 @@ impl SettingsObserver {
                         Some(
                             async move {
                                 let content = fs.load(&abs_path).await?;
-                                if abs_path.ends_with(local_vscode_tasks_file_relative_path().as_std_path()) {
+                                if abs_path.ends_with(
+                                    local_vscode_tasks_file_relative_path().as_std_path(),
+                                ) {
                                     let vscode_tasks =
                                         parse_json_with_comments::<VsCodeTaskFile>(&content)
                                             .with_context(|| {
@@ -1411,7 +1250,6 @@ impl SettingsObserver {
             }
         })
     }
-
 }
 
 fn apply_local_settings(

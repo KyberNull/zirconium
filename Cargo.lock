@@ -199,10 +199,7 @@ dependencies = [
  "fs",
  "futures 0.3.32",
  "gpui",
- "language",
  "project",
- "proto",
- "smallvec",
  "ui",
  "util",
  "workspace",
@@ -1953,7 +1950,6 @@ dependencies = [
  "itertools 0.14.0",
  "language",
  "language_model",
- "lsp",
  "markdown",
  "multi_buffer",
  "project",
@@ -4448,39 +4444,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "diagnostics"
-version = "0.1.0"
-dependencies = [
- "agent_settings",
- "anyhow",
- "collections",
- "ctor",
- "editor",
- "futures-lite 1.13.0",
- "gpui",
- "indoc",
- "itertools 0.14.0",
- "language",
- "log",
- "lsp",
- "markdown",
- "pretty_assertions",
- "project",
- "rand 0.9.4",
- "serde_json",
- "settings",
- "text",
- "theme",
- "theme_settings",
- "ui",
- "unindent",
- "util",
- "workspace",
- "zed_actions",
- "zlog",
-]
-
-[[package]]
 name = "dialoguer"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4870,24 +4833,14 @@ name = "edit_prediction_context"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "clock",
  "collections",
- "env_logger 0.11.8",
  "futures 0.3.32",
  "gpui",
  "indoc",
  "language",
  "log",
- "lsp",
- "parking_lot",
- "pretty_assertions",
  "project",
- "serde_json",
- "settings",
- "smallvec",
- "telemetry",
  "text",
- "tree-sitter",
  "util",
  "zeta_prompt",
 ]
@@ -8540,28 +8493,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "json_schema_store"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "collections",
- "extension",
- "feature_flags",
- "gpui",
- "language",
- "parking_lot",
- "paths",
- "project",
- "schemars 1.0.4",
- "serde_json",
- "settings",
- "snippet_provider",
- "task",
- "theme",
- "util",
-]
-
-[[package]]
 name = "jsonschema"
 version = "0.37.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8654,7 +8585,6 @@ dependencies = [
  "fuzzy",
  "gpui",
  "itertools 0.14.0",
- "json_schema_store",
  "language",
  "log",
  "menu",
@@ -8869,20 +8799,9 @@ dependencies = [
 name = "language_extension"
 version = "0.1.0"
 dependencies = [
- "anyhow",
- "async-trait",
- "collections",
  "extension",
- "futures 0.3.32",
- "gpui",
  "language",
- "log",
- "lsp",
- "project",
- "serde",
- "serde_json",
  "tracing",
- "util",
  "ztracing",
 ]
 
@@ -9015,18 +8934,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "language_onboarding"
-version = "0.1.0"
-dependencies = [
- "db",
- "editor",
- "gpui",
- "project",
- "ui",
- "workspace",
-]
-
-[[package]]
 name = "language_selector"
 version = "0.1.0"
 dependencies = [
@@ -9050,35 +8957,19 @@ dependencies = [
 name = "language_tools"
 version = "0.1.0"
 dependencies = [
- "anyhow",
- "client",
- "collections",
  "command_palette_hooks",
- "edit_prediction",
  "editor",
- "futures 0.3.32",
  "gpui",
  "itertools 0.14.0",
  "language",
- "lsp",
  "menu",
- "path",
  "project",
- "proto",
- "release_channel",
- "semver",
  "serde_json",
- "settings",
- "sysinfo 0.37.2",
- "telemetry",
  "theme",
- "theme_settings",
  "tree-sitter",
  "ui",
- "util",
  "workspace",
  "zed_actions",
- "zlog",
 ]
 
 [[package]]
@@ -9086,23 +8977,17 @@ name = "languages"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-compression",
  "async-fs",
- "async-tar",
  "async-trait",
  "chrono",
  "collections",
  "fs",
  "futures 0.3.32",
- "globset",
  "gpui",
  "grammars",
- "http_client",
  "itertools 0.14.0",
- "json_schema_store",
  "language",
  "log",
- "lsp",
  "node_runtime",
  "parking_lot",
  "pet",
@@ -9116,14 +9001,12 @@ dependencies = [
  "project",
  "regex",
  "rope",
- "semver",
  "serde",
  "serde_json",
  "serde_json_lenient",
  "settings",
  "smallvec",
  "smol",
- "snippet",
  "task",
  "tempfile",
  "terminal",
@@ -9139,7 +9022,6 @@ dependencies = [
  "tree-sitter-rust",
  "tree-sitter-typescript",
  "unindent",
- "url",
  "util",
 ]
 
@@ -9566,31 +9448,6 @@ dependencies = [
  "serde",
  "serde_json",
  "url",
-]
-
-[[package]]
-name = "lsp_locations"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "collections",
- "editor",
- "file_icons",
- "fuzzy",
- "gpui",
- "indoc",
- "language",
- "log",
- "lsp",
- "picker",
- "picker_preview",
- "project",
- "settings",
- "text",
- "theme_settings",
- "ui",
- "util",
- "workspace",
 ]
 
 [[package]]
@@ -13147,31 +13004,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "project_symbols"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "editor",
- "futures 0.3.32",
- "fuzzy",
- "gpui",
- "language",
- "lsp",
- "ordered-float 2.10.1",
- "picker",
- "picker_preview",
- "project",
- "release_channel",
- "semver",
- "serde_json",
- "settings",
- "theme",
- "theme_settings",
- "util",
- "workspace",
-]
-
-[[package]]
 name = "prompt_store"
 version = "0.1.0"
 dependencies = [
@@ -14147,7 +13979,6 @@ dependencies = [
  "gpui_tokio",
  "http_client",
  "image",
- "json_schema_store",
  "language",
  "language_extension",
  "language_model",
@@ -16766,7 +16597,6 @@ dependencies = [
  "file_icons",
  "fuzzy",
  "gpui",
- "itertools 0.14.0",
  "language",
  "menu",
  "picker",
@@ -21370,7 +21200,6 @@ dependencies = [
  "crashes",
  "db",
  "dev_container",
- "diagnostics",
  "edit_prediction",
  "edit_prediction_ui",
  "editor",
@@ -21401,19 +21230,16 @@ dependencies = [
  "install_cli",
  "itertools 0.14.0",
  "journal",
- "json_schema_store",
  "keymap_editor",
  "language",
  "language_extension",
  "language_model",
  "language_models",
- "language_onboarding",
  "language_selector",
  "language_tools",
  "languages",
  "line_ending_selector",
  "log",
- "lsp_locations",
  "markdown",
  "markdown_preview",
  "menu",
@@ -21433,7 +21259,6 @@ dependencies = [
  "profiling",
  "project",
  "project_panel",
- "project_symbols",
  "prompt_store",
  "proto",
  "rayon",

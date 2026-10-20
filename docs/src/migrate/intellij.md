@@ -56,7 +56,6 @@ Settings IntelliJ users typically configure first:
 | `format_on_save`        | Auto-format when saving. Set to `"on"` to enable.                               |
 | `soft_wrap`             | Wrap long lines. Options: `"none"`, `"editor_width"`, `"preferred_line_length"` |
 | `preferred_line_length` | Column width for wrapping and rulers. Default is 80.                            |
-| `inlay_hints`           | Show parameter names and type hints inline, like IntelliJ's hints.              |
 | `relative_line_numbers` | Useful if you're coming from IdeaVim.                                           |
 
 Zed also supports per-project settings. Create a `.zed/settings.json` file in your project root to override global settings for that project, similar to how you might use `.idea` folders in IntelliJ.
@@ -243,7 +242,6 @@ Zed has three dock positions: left, bottom, and right. Panels can be moved betwe
 
 > **Tip:** IntelliJ has an "Override IDE shortcuts" setting that lets terminal shortcuts like `Ctrl+Left/Right` work normally. In Zed, terminal keybindings are separate—check your keymap if familiar shortcuts aren't working in the terminal panel.
 
-
 ### Extensions vs. Plugins
 
 IntelliJ has a large plugin catalog covering everything from language support to database tools to deployment integrations.
@@ -312,20 +310,6 @@ Here are a few useful tweaks:
 "load_direnv": "shell_hook"
 ```
 
-**Configure language servers** (requires manual JSON editing): For Java development, you may want to configure the Java language server in your settings:
-
-```json
-{
-  "lsp": {
-    "jdtls": {
-      "settings": {
-        "java_home": "/path/to/jdk"
-      }
-    }
-  }
-}
-```
-
 ## Next Steps
 
 Now that you're set up, here are some resources to help you get the most out of Zed:
@@ -336,3 +320,4 @@ Now that you're set up, here are some resources to help you get the most out of 
 - [AI Features](../ai/overview.md) — Explore Zed's AI capabilities beyond code completion
 - [Collaboration](../collaboration/overview.md) — Share your projects and code together in real time
 - [Languages](../languages.md) — Language-specific setup guides, including Java and Kotlin
+

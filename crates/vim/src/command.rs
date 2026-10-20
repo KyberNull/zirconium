@@ -1416,18 +1416,6 @@ impl CommandRange {
         }
     }
 
-    pub fn as_count(&self) -> Option<u32> {
-        if let CommandRange {
-            start: Position::Line { row, offset: 0 },
-            end: None,
-        } = &self
-        {
-            Some(*row)
-        } else {
-            None
-        }
-    }
-
     /// The `CommandRange` representing the entire buffer.
     fn buffer() -> Self {
         Self {
@@ -1698,31 +1686,8 @@ fn generate_commands(_: &App) -> Vec<VimCommand> {
         .bang(workspace::CloseInactiveTabsAndPanes {
             save_intent: Some(SaveIntent::Skip),
         }),
-        VimCommand::str(("cl", "ist"), "diagnostics::Deploy"),
         VimCommand::new(("cc", ""), editor::actions::Hover),
         VimCommand::new(("ll", ""), editor::actions::Hover),
-        VimCommand::new(("cn", "ext"), editor::actions::GoToDiagnostic::default())
-            .range(wrap_count),
-        VimCommand::new(
-            ("cp", "revious"),
-            editor::actions::GoToPreviousDiagnostic::default(),
-        )
-        .range(wrap_count),
-        VimCommand::new(
-            ("cN", "ext"),
-            editor::actions::GoToPreviousDiagnostic::default(),
-        )
-        .range(wrap_count),
-        VimCommand::new(
-            ("lp", "revious"),
-            editor::actions::GoToPreviousDiagnostic::default(),
-        )
-        .range(wrap_count),
-        VimCommand::new(
-            ("lN", "ext"),
-            editor::actions::GoToPreviousDiagnostic::default(),
-        )
-        .range(wrap_count),
         VimCommand::new(("j", "oin"), JoinLines).range(select_range),
         VimCommand::new(("reflow", ""), Rewrap { line_length: None })
             .range(select_range)
@@ -1818,16 +1783,6 @@ fn select_range(action: Box<dyn Action>, range: &CommandRange) -> Option<Box<dyn
         }
         .boxed_clone(),
     )
-}
-
-fn wrap_count(action: Box<dyn Action>, range: &CommandRange) -> Option<Box<dyn Action>> {
-    range.as_count().map(|count| {
-        WithCount {
-            count,
-            action: WrappedAction(action),
-        }
-        .boxed_clone()
-    })
 }
 
 pub fn command_interceptor(

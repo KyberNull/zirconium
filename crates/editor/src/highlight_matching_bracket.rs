@@ -87,7 +87,9 @@ impl Editor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{editor_tests::init_test, test::editor_lsp_test_context::EditorLspTestContext};
+    use crate::{
+        editor_tests::init_test, test::editor_language_test_context::EditorLanguageTestContext,
+    };
     use indoc::indoc;
     use language::{BracketPair, BracketPairConfig, Language, LanguageConfig, LanguageMatcher};
 
@@ -95,7 +97,7 @@ mod tests {
     async fn test_matching_bracket_highlights(cx: &mut gpui::TestAppContext) {
         init_test(cx, |_| {});
 
-        let mut cx = EditorLspTestContext::new(
+        let mut cx = EditorLanguageTestContext::new(
             Language::new(
                 LanguageConfig {
                     name: "Rust".into(),
@@ -132,7 +134,6 @@ mod tests {
                 ("(" @open ")" @close)
                 "#})
             .unwrap(),
-            Default::default(),
             cx,
         )
         .await;

@@ -1,36 +1,26 @@
 use std::{
     borrow::Cow,
-    ops::{Deref, DerefMut, Range},
+    ops::{Deref, DerefMut},
     path::Path,
     sync::Arc,
 };
 
-use anyhow::Result;
 use language::{markdown_lang, rust_lang};
-use multi_buffer::MultiBufferOffset;
 use serde_json::json;
 
-use crate::{Editor, ToPoint};
+use crate::Editor;
 use collections::HashSet;
-use futures::Future;
-use futures::stream::StreamExt;
 use gpui::{Context, Entity, Focusable as _, VisualTestContext, Window};
 use indoc::indoc;
-use language::{
-    BlockCommentConfig, FakeLspAdapter, Language, LanguageConfig, LanguageMatcher, LanguageQueries,
-    point_to_lsp,
-};
-use lsp::{notification, request};
+use language::{BlockCommentConfig, Language, LanguageConfig, LanguageMatcher, LanguageQueries};
 use project::Project;
 use workspace::{AppState, MultiWorkspace, Workspace, WorkspaceHandle};
 
 use super::editor_test_context::{AssertionContextManager, EditorTestContext};
 
-pub struct EditorLspTestContext {
+pub struct EditorLanguageTestContext {
     pub cx: EditorTestContext,
-    pub lsp: lsp::FakeLanguageServer,
     pub workspace: Entity<Workspace>,
-    pub buffer_lsp_url: lsp::Uri,
 }
 
 #[cfg(test)]
@@ -45,12 +35,11 @@ pub(crate) fn git_commit_lang() -> Arc<Language> {
     ))
 }
 
-impl EditorLspTestContext {
+impl EditorLanguageTestContext {
     pub async fn new(
         language: Language,
-        capabilities: lsp::ServerCapabilities,
         cx: &mut gpui::TestAppContext,
-    ) -> EditorLspTestContext {
+    ) -> EditorLanguageTestContext {
         let app_state = cx.update(AppState::test);
 
         cx.update(|cx| {
@@ -64,19 +53,12 @@ impl EditorLspTestContext {
             language
                 .path_suffixes()
                 .first()
-                .expect("language must have a path suffix for EditorLspTestContext")
+                .expect("language must have a path suffix for EditorLanguageTestContext")
         );
 
         let project = Project::test(app_state.fs.clone(), [], cx).await;
 
         let language_registry = project.read_with(cx, |project, _| project.languages().clone());
-        let mut fake_servers = language_registry.register_fake_lsp(
-            language.name(),
-            FakeLspAdapter {
-                capabilities,
-                ..Default::default()
-            },
-        );
         language_registry.add(Arc::new(language));
 
         let root = Self::root_path();
@@ -140,9 +122,6 @@ impl EditorLspTestContext {
             window.focus(&editor.focus_handle(cx), cx)
         });
 
-        let lsp = fake_servers.next().await.unwrap();
-
-        // Ensure the language server is fully registered with the buffer
         cx.executor().run_until_parked();
 
         let workspace = cx.read(|cx| workspace.read(cx).workspace().clone());
@@ -154,23 +133,15 @@ impl EditorLspTestContext {
                 editor,
                 assertion_cx: AssertionContextManager::new(),
             },
-            lsp,
             workspace,
-            buffer_lsp_url: lsp::Uri::from_file_path(root.join("dir").join(file_name)).unwrap(),
         }
     }
 
-    pub async fn new_rust(
-        capabilities: lsp::ServerCapabilities,
-        cx: &mut gpui::TestAppContext,
-    ) -> EditorLspTestContext {
-        Self::new(Arc::into_inner(rust_lang()).unwrap(), capabilities, cx).await
+    pub async fn new_rust(cx: &mut gpui::TestAppContext) -> EditorLanguageTestContext {
+        Self::new(Arc::into_inner(rust_lang()).unwrap(), cx).await
     }
 
-    pub async fn new_typescript(
-        capabilities: lsp::ServerCapabilities,
-        cx: &mut gpui::TestAppContext,
-    ) -> EditorLspTestContext {
+    pub async fn new_typescript(cx: &mut gpui::TestAppContext) -> EditorLanguageTestContext {
         let mut word_characters: HashSet<char> = Default::default();
         word_characters.insert('$');
         word_characters.insert('#');
@@ -269,13 +240,10 @@ impl EditorLspTestContext {
         })
         .expect("Could not parse queries");
 
-        Self::new(language, capabilities, cx).await
+        Self::new(language, cx).await
     }
 
-    pub async fn new_tsx(
-        capabilities: lsp::ServerCapabilities,
-        cx: &mut gpui::TestAppContext,
-    ) -> EditorLspTestContext {
+    pub async fn new_tsx(cx: &mut gpui::TestAppContext) -> EditorLanguageTestContext {
         let mut word_characters: HashSet<char> = Default::default();
         word_characters.insert('$');
         word_characters.insert('#');
@@ -383,7 +351,7 @@ impl EditorLspTestContext {
         })
         .expect("Could not parse queries");
 
-        Self::new(language, capabilities, cx).await
+        Self::new(language, cx).await
     }
 
     pub async fn new_html(cx: &mut gpui::TestAppContext) -> Self {
@@ -415,16 +383,11 @@ impl EditorLspTestContext {
             ..Default::default()
         })
         .expect("Could not parse queries");
-        Self::new(language, Default::default(), cx).await
+        Self::new(language, cx).await
     }
 
     pub async fn new_markdown_with_rust(cx: &mut gpui::TestAppContext) -> Self {
-        let context = Self::new(
-            Arc::into_inner(markdown_lang()).unwrap(),
-            Default::default(),
-            cx,
-        )
-        .await;
+        let context = Self::new(Arc::into_inner(markdown_lang()).unwrap(), cx).await;
 
         let language_registry = context.workspace.read_with(cx, |workspace, cx| {
             workspace.project().read(cx).languages().clone()
@@ -434,71 +397,11 @@ impl EditorLspTestContext {
         context
     }
 
-    /// Constructs lsp range using a marked string with '[', ']' range delimiters
-    #[track_caller]
-    pub fn lsp_range(&mut self, marked_text: &str) -> lsp::Range {
-        let ranges = self.ranges(marked_text);
-        self.to_lsp_range(MultiBufferOffset(ranges[0].start)..MultiBufferOffset(ranges[0].end))
-    }
-
-    #[expect(clippy::wrong_self_convention, reason = "This is test code")]
-    pub fn to_lsp_range(&mut self, range: Range<MultiBufferOffset>) -> lsp::Range {
-        use language::ToPointUtf16;
-        let snapshot = self.update_editor(|editor, window, cx| editor.snapshot(window, cx));
-        let start_point = range.start.to_point(&snapshot.buffer_snapshot());
-        let end_point = range.end.to_point(&snapshot.buffer_snapshot());
-
-        self.editor(|editor, _, cx| {
-            let buffer = editor.buffer().read(cx);
-            let (start_buffer, start_offset) =
-                buffer.point_to_buffer_offset(start_point, cx).unwrap();
-            let start = point_to_lsp(start_offset.to_point_utf16(&start_buffer.read(cx)));
-            let (end_buffer, end_offset) = buffer.point_to_buffer_offset(end_point, cx).unwrap();
-            let end = point_to_lsp(end_offset.to_point_utf16(&end_buffer.read(cx)));
-            lsp::Range { start, end }
-        })
-    }
-
-    #[expect(clippy::wrong_self_convention, reason = "This is test code")]
-    pub fn to_lsp(&mut self, offset: MultiBufferOffset) -> lsp::Position {
-        use language::ToPointUtf16;
-
-        let snapshot = self.update_editor(|editor, window, cx| editor.snapshot(window, cx));
-        let point = offset.to_point(&snapshot.buffer_snapshot());
-
-        self.editor(|editor, _, cx| {
-            let buffer = editor.buffer().read(cx);
-            let (buffer, offset) = buffer.point_to_buffer_offset(point, cx).unwrap();
-            point_to_lsp(offset.to_point_utf16(&buffer.read(cx)))
-        })
-    }
-
     pub fn update_workspace<F, T>(&mut self, update: F) -> T
     where
         F: FnOnce(&mut Workspace, &mut Window, &mut Context<Workspace>) -> T,
     {
         self.workspace.update_in(&mut self.cx.cx, update)
-    }
-
-    pub fn set_request_handler<T, F, Fut>(
-        &self,
-        mut handler: F,
-    ) -> futures::channel::mpsc::UnboundedReceiver<()>
-    where
-        T: 'static + request::Request,
-        T::Params: 'static + Send,
-        F: 'static + Send + FnMut(lsp::Uri, T::Params, gpui::AsyncApp) -> Fut,
-        Fut: 'static + Future<Output = Result<T::Result>>,
-    {
-        let url = self.buffer_lsp_url.clone();
-        self.lsp.set_request_handler::<T, _, _>(move |params, cx| {
-            let url = url.clone();
-            handler(url, params, cx)
-        })
-    }
-
-    pub fn notify<T: notification::Notification>(&self, params: T::Params) {
-        self.lsp.notify::<T>(params);
     }
 
     #[cfg(target_os = "windows")]
@@ -512,7 +415,7 @@ impl EditorLspTestContext {
     }
 }
 
-impl Deref for EditorLspTestContext {
+impl Deref for EditorLanguageTestContext {
     type Target = EditorTestContext;
 
     fn deref(&self) -> &Self::Target {
@@ -520,7 +423,7 @@ impl Deref for EditorLspTestContext {
     }
 }
 
-impl DerefMut for EditorLspTestContext {
+impl DerefMut for EditorLanguageTestContext {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.cx
     }

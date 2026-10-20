@@ -24,7 +24,7 @@ use collections::{HashMap, HashSet};
 use copilot::{Copilot, Reinstall};
 use credentials_provider::CredentialsProvider;
 use db::kvp::{Dismissable, KeyValueStore};
-use edit_prediction_context::{RelatedExcerptStore, RelatedExcerptStoreEvent, RelatedFile};
+use edit_prediction_context::RelatedFile;
 use edit_prediction_types::EditPredictionRequestTrigger;
 use feature_flags::{FeatureFlag, FeatureFlagAppExt as _, PresenceFlag, register_feature_flag};
 use futures::{
@@ -37,7 +37,7 @@ use gpui::BackgroundExecutor;
 use gpui::TaskExt;
 use gpui::http_client::Url;
 use gpui::{
-    App, AsyncApp, Context, Entity, EntityId, Global, SharedString, Task, WeakEntity, actions,
+    App, AsyncApp, Context, Entity, EntityId, Global, Task, WeakEntity, actions,
     http_client::{self, AsyncBody, Method},
     prelude::*,
 };
@@ -217,24 +217,8 @@ pub struct EditPredictionModelInput {
 
 #[derive(Debug)]
 pub enum DebugEvent {
-    ContextRetrievalStarted(ContextRetrievalStartedDebugEvent),
-    ContextRetrievalFinished(ContextRetrievalFinishedDebugEvent),
     EditPredictionStarted(EditPredictionStartedDebugEvent),
     EditPredictionFinished(EditPredictionFinishedDebugEvent),
-}
-
-#[derive(Debug)]
-pub struct ContextRetrievalStartedDebugEvent {
-    pub project_entity_id: EntityId,
-    pub timestamp: Instant,
-    pub search_prompt: String,
-}
-
-#[derive(Debug)]
-pub struct ContextRetrievalFinishedDebugEvent {
-    pub project_entity_id: EntityId,
-    pub timestamp: Instant,
-    pub metadata: Vec<(&'static str, SharedString)>,
 }
 
 #[derive(Debug)]
@@ -370,7 +354,6 @@ struct ProjectState {
     debug_tx: Option<mpsc::UnboundedSender<DebugEvent>>,
     last_edit_prediction_refresh: Option<(EntityId, Instant)>,
     cancelled_predictions: HashSet<usize>,
-    context: Entity<RelatedExcerptStore>,
     license_detection_watchers: HashMap<WorktreeId, Rc<LicenseDetectionWatcher>>,
     _subscriptions: [gpui::Subscription; 2],
     copilot: Option<Entity<Copilot>>,
@@ -1239,30 +1222,6 @@ impl EditPredictionStore {
             .unwrap_or_default()
     }
 
-    pub fn context_for_project<'a>(
-        &'a self,
-        project: &Entity<Project>,
-        cx: &'a mut App,
-    ) -> Vec<RelatedFile> {
-        self.projects
-            .get(&project.entity_id())
-            .map(|project_state| {
-                project_state.context.update(cx, |context, cx| {
-                    context
-                        .related_files_with_buffers(cx)
-                        .map(|(mut related_file, buffer)| {
-                            related_file.in_open_source_repo = buffer
-                                .read(cx)
-                                .file()
-                                .map_or(false, |file| self.is_file_open_source(&project, file, cx));
-                            related_file
-                        })
-                        .collect()
-                })
-            })
-            .unwrap_or_default()
-    }
-
     pub fn copilot_for_project(&self, project: &Entity<Project>) -> Option<Entity<Copilot>> {
         self.projects
             .get(&project.entity_id())
@@ -1296,21 +1255,6 @@ impl EditPredictionStore {
         } else {
             None
         }
-    }
-
-    pub fn context_for_project_with_buffers<'a>(
-        &'a self,
-        project: &Entity<Project>,
-        cx: &'a mut App,
-    ) -> Vec<(RelatedFile, Entity<Buffer>)> {
-        self.projects
-            .get(&project.entity_id())
-            .map(|project| {
-                project.context.update(cx, |context, cx| {
-                    context.related_files_with_buffers(cx).collect()
-                })
-            })
-            .unwrap_or_default()
     }
 
     pub fn usage(&self, cx: &App) -> Option<EditPredictionUsage> {
@@ -1412,14 +1356,6 @@ impl EditPredictionStore {
         self.projects
             .entry(entity_id)
             .or_insert_with(|| ProjectState {
-                context: {
-                    let related_excerpt_store = cx.new(|cx| RelatedExcerptStore::new(project, cx));
-                    cx.subscribe(&related_excerpt_store, move |this, _, event, _| {
-                        this.handle_excerpt_store_event(entity_id, event);
-                    })
-                    .detach();
-                    related_excerpt_store
-                },
                 events: VecDeque::new(),
                 last_event: None,
                 next_last_event_seq: 0,
@@ -1449,66 +1385,6 @@ impl EditPredictionStore {
 
     pub fn remove_project(&mut self, project: &Entity<Project>) {
         self.projects.remove(&project.entity_id());
-    }
-
-    fn handle_excerpt_store_event(
-        &mut self,
-        project_entity_id: EntityId,
-        event: &RelatedExcerptStoreEvent,
-    ) {
-        if let Some(project_state) = self.projects.get(&project_entity_id) {
-            if let Some(debug_tx) = project_state.debug_tx.clone() {
-                match event {
-                    RelatedExcerptStoreEvent::StartedRefresh => {
-                        debug_tx
-                            .unbounded_send(DebugEvent::ContextRetrievalStarted(
-                                ContextRetrievalStartedDebugEvent {
-                                    project_entity_id: project_entity_id,
-                                    timestamp: Instant::now(),
-                                    search_prompt: String::new(),
-                                },
-                            ))
-                            .ok();
-                    }
-                    RelatedExcerptStoreEvent::FinishedRefresh {
-                        cache_hit_count,
-                        cache_miss_count,
-                        mean_definition_latency,
-                        max_definition_latency,
-                    } => {
-                        debug_tx
-                            .unbounded_send(DebugEvent::ContextRetrievalFinished(
-                                ContextRetrievalFinishedDebugEvent {
-                                    project_entity_id: project_entity_id,
-                                    timestamp: Instant::now(),
-                                    metadata: vec![
-                                        (
-                                            "Cache Hits",
-                                            format!(
-                                                "{}/{}",
-                                                cache_hit_count,
-                                                cache_hit_count + cache_miss_count
-                                            )
-                                            .into(),
-                                        ),
-                                        (
-                                            "Max LSP Time",
-                                            format!("{} ms", max_definition_latency.as_millis())
-                                                .into(),
-                                        ),
-                                        (
-                                            "Mean LSP Time",
-                                            format!("{} ms", mean_definition_latency.as_millis())
-                                                .into(),
-                                        ),
-                                    ],
-                                },
-                            ))
-                            .ok();
-                    }
-                }
-            }
-        }
     }
 
     pub fn debug_info(
@@ -2806,7 +2682,6 @@ impl EditPredictionStore {
         let diagnostic_search_range =
             Point::new(diagnostic_search_start, 0)..Point::new(diagnostic_search_end, 0);
 
-        let related_files = self.context_for_project(&project, cx);
         let allow_jump = is_cloud_zeta && cx.has_flag::<EditPredictionJumpsFeatureFlag>();
         let mode = match all_language_settings(snapshot.file(), cx).edit_predictions_mode() {
             EditPredictionsMode::Eager => PredictEditsMode::Eager,
@@ -2842,8 +2717,7 @@ impl EditPredictionStore {
             || (snapshot
                 .file()
                 .map_or(false, |file| self.is_file_open_source(&project, file, cx))
-                && events.iter().all(|event| event.in_open_source_repo())
-                && related_files.iter().all(|file| file.in_open_source_repo));
+                && events.iter().all(|event| event.in_open_source_repo()));
 
         let can_collect_data = !cfg!(test)
             && is_open_source
@@ -2866,7 +2740,7 @@ impl EditPredictionStore {
             position,
             events,
             stored_events: stored_events.clone(),
-            related_files,
+            related_files: Vec::new(),
             editable_context,
             mode,
             trigger,
@@ -3111,20 +2985,6 @@ impl EditPredictionStore {
         }
     }
 
-    pub fn refresh_context(
-        &mut self,
-        project: &Entity<Project>,
-        buffer: &Entity<language::Buffer>,
-        cursor_position: language::Anchor,
-        cx: &mut Context<Self>,
-    ) {
-        self.get_or_init_project(project, cx)
-            .context
-            .update(cx, |store, cx| {
-                store.refresh(buffer.clone(), cursor_position, cx);
-            });
-    }
-
     pub fn collect_editable_context(
         &mut self,
         project: Entity<Project>,
@@ -3167,20 +3027,6 @@ impl EditPredictionStore {
             )
             .await
         })
-    }
-
-    #[cfg(feature = "cli-support")]
-    pub fn set_context_for_buffer(
-        &mut self,
-        project: &Entity<Project>,
-        related_files: Vec<RelatedFile>,
-        cx: &mut Context<Self>,
-    ) {
-        self.get_or_init_project(project, cx)
-            .context
-            .update(cx, |store, cx| {
-                store.set_related_files(related_files, cx);
-            });
     }
 
     #[cfg(feature = "cli-support")]

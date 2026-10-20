@@ -1,6 +1,6 @@
 ---
 title: Luau
-description: "Configure Luau language support in Zed, including language servers, formatting, and debugging."
+description: "Configure Luau language support in Zed, including formatting and syntax highlighting."
 ---
 
 # Luau
@@ -11,7 +11,6 @@ Luau language support in Zed is provided by the community-maintained [Luau exten
 Report issues to: [https://github.com/4teapo/zed-luau/issues](https://github.com/4teapo/zed-luau/issues)
 
 - Tree-sitter: [4teapo/tree-sitter-luau](https://github.com/4teapo/tree-sitter-luau)
-- Language Server: [JohnnyMorganz/luau-lsp](https://github.com/JohnnyMorganz/luau-lsp)
 
 ## Configuration
 

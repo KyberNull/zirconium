@@ -1,27 +1,23 @@
 use crate::available_languages::AvailableLanguage;
 use crate::{
-    CachedLspAdapter, File, Language, LanguageConfig, LanguageId, LanguageMatcher,
-    LanguageServerName, LspAdapter, ManifestName, PLAIN_TEXT, ToolchainLister,
-    available_languages::AvailableLanguages, language_settings::all_language_settings,
-    task_context::ContextProvider, with_parser,
+    File, Language, LanguageConfig, LanguageId, LanguageMatcher, ManifestName, PLAIN_TEXT,
+    ToolchainLister, available_languages::AvailableLanguages,
+    language_settings::all_language_settings, task_context::ContextProvider, with_parser,
 };
 use anyhow::{Context as _, Result, anyhow};
-use collections::{FxHashMap, HashMap, HashSet, hash_map};
-pub use language_core::{
-    BinaryStatus, LanguageName, LanguageQueries, LanguageServerStatusUpdate, QueryFile,
-    QueryFileContents, QueryFiles, ServerHealth,
-};
+use collections::{FxHashMap, HashMap, hash_map};
+pub use language_core::{LanguageName, LanguageQueries, QueryFile, QueryFileContents, QueryFiles};
 use settings::{AllLanguageSettingsContent, LanguageSettingsContent};
 
 use futures::{
     Future,
-    channel::{mpsc, oneshot},
+    channel::oneshot,
     future::{BoxFuture, FutureExt as _},
 };
 use globset::GlobSet;
 use gpui::{App, BackgroundExecutor};
 use lsp::LanguageServerId;
-use parking_lot::{Mutex, RwLock};
+use parking_lot::RwLock;
 use postage::watch;
 
 use std::{
@@ -36,9 +32,7 @@ use util::{maybe, post_inc};
 
 pub struct LanguageRegistry {
     state: RwLock<LanguageRegistryState>,
-    language_server_download_dir: Option<Arc<Path>>,
     executor: BackgroundExecutor,
-    lsp_binary_status_tx: ServerStatusSender,
 }
 
 struct LanguageRegistryState {
@@ -47,26 +41,11 @@ struct LanguageRegistryState {
     language_settings: AllLanguageSettingsContent,
     available_languages: AvailableLanguages,
     grammars: HashMap<Arc<str>, AvailableGrammar>,
-    lsp_adapters: HashMap<LanguageName, Vec<Arc<CachedLspAdapter>>>,
-    all_lsp_adapters: HashMap<LanguageServerName, Arc<CachedLspAdapter>>,
-    available_lsp_adapters:
-        HashMap<LanguageServerName, Arc<dyn Fn() -> Arc<CachedLspAdapter> + 'static + Send + Sync>>,
     loading_languages: HashMap<LanguageId, Vec<oneshot::Sender<Result<Arc<Language>>>>>,
     subscription: (watch::Sender<()>, watch::Receiver<()>),
     theme: Option<Arc<Theme>>,
     version: usize,
     reload_count: usize,
-
-    #[cfg(any(test, feature = "test-support"))]
-    fake_server_entries: HashMap<LanguageServerName, FakeLanguageServerEntry>,
-}
-
-#[cfg(any(test, feature = "test-support"))]
-pub struct FakeLanguageServerEntry {
-    pub capabilities: lsp::ServerCapabilities,
-    pub initializer: Option<Box<dyn 'static + Send + Sync + Fn(&mut lsp::FakeLanguageServer)>>,
-    pub tx: futures::channel::mpsc::UnboundedSender<lsp::FakeLanguageServer>,
-    pub _server: Option<lsp::FakeLanguageServer>,
 }
 
 enum AvailableGrammar {
@@ -87,11 +66,6 @@ impl std::fmt::Display for LanguageNotFound {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "language not found")
     }
-}
-
-#[derive(Clone, Default)]
-struct ServerStatusSender {
-    txs: Arc<Mutex<Vec<mpsc::UnboundedSender<(LanguageServerName, BinaryStatus)>>>>,
 }
 
 pub struct LoadedLanguage {
@@ -115,19 +89,11 @@ impl LanguageRegistry {
                 grammars: Default::default(),
                 language_settings: Default::default(),
                 loading_languages: Default::default(),
-                lsp_adapters: Default::default(),
-                all_lsp_adapters: Default::default(),
-                available_lsp_adapters: HashMap::default(),
                 subscription: watch::channel(),
                 theme: Default::default(),
                 version: 0,
                 reload_count: 0,
-
-                #[cfg(any(test, feature = "test-support"))]
-                fake_server_entries: Default::default(),
             }),
-            language_server_download_dir: None,
-            lsp_binary_status_tx: Default::default(),
             executor,
         };
         this.add(PLAIN_TEXT.clone());
@@ -136,30 +102,12 @@ impl LanguageRegistry {
 
     #[cfg(any(test, feature = "test-support"))]
     pub fn test(executor: BackgroundExecutor) -> Self {
-        let mut this = Self::new(executor);
-        this.language_server_download_dir = Some(Path::new("/the-download-dir").into());
-        this
+        Self::new(executor)
     }
 
     /// Clears out all of the loaded languages and reload them from scratch.
     pub fn reload(&self) {
         self.state.write().reload();
-    }
-
-    /// Reorders the list of language servers for the given language.
-    ///
-    /// Uses the provided list of ordered [`CachedLspAdapters`] as the desired order.
-    ///
-    /// Any existing language servers not present in `ordered_lsp_adapters` will be
-    /// appended to the end.
-    pub fn reorder_language_servers(
-        &self,
-        language: &LanguageName,
-        ordered_lsp_adapters: Vec<Arc<CachedLspAdapter>>,
-    ) {
-        self.state
-            .write()
-            .reorder_language_servers(language, ordered_lsp_adapters);
     }
 
     /// Removes the specified languages and grammars from the registry.
@@ -171,19 +119,6 @@ impl LanguageRegistry {
         self.state
             .write()
             .remove_languages(languages_to_remove, grammars_to_remove)
-    }
-
-    pub fn remove_lsp_adapter(&self, language_name: &LanguageName, name: &LanguageServerName) {
-        let mut state = self.state.write();
-        if let Some(adapters) = state.lsp_adapters.get_mut(language_name) {
-            adapters.retain(|adapter| &adapter.name != name)
-        }
-        state.all_lsp_adapters.remove(name);
-        state.available_lsp_adapters.remove(name);
-
-        state.version += 1;
-        state.reload_count += 1;
-        *state.subscription.0.borrow_mut() = ();
     }
 
     #[cfg(any(feature = "test-support", test))]
@@ -208,170 +143,6 @@ impl LanguageRegistry {
                 .boxed()
             }),
         )
-    }
-
-    /// Registers an available language server adapter.
-    ///
-    /// The language server is registered under the language server name, but
-    /// not bound to a particular language.
-    ///
-    /// When a language wants to load this particular language server, it will
-    /// invoke the `load` function.
-    pub fn register_available_lsp_adapter(
-        &self,
-        name: LanguageServerName,
-        adapter: Arc<dyn LspAdapter>,
-    ) {
-        let mut state = self.state.write();
-
-        if adapter.is_extension()
-            && let Some(existing_adapter) = state.all_lsp_adapters.get(&name)
-            && !existing_adapter.adapter.is_extension()
-        {
-            log::warn!(
-                "not registering extension-provided language server {name:?}, since a builtin language server exists with that name",
-            );
-            return;
-        }
-
-        state.available_lsp_adapters.insert(
-            name,
-            Arc::new(move || CachedLspAdapter::new(adapter.clone())),
-        );
-    }
-
-    /// Loads the language server adapter for the language server with the given name.
-    pub fn load_available_lsp_adapter(
-        &self,
-        name: &LanguageServerName,
-    ) -> Option<Arc<CachedLspAdapter>> {
-        let state = self.state.read();
-        let load_lsp_adapter = state.available_lsp_adapters.get(name)?;
-
-        Some(load_lsp_adapter())
-    }
-
-    /// Checks if a language server adapter with the given name is available to be loaded.
-    pub fn is_lsp_adapter_available(&self, name: &LanguageServerName) -> bool {
-        let state = self.state.read();
-        state.available_lsp_adapters.contains_key(name)
-    }
-
-    /// Returns the names of all available LSP adapters (registered via `register_available_lsp_adapter`).
-    /// These are adapters that are not bound to a specific language but can be enabled via settings.
-    pub fn available_lsp_adapter_names(&self) -> Vec<LanguageServerName> {
-        self.state
-            .read()
-            .available_lsp_adapters
-            .keys()
-            .cloned()
-            .collect()
-    }
-
-    pub fn register_lsp_adapter(&self, language_name: LanguageName, adapter: Arc<dyn LspAdapter>) {
-        let mut state = self.state.write();
-
-        if adapter.is_extension()
-            && let Some(existing_adapter) = state.all_lsp_adapters.get(&adapter.name())
-            && !existing_adapter.adapter.is_extension()
-        {
-            log::warn!(
-                "not registering extension-provided language server {:?} for language {language_name:?}, since a builtin language server exists with that name",
-                adapter.name(),
-            );
-            return;
-        }
-
-        let cached = CachedLspAdapter::new(adapter);
-        state
-            .lsp_adapters
-            .entry(language_name)
-            .or_default()
-            .push(cached.clone());
-        state
-            .all_lsp_adapters
-            .insert(cached.name.clone(), cached.clone());
-        state.version += 1;
-        *state.subscription.0.borrow_mut() = ();
-    }
-
-    /// Register a fake language server and adapter
-    /// The returned channel receives a new instance of the language server every time it is started
-    #[cfg(any(feature = "test-support", test))]
-    pub fn register_fake_lsp(
-        &self,
-        language_name: impl Into<LanguageName>,
-        mut adapter: crate::FakeLspAdapter,
-    ) -> futures::channel::mpsc::UnboundedReceiver<lsp::FakeLanguageServer> {
-        let adapter_name = LanguageServerName(adapter.name.into());
-        let capabilities = adapter.capabilities.clone();
-        let initializer = adapter.initializer.take();
-        self.register_fake_lsp_adapter(language_name, adapter);
-        self.register_fake_lsp_server(adapter_name, capabilities, initializer)
-    }
-
-    /// Register a fake lsp adapter (without the language server)
-    #[cfg(any(feature = "test-support", test))]
-    pub fn register_fake_lsp_adapter(
-        &self,
-        language_name: impl Into<LanguageName>,
-        adapter: crate::FakeLspAdapter,
-    ) {
-        let language_name = language_name.into();
-        let mut state = self.state.write();
-        let cached_adapter = CachedLspAdapter::new(Arc::new(adapter));
-        state
-            .lsp_adapters
-            .entry(language_name)
-            .or_default()
-            .push(cached_adapter.clone());
-        state
-            .all_lsp_adapters
-            .insert(cached_adapter.name(), cached_adapter);
-        state.version += 1;
-        *state.subscription.0.borrow_mut() = ();
-    }
-
-    /// Register a fake language server (without the adapter)
-    /// The returned channel receives a new instance of the language server every time it is started
-    #[cfg(any(feature = "test-support", test))]
-    pub fn register_fake_lsp_server(
-        &self,
-        lsp_name: LanguageServerName,
-        capabilities: lsp::ServerCapabilities,
-        initializer: Option<Box<dyn Fn(&mut lsp::FakeLanguageServer) + Send + Sync>>,
-    ) -> futures::channel::mpsc::UnboundedReceiver<lsp::FakeLanguageServer> {
-        let (servers_tx, servers_rx) = futures::channel::mpsc::unbounded();
-        self.state.write().fake_server_entries.insert(
-            lsp_name,
-            FakeLanguageServerEntry {
-                tx: servers_tx,
-                capabilities,
-                initializer,
-                _server: None,
-            },
-        );
-        servers_rx
-    }
-
-    #[cfg(any(feature = "test-support", test))]
-    pub fn register_fake_available_lsp_adapter(
-        &self,
-        name: impl Into<LanguageServerName>,
-        adapter: crate::FakeLspAdapter,
-    ) {
-        let name = name.into();
-        let adapter = Arc::new(adapter);
-        let mut state = self.state.write();
-        state.available_lsp_adapters.insert(
-            name,
-            Arc::new(move || CachedLspAdapter::new(adapter.clone())),
-        );
-    }
-
-    #[cfg(any(feature = "test-support", test))]
-    pub fn has_fake_lsp_server(&self, lsp_name: &LanguageServerName) -> bool {
-        self.state.read().fake_server_entries.contains_key(lsp_name)
     }
 
     /// Adds a language to the registry, which can be loaded if needed.
@@ -494,10 +265,6 @@ impl LanguageRegistry {
         for language in &state.languages {
             language.set_theme(theme.syntax());
         }
-    }
-
-    pub fn set_language_server_download_dir(&mut self, path: impl Into<Arc<Path>>) {
-        self.language_server_download_dir = Some(path.into());
     }
 
     pub fn language_for_name(
@@ -788,77 +555,8 @@ impl LanguageRegistry {
         self.state.read().languages.to_vec()
     }
 
-    pub fn lsp_adapters(&self, language_name: &LanguageName) -> Vec<Arc<CachedLspAdapter>> {
-        self.state
-            .read()
-            .lsp_adapters
-            .get(language_name)
-            .cloned()
-            .unwrap_or_default()
-    }
-
-    pub fn all_lsp_adapters(&self) -> Vec<Arc<CachedLspAdapter>> {
-        self.state
-            .read()
-            .all_lsp_adapters
-            .values()
-            .cloned()
-            .collect()
-    }
-
-    pub fn adapter_for_name(&self, name: &LanguageServerName) -> Option<Arc<CachedLspAdapter>> {
-        self.state.read().all_lsp_adapters.get(name).cloned()
-    }
-
-    pub fn update_lsp_binary_status(&self, server_name: LanguageServerName, status: BinaryStatus) {
-        self.lsp_binary_status_tx.send(server_name, status);
-    }
-
     pub fn next_language_server_id(&self) -> LanguageServerId {
         self.state.write().next_language_server_id()
-    }
-
-    pub fn language_server_download_dir(&self, name: &LanguageServerName) -> Option<Arc<Path>> {
-        self.language_server_download_dir
-            .as_ref()
-            .map(|dir| Arc::from(dir.join(name.0.as_ref())))
-    }
-
-    #[cfg(any(test, feature = "test-support"))]
-    pub fn create_fake_language_server(
-        &self,
-        server_id: LanguageServerId,
-        name: &LanguageServerName,
-        binary: lsp::LanguageServerBinary,
-        cx: &mut gpui::AsyncApp,
-    ) -> Option<lsp::LanguageServer> {
-        let mut state = self.state.write();
-        let fake_entry = state.fake_server_entries.get_mut(name)?;
-
-        let (server, mut fake_server) = lsp::FakeLanguageServer::new(
-            server_id,
-            binary,
-            name.0.to_string(),
-            fake_entry.capabilities.clone(),
-            cx,
-        );
-        fake_entry._server = Some(fake_server.clone());
-
-        if let Some(initializer) = &fake_entry.initializer {
-            initializer(&mut fake_server);
-        }
-
-        // Emit synchronously so tests can reliably observe server creation even if the LSP startup
-        // task hasn't progressed to initialization yet.
-        fake_entry.tx.unbounded_send(fake_server).ok();
-
-        Some(server)
-    }
-
-    pub fn language_server_binary_statuses(
-        &self,
-    ) -> mpsc::UnboundedReceiver<(LanguageServerName, BinaryStatus)> {
-        self.lsp_binary_status_tx.subscribe()
     }
 }
 
@@ -894,36 +592,6 @@ impl LanguageRegistryState {
         *self.subscription.0.borrow_mut() = ();
     }
 
-    /// Reorders the list of language servers for the given language.
-    ///
-    /// Uses the provided list of ordered [`CachedLspAdapters`] as the desired order.
-    ///
-    /// Any existing language servers not present in `ordered_lsp_adapters` will be
-    /// appended to the end.
-    fn reorder_language_servers(
-        &mut self,
-        language_name: &LanguageName,
-        ordered_lsp_adapters: Vec<Arc<CachedLspAdapter>>,
-    ) {
-        let Some(lsp_adapters) = self.lsp_adapters.get_mut(language_name) else {
-            return;
-        };
-
-        let ordered_lsp_adapter_ids = ordered_lsp_adapters
-            .iter()
-            .map(|lsp_adapter| lsp_adapter.name.clone())
-            .collect::<HashSet<_>>();
-
-        let mut new_lsp_adapters = ordered_lsp_adapters;
-        for adapter in lsp_adapters.iter() {
-            if !ordered_lsp_adapter_ids.contains(&adapter.name) {
-                new_lsp_adapters.push(adapter.clone());
-            }
-        }
-
-        *lsp_adapters = new_lsp_adapters;
-    }
-
     fn remove_languages(
         &mut self,
         languages_to_remove: &[LanguageName],
@@ -947,18 +615,5 @@ impl LanguageRegistryState {
     /// language registry won't try to load it again.
     fn mark_language_loaded(&mut self, id: LanguageId) {
         self.available_languages.mark_loaded(id);
-    }
-}
-
-impl ServerStatusSender {
-    fn subscribe(&self) -> mpsc::UnboundedReceiver<(LanguageServerName, BinaryStatus)> {
-        let (tx, rx) = mpsc::unbounded();
-        self.txs.lock().push(tx);
-        rx
-    }
-
-    fn send(&self, name: LanguageServerName, status: BinaryStatus) {
-        let mut txs = self.txs.lock();
-        txs.retain(|tx| tx.unbounded_send((name.clone(), status.clone())).is_ok());
     }
 }

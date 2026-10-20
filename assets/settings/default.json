@@ -316,9 +316,6 @@
   "selection_highlight": true,
   // Whether the text selection should have rounded corners.
   "rounded_selection": true,
-  // The debounce delay before querying highlights from the language
-  // server based on the current cursor location.
-  "lsp_highlight_debounce": 75,
   // The minimum APCA perceptual contrast between foreground and background colors.
   // APCA (Accessible Perceptual Contrast Algorithm) is more accurate than WCAG 2.x,
   // especially for dark mode. Values range from 0 to 106.
@@ -393,22 +390,6 @@
     // The delay in milliseconds that must elapse before drag and drop is allowed. Otherwise, a new text selection is created.
     "delay": 300,
   },
-  // Whether and how to display code lenses from language servers.
-  //
-  // Possible values:
-  //
-  // 1. Do not display code lenses.
-  //      "code_lens": "off",
-  // 2. Display code lenses from language servers above code elements.
-  //      "code_lens": "on",
-  // 3. Display code lenses in the code action menu.
-  //      "code_lens": "menu",
-  "code_lens": "off",
-  // What to do when go to definition yields no results.
-  //
-  // 1. Do nothing: `none`
-  // 2. Find references for the same symbol: `find_all_references` (default)
-  "go_to_definition_fallback": "find_all_references",
   // How to scroll the target into view when navigating to a definition or reference
   // (e.g. Go to Definition, Go to Type Definition, Find All References).
   //
@@ -418,14 +399,6 @@
   // 4. Preserve the cursor's vertical position within the viewport, falling back to `center` when the cursor is
   //    offscreen: `preserve`
   "go_to_definition_scroll_strategy": "center",
-  // Where to show LSP results that can contain multiple locations
-  // (Go to Definition, Go to Implementation, Find All References). A single
-  // result always opens directly. Individual actions can override this with
-  // their `open_results_in` argument.
-  //
-  // 1. Open the results in a multibuffer: `multi_buffer` (default)
-  // 2. Open the results in a filterable picker: `picker`
-  "lsp_results_location": "multi_buffer",
   // Which level to use to filter out diagnostics displayed in the editor.
   //
   // Affects the editor rendering only, and does not interrupt
@@ -458,9 +431,6 @@
   "excerpt_context_lines": 2,
   // Globs to match against file paths to determine if a file is private.
   "private_files": ["**/.env*", "**/*.pem", "**/*.key", "**/*.cert", "**/*.crt", "**/secrets.yml"],
-  // Whether to use additional LSP queries to format (and amend) the code after
-  // every "trigger" symbol input, defined by LSP server capabilities.
-  "use_on_type_format": true,
   // Whether to automatically add matching closing characters when typing
   // opening parenthesis, bracket, brace, single or double quote characters.
   // For example, when you type '(', Zed will add a closing ) at the correct position.
@@ -775,36 +745,6 @@
   // If your search query contains any uppercase letters, the search becomes case-sensitive;
   // if it contains only lowercase letters, the search becomes case-insensitive.
   "use_smartcase_search": false,
-  // Inlay hint related settings
-  "inlay_hints": {
-    // Global switch to toggle hints on and off, switched off by default.
-    "enabled": false,
-    // Toggle certain types of hints on and off, all switched on by default.
-    "show_type_hints": true,
-    "show_parameter_hints": true,
-    "show_value_hints": true,
-    // Corresponds to null/None LSP hint type value.
-    "show_other_hints": true,
-    // Whether to show a background for inlay hints.
-    //
-    // If set to `true`, the background will use the `hint.background` color from the current theme.
-    "show_background": false,
-    // Time to wait after editing the buffer, before requesting the hints,
-    // set to 0 to disable debouncing.
-    "edit_debounce_ms": 700,
-    // Time to wait after scrolling the buffer, before requesting the hints,
-    // set to 0 to disable debouncing.
-    "scroll_debounce_ms": 50,
-    // A set of modifiers which, when pressed, will toggle the visibility of inlay hints.
-    // If the set if empty or not all the modifiers specified are pressed, inlay hints will not be toggled.
-    "toggle_on_modifiers_press": {
-      "control": false,
-      "shift": false,
-      "alt": false,
-      "platform": false,
-      "function": false,
-    },
-  },
   // Whether to resize all the panels in a dock when resizing the dock.
   // Can be a combination of "left", "right" and "bottom".
   "resize_all_panels_in_dock": ["left"],
@@ -858,16 +798,6 @@
       // When false, the view is locked to the leftmost position and long file names are clipped.
       "horizontal_scroll": true,
     },
-    // Which files containing diagnostic errors/warnings to mark in the project panel.
-    // This setting can take the following three values:
-    //
-    // 1. Do not mark any files:
-    //    "off"
-    // 2. Only mark files with errors:
-    //    "errors"
-    // 3. Mark files with errors and warnings:
-    //    "all"
-    "show_diagnostics": "all",
     // Whether to stick parent directories at top of the project panel.
     "sticky_scroll": true,
     // Settings related to indent guides in the project panel.
@@ -906,8 +836,6 @@
     //    No case folding, no natural number sorting:
     //    "unicode"
     "sort_order": "default",
-    // Whether to show error and warning count badges next to file names in the project panel.
-    "diagnostic_badges": false,
     // Whether to show the git status indicator next to file names in the project panel.
     "git_status_indicator": false,
     // Whether to enable drag-and-drop operations in the project panel.
@@ -1182,20 +1110,14 @@
           "create_directory": true,
           "create_thread": true,
           "delete_path": true,
-          "diagnostics": true,
-          "apply_code_action": true,
           "ask_user": true,
           "edit_file": true,
           "write_file": true,
           "fetch": true,
           "find_path": true,
-          "find_references": true,
-          "get_code_actions": true,
-          "go_to_definition": true,
           "list_agents_and_models": true,
           "list_directory": true,
           "move_path": true,
-          "rename_symbol": true,
           "read_file": true,
           "grep": true,
           "skill": true,
@@ -1210,15 +1132,11 @@
         // "enable_all_context_servers": true,
         "tools": {
           "create_thread": true,
-          "diagnostics": true,
           "ask_user": true,
           "fetch": true,
           "list_agents_and_models": true,
           "list_directory": true,
           "find_path": true,
-          "find_references": true,
-          "get_code_actions": true,
-          "go_to_definition": true,
           "read_file": true,
           "grep": true,
           "skill": true,
@@ -1291,39 +1209,8 @@
   },
   // Whether the screen sharing icon is shown in the os status bar.
   "show_call_status_icon": true,
-  // Whether to use language servers to provide code intelligence.
-  "enable_language_server": true,
-  // Whether to perform linked edits of associated ranges, if the language server supports it.
-  // For example, when editing opening <html> tag, the contents of the closing </html> tag will be edited as well.
-  "linked_edits": true,
-  // The list of language servers to use (or disable) for all languages.
-  //
-  // This is typically customized on a per-language basis.
-  "language_servers": ["..."],
-  // Controls how semantic tokens from language servers are used for syntax highlighting.
-  //
-  // Options:
-  // - "off": Do not request semantic tokens from language servers.
-  // - "combined": Use LSP semantic tokens together with tree-sitter highlighting as base.
-  // - "full": Use LSP semantic tokens exclusively to highlight the text, tree-sitter syntax highlighting is off.
-  //
-  // May require language server restart to properly apply.
-  "semantic_tokens": "off",
 
-  // Controls whether folding ranges from language servers are used instead of
-  // tree-sitter and indent-based folding.
-  //
-  // Options:
-  // - "off": Use tree-sitter and indent-based folding (default).
-  // - "on": Use LSP folding wherever possible, falling back to tree-sitter and indent-based folding when no results were returned by the server.
-  "document_folding_ranges": "off",
 
-  // Controls the source of document symbols used for outlines and breadcrumbs.
-  //
-  // Options:
-  // - "off": Use tree-sitter queries to compute document symbols (default).
-  // - "on": Use the language server's `textDocument/documentSymbol` LSP response. When enabled, tree-sitter is not used for document symbols.
-  "document_symbols": "off",
 
   // When to automatically save edited buffers. This setting can
   // take four values.
@@ -1379,17 +1266,6 @@
     // 3. Activate the left neighbour tab if present
     //     "left_neighbour"
     "activate_on_close": "history",
-    // Which files containing diagnostic errors/warnings to mark in the tabs.
-    // Diagnostics are only shown when file icons are also active.
-    // This setting only works when can take the following three values:
-    //
-    // 1. Do not mark any files:
-    //    "off"
-    // 2. Only mark files with errors:
-    //    "errors"
-    // 3. Mark files with errors and warnings:
-    //    "all"
-    "show_diagnostics": "off",
   },
   // Settings related to preview tabs.
   "preview_tabs": {
@@ -1488,33 +1364,26 @@
   //   "on" — format the whole buffer
   //   "off" — do not format
   //   "modifications" — format only lines with unstaged changes; skips formatting
-  //     when no git diff is available or the language server lacks range formatting
+  //     when no git diff is available or the formatter lacks range formatting
   //   "modifications_if_available" — same, but falls back to formatting the whole
   //     buffer when range formatting cannot be used
   // Keep in mind, if the autosave with delay is enabled, format_on_save will be ignored
   "format_on_save": "off",
   // How to perform a buffer format. This setting can take multiple values:
   //
-  // 1. Default. Format files using Zed's Prettier integration (if applicable),
-  //    or falling back to formatting via language server:
+  // 1. Default. Format files using Zed's Prettier integration (if applicable):
   //     "formatter": "auto"
-  // 2. Format code using the current language server:
-  //     "formatter": "language_server"
-  // 3. Format code using a specific language server:
-  //     "formatter": {"language_server": {"name": "ruff"}}
-  // 4. Format code using an external command:
+  // 2. Format code using an external command:
   //     "formatter": {
   //       "external": {
   //         "command": "prettier",
   //         "arguments": ["--stdin-filepath", "{buffer_path}"]
   //       }
   //     }
-  // 5. Format code using Zed's Prettier integration:
+  // 3. Format code using Zed's Prettier integration:
   //     "formatter": "prettier"
-  // 6. Format code using a code action
-  //     "formatter": {"code_action": "source.fixAll.eslint"}
-  // 7. An array of any format step specified above to apply in order
-  //     "formatter": [{"code_action": "source.fixAll.eslint"}, "prettier"]
+  // 4. An array of any format step specified above to apply in order
+  //     "formatter": ["prettier", {"external": {"command": "sed", "arguments": ["s/ *$//"]}}]
   "formatter": "auto",
   // How to soft-wrap long lines of text.
   // Possible values:
@@ -1565,58 +1434,6 @@
   // Automatically update Zed. This setting may be ignored on Linux if
   // installed through a package manager.
   "auto_update": true,
-  // How to render LSP `textDocument/documentColor` colors in the editor.
-  //
-  // Possible values:
-  //
-  // 1. Do not query and render document colors.
-  //      "lsp_document_colors": "none",
-  // 2. Render document colors as inlay hints near the color text (default).
-  //      "lsp_document_colors": "inlay",
-  // 3. Draw a border around the color text.
-  //      "lsp_document_colors": "border",
-  // 4. Draw a background behind the color text..
-  //      "lsp_document_colors": "background",
-  "lsp_document_colors": "inlay",
-  // Whether to query and display LSP `textDocument/documentLink` links in the editor.
-  //
-  // Default: true
-  "lsp_document_links": true,
-  // Diagnostics configuration.
-  "diagnostics": {
-    // Whether to show the project diagnostics button in the status bar.
-    "button": true,
-    // Whether to show warnings or not by default.
-    //
-    // Default: true
-    "include_warnings": true,
-    // Settings for using LSP pull diagnostics mechanism in Zed.
-    "lsp_pull_diagnostics": {
-      // Whether to pull for diagnostics or not.
-      "enabled": true,
-      // Minimum time to wait before pulling diagnostics from the language server(s).
-      // 0 turns the debounce off.
-      "debounce_ms": 50,
-    },
-    // Settings for inline diagnostics
-    "inline": {
-      // Whether to show diagnostics inline or not
-      "enabled": false,
-      // The delay in milliseconds to show inline diagnostics after the
-      // last diagnostic update.
-      "update_debounce_ms": 150,
-      // The amount of padding between the end of the source line and the start
-      // of the inline diagnostic in units of em widths.
-      "padding": 4,
-      // The minimum column to display inline diagnostics. This setting can be
-      // used to horizontally align inline diagnostics at some column. Lines
-      // longer than this value will still push diagnostics further to the right.
-      "min_column": 0,
-      // The minimum severity of the diagnostics to show inline.
-      // Inherits editor's diagnostics' max severity settings when `null`.
-      "max_severity": null,
-    },
-  },
   // Files or globs of files that will be excluded by Zed entirely. They will be skipped during file
   // scans, file searches, and not be displayed in the project file tree. Takes precedence over `file_scan_inclusions`.
   "file_scan_exclusions": [
@@ -2111,21 +1928,10 @@
     // Whether to invoke the OS-specific alert sound when the terminal bell (BEL character) is printed.
     "bell": "off",
   },
-  "code_actions_on_format": {},
   // Settings related to running tasks.
   "tasks": {
     "variables": {},
     "enabled": true,
-    // Use LSP tasks over Zed language extension ones.
-    // If no LSP tasks are returned due to error/timeout or regular execution,
-    // Zed language extension tasks will be used instead.
-    //
-    // Other Zed tasks will still be shown:
-    // * Zed task from either of the task config file
-    // * Zed task from history (e.g. one-off task was spawned before)
-    //
-    // Default: true
-    "prefer_lsp": true,
   },
   // An object whose keys are language names, and whose values
   // are arrays of filenames or extensions of files that should
@@ -2187,9 +1993,9 @@
     //
     // May take 3 values:
     // 1. "enabled"
-    //   Always fetch document's words for completions along with LSP completions.
+    //   Always fetch document's words for completions.
     // 2. "fallback"
-    //   Only if LSP response errors or times out, use document's words to show completions.
+    //   Only fetch document's words when there is nothing else to complete.
     // 3. "disabled"
     //   Never fetch or complete document's words for completions.
     //   (Word-based completions can still be queried via a separate action)
@@ -2201,41 +2007,11 @@
     //
     // Default: 3
     "words_min_length": 3,
-    // Whether to fetch LSP completions or not.
-    //
-    // Default: true
-    "lsp": true,
-    // When fetching LSP completions, determines how long to wait for a response of a particular server.
-    // When set to 0, waits indefinitely.
-    //
-    // Default: 0
-    "lsp_fetch_timeout_ms": 0,
-    // Controls what range to replace when accepting LSP completions.
-    //
-    // When LSP servers give an `InsertReplaceEdit` completion, they provides two ranges: `insert` and `replace`. Usually, `insert`
-    // contains the word prefix before your cursor and `replace` contains the whole word.
-    //
-    // Effectively, this setting just changes whether Zed will use the received range for `insert` or `replace`, so the results may
-    // differ depending on the underlying LSP server.
-    //
-    // Possible values:
-    // 1. "insert"
-    //   Replaces text before the cursor, using the `insert` range described in the LSP specification.
-    // 2. "replace"
-    //   Replaces text before and after the cursor, using the `replace` range described in the LSP specification.
-    // 3. "replace_subsequence"
-    //   Behaves like `"replace"` if the text that would be replaced is a subsequence of the completion text,
-    //   and like `"insert"` otherwise.
-    // 4. "replace_suffix"
-    //   Behaves like `"replace"` if the text after the cursor is a suffix of the completion, and like
-    //   `"insert"` otherwise.
-    "lsp_insert_mode": "replace_suffix",
   },
   // Different settings for specific languages.
   "languages": {
     "Astro": {
       "format_on_save": "on",
-      "language_servers": ["astro-language-server", "..."],
       "prettier": {
         "allowed": true,
         "plugins": ["prettier-plugin-astro"],
@@ -2247,19 +2023,14 @@
       },
     },
     "C": {
-      "use_on_type_format": false,
       "prettier": {
         "allowed": false,
       },
     },
     "C++": {
-      "use_on_type_format": false,
       "prettier": {
         "allowed": false,
       },
-    },
-    "CSharp": {
-      "language_servers": ["roslyn", "!csharp-ls", "!omnisharp", "..."],
     },
     "CSS": {
       "prettier": {
@@ -2277,18 +2048,13 @@
     },
     "EEx": {
       "format_on_save": "on",
-      "language_servers": ["elixir-ls", "!expert", "!dexter", "!next-ls", "!lexical", "..."],
     },
     "Elixir": {
       "format_on_save": "on",
-      "language_servers": ["elixir-ls", "!expert", "!dexter", "!next-ls", "!lexical", "!emmet-language-server", "..."],
     },
     "Elm": {
       "format_on_save": "on",
       "tab_size": 4,
-    },
-    "Erlang": {
-      "language_servers": ["erlang-ls", "!elp", "..."],
     },
     "Git Commit": {
       "allow_rewrap": "anywhere",
@@ -2298,9 +2064,6 @@
     "Go": {
       "format_on_save": "on",
       "hard_tabs": true,
-      "code_actions_on_format": {
-        "source.organizeImports": true,
-      },
     },
     "GraphQL": {
       "format_on_save": "on",
@@ -2310,15 +2073,11 @@
     },
     "HEEx": {
       "format_on_save": "on",
-      "language_servers": ["elixir-ls", "!expert", "!dexter", "!next-ls", "!lexical", "..."],
     },
     "HTML": {
       "prettier": {
         "allowed": true,
       },
-    },
-    "HTML+ERB": {
-      "language_servers": ["herb", "!ruby-lsp", "..."],
     },
     "Java": {
       "prettier": {
@@ -2327,7 +2086,6 @@
       },
     },
     "JavaScript": {
-      "language_servers": ["!typescript-language-server", "vtsls", "..."],
       "prettier": {
         "allowed": true,
       },
@@ -2342,23 +2100,16 @@
         "allowed": true,
       },
     },
-    "JS+ERB": {
-      "language_servers": ["!ruby-lsp", "..."],
-    },
     "Kotlin": {
       "format_on_save": "on",
-      "language_servers": ["!kotlin-language-server", "kotlin-lsp", "..."],
     },
     "LaTeX": {
-      "formatter": "language_server",
-      "language_servers": ["texlab", "..."],
       "prettier": {
         "allowed": true,
         "plugins": ["prettier-plugin-latex"],
       },
     },
     "Markdown": {
-      "use_on_type_format": false,
       "remove_trailing_whitespace_on_save": false,
       "allow_rewrap": "anywhere",
       "soft_wrap": "editor_width",
@@ -2370,7 +2121,6 @@
       },
     },
     "PHP": {
-      "language_servers": ["phpactor", "!intelephense", "!phptools", "!phpantom", "..."],
       "prettier": {
         "allowed": true,
         "plugins": ["@prettier/plugin-php"],
@@ -2384,32 +2134,6 @@
         "words": "disabled",
       },
     },
-    "Proto": {
-      "language_servers": ["buf", "!protols", "!protobuf-language-server", "..."],
-    },
-    "Python": {
-      "code_actions_on_format": {
-        "source.organizeImports.ruff": true,
-      },
-      "formatter": {
-        "language_server": {
-          "name": "ruff",
-        },
-      },
-      "language_servers": ["basedpyright", "ruff", "!ty", "!pyrefly", "!pyright", "!pylsp", "..."],
-    },
-    "Ruby": {
-      "language_servers": [
-        "solargraph",
-        "!ruby-lsp",
-        "!rubocop",
-        "!sorbet",
-        "!steep",
-        "!kanayago",
-        "!fuzzy-ruby-server",
-        "...",
-      ],
-    },
     "Rust": {
       "format_on_save": "on",
     },
@@ -2420,17 +2144,14 @@
     },
     "Starlark": {
       "format_on_save": "on",
-      "language_servers": ["starpls", "!buck2-lsp", "!tilt", "..."],
     },
     "Svelte": {
-      "language_servers": ["svelte-language-server", "..."],
       "prettier": {
         "allowed": true,
         "plugins": ["prettier-plugin-svelte"],
       },
     },
     "TSX": {
-      "language_servers": ["!typescript-language-server", "vtsls", "..."],
       "prettier": {
         "allowed": true,
       },
@@ -2441,17 +2162,11 @@
       },
     },
     "TypeScript": {
-      "language_servers": ["!typescript-language-server", "vtsls", "..."],
       "prettier": {
         "allowed": true,
       },
     },
-    "SystemVerilog": {
-      "language_servers": ["!slang", "..."],
-      "use_on_type_format": false,
-    },
     "Vue.js": {
-      "language_servers": ["vue-language-server", "vtsls", "..."],
       "prettier": {
         "allowed": true,
       },
@@ -2467,12 +2182,8 @@
         "allowed": true,
       },
     },
-    "YAML+ERB": {
-      "language_servers": ["!ruby-lsp", "..."],
-    },
     "Zig": {
       "format_on_save": "on",
-      "language_servers": ["zls", "..."],
     },
   },
   // Different settings for specific language models.
@@ -2555,69 +2266,13 @@
   "jsx_tag_auto_close": {
     "enabled": true,
   },
-  // LSP Specific settings.
-  "lsp": {
-    // Specify the LSP name as a key here.
-    // "rust-analyzer": {
-    //     // A special flag for rust-analyzer integration, to use server-provided tasks
-    //     enable_lsp_tasks": true,
-    //     // These initialization options are merged into Zed's defaults
-    //     "initialization_options": {
-    //         "check": {
-    //             "command": "clippy" // rust-analyzer.check.command (default: "check")
-    //         }
-    //     }
-    // }
-  },
   // Common language server settings.
   "global_lsp_settings": {
-    // Whether to show the LSP servers button in the status bar.
-    "button": true,
     // The maximum amount of time to wait for responses from language servers, in seconds.
     // A value of 0 will result in no timeout being applied.
     //
     // Default: 120
     "request_timeout": 120,
-    // The maximum line length a buffer may contain before language server features are disabled
-    // for the entire buffer.
-    //
-    // Default: 20000
-    "max_buffer_line_length": 20000,
-    "notifications": {
-      // Timeout in milliseconds for automatically dismissing language server notifications.
-      // Set to 0 to disable auto-dismiss.
-      "dismiss_timeout_ms": 5000,
-    },
-    // Rules for highlighting semantic tokens. User-defined rules are prepended to the default
-    // rules (viewable via "Show Default Semantic Token Rules"), so they take precedence.
-    //
-    // Each `rule` has the following properties:
-    // - `token_type`: The LSP semantic token type to customize. If omitted, the rule matches all token types.
-    // - `token_modifiers`: A list of LSP semantic token modifiers to match. All modifiers must be present
-    //    to match.
-    // - `style`: A list of styles from the current syntax theme to use. The first style found is used. Any
-    //    settings below override that style.
-    // - `foreground_color`: The foreground color to use for the token type, in hex format (e.g., "#ff0000").
-    // - `background_color`: The background color to use for the token type, in hex format.
-    // - `underline`: A boolean or color to underline with, in hex format. If `true`, then the token will be underlined with the text color.
-    // - `strikethrough`: A boolean or color to strikethrough with, in hex format. If `true`, then the token have a strikethrough with the text color.
-    // - `font_weight`: One of "normal", "bold".
-    // - `font_style`: One of "normal", "italic".
-    //
-    // The first matching rule for a token is applied. Because user-defined rules are prepended to the
-    // default rules, a token can be entirely disabled by adding an empty rule that matches it.
-    //
-    // Example: Highlight unresolved references in red and bold:
-    // "semantic_token_rules": [
-    //   {
-    //     "token_type": "unresolvedReference",
-    //     "foreground_color": "#c93f3f",
-    //     "font_weight": "bold"
-    //   }
-    // ]
-    //
-    // Default rules are viewable via the "zed: show default semantic token rules" action.
-    "semantic_token_rules": [],
   },
   // Jupyter settings
   "jupyter": {
@@ -2712,13 +2367,7 @@
   // Settings overrides to use when using macOS.
   "macos": {},
   // Settings overrides to use when using Windows.
-  "windows": {
-    "languages": {
-      "PHP": {
-        "language_servers": ["intelephense", "!phpactor", "!phptools", "!phpantom", "..."],
-      },
-    },
-  },
+  "windows": {},
   // Whether to show full labels in line indicator or short ones
   //
   // Values:

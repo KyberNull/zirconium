@@ -56,26 +56,6 @@ message Envelope {
     UpdateProjectCollaborator update_project_collaborator = 30;
     RemoveProjectCollaborator remove_project_collaborator = 31;
 
-    GetDefinition get_definition = 32;
-    GetDefinitionResponse get_definition_response = 33;
-    GetEditPredictionDefinition get_edit_prediction_definition = 462;
-    GetEditPredictionDefinitionResponse get_edit_prediction_definition_response = 463;
-    GetEditPredictionTypeDefinition get_edit_prediction_type_definition = 464;
-    GetEditPredictionTypeDefinitionResponse get_edit_prediction_type_definition_response = 465;
-    GetDeclaration get_declaration = 237;
-    GetDeclarationResponse get_declaration_response = 238;
-    GetTypeDefinition get_type_definition = 34;
-    GetTypeDefinitionResponse get_type_definition_response = 35;
-
-    GetReferences get_references = 36;
-    GetReferencesResponse get_references_response = 37;
-    GetDocumentHighlights get_document_highlights = 38;
-    GetDocumentHighlightsResponse get_document_highlights_response = 39;
-    GetProjectSymbols get_project_symbols = 40;
-    GetProjectSymbolsResponse get_project_symbols_response = 41;
-    OpenBufferForSymbol open_buffer_for_symbol = 42;
-    OpenBufferForSymbolResponse open_buffer_for_symbol_response = 43;
-
     UpdateProject update_project = 44;
     UpdateWorktree update_worktree = 45;
 
@@ -88,9 +68,6 @@ message Envelope {
     ExpandProjectEntryResponse expand_project_entry_response = 52;
     ExpandAllForProjectEntry expand_all_for_project_entry = 291;
     ExpandAllForProjectEntryResponse expand_all_for_project_entry_response = 292;
-    UpdateDiagnosticSummary update_diagnostic_summary = 53;
-    StartLanguageServer start_language_server = 54;
-    UpdateLanguageServer update_language_server = 55;
 
     OpenBufferById open_buffer_by_id = 56;
     OpenBufferByPath open_buffer_by_path = 57;
@@ -107,22 +84,6 @@ message Envelope {
     SynchronizeBuffersResponse synchronize_buffers_response = 68;
     FormatBuffers format_buffers = 69;
     FormatBuffersResponse format_buffers_response = 70;
-    GetCompletions get_completions = 71;
-    GetCompletionsResponse get_completions_response = 72;
-    ResolveCompletionDocumentation resolve_completion_documentation = 73;
-    ResolveCompletionDocumentationResponse resolve_completion_documentation_response = 74;
-    ApplyCompletionAdditionalEdits apply_completion_additional_edits = 75;
-    ApplyCompletionAdditionalEditsResponse apply_completion_additional_edits_response = 76;
-    GetCodeActions get_code_actions = 77;
-    GetCodeActionsResponse get_code_actions_response = 78;
-    GetHover get_hover = 79;
-    GetHoverResponse get_hover_response = 80;
-    ApplyCodeAction apply_code_action = 81;
-    ApplyCodeActionResponse apply_code_action_response = 82;
-    PrepareRename prepare_rename = 83;
-    PrepareRenameResponse prepare_rename_response = 84;
-    PerformRename perform_rename = 85;
-    PerformRenameResponse perform_rename_response = 86;
 
     UpdateContacts update_contacts = 89;
     ShowContacts show_contacts = 91;
@@ -140,16 +101,7 @@ message Envelope {
     Unfollow unfollow = 101;
     UpdateDiffBases update_diff_bases = 104;
 
-    OnTypeFormatting on_type_formatting = 105;
-    OnTypeFormattingResponse on_type_formatting_response = 106;
-
     UpdateWorktreeSettings update_worktree_settings = 107;
-
-    InlayHints inlay_hints = 108;
-    InlayHintsResponse inlay_hints_response = 109;
-    ResolveInlayHint resolve_inlay_hint = 110;
-    ResolveInlayHintResponse resolve_inlay_hint_response = 111;
-    RefreshInlayHints refresh_inlay_hints = 112;
 
     CreateChannel create_channel = 113;
     CreateChannelResponse create_channel_response = 114;
@@ -196,14 +148,9 @@ message Envelope {
     GetNotificationsResponse get_notifications_response = 151;
     DeleteNotification delete_notification = 152;
     MarkNotificationRead mark_notification_read = 153;
-    LspExtExpandMacro lsp_ext_expand_macro = 154;
-    LspExtExpandMacroResponse lsp_ext_expand_macro_response = 155;
     SetRoomParticipantRole set_room_participant_role = 156;
 
     UpdateUserChannels update_user_channels = 157;
-
-    GetImplementation get_implementation = 162;
-    GetImplementationResponse get_implementation_response = 163;
 
     UpdateChannelMessage update_channel_message = 170;
     ChannelMessageUpdate channel_message_update = 171;
@@ -213,8 +160,6 @@ message Envelope {
 
     UpdateNotification update_notification = 174;
 
-    RestartLanguageServers restart_language_servers = 208;
-
     RejoinRemoteProjects rejoin_remote_projects = 186;
     RejoinRemoteProjectsResponse rejoin_remote_projects_response = 187;
 
@@ -223,19 +168,10 @@ message Envelope {
     TaskContextForLocation task_context_for_location = 203;
     TaskContext task_context = 204;
 
-    LinkedEditingRange linked_editing_range = 209;
-    LinkedEditingRangeResponse linked_editing_range_response = 210;
-
-    GetSignatureHelp get_signature_help = 217;
-    GetSignatureHelpResponse get_signature_help_response = 218;
-
     ListRemoteDirectory list_remote_directory = 219;
     ListRemoteDirectoryResponse list_remote_directory_response = 220;
     AddWorktree add_worktree = 222;
     AddWorktreeResponse add_worktree_response = 223;
-
-    LspExtSwitchSourceHeader lsp_ext_switch_source_header = 241;
-    LspExtSwitchSourceHeaderResponse lsp_ext_switch_source_header_response = 242;
 
     FindSearchCandidates find_search_candidates = 243;
 
@@ -244,8 +180,6 @@ message Envelope {
     ShutdownRemoteServer shutdown_remote_server = 257;
 
     RemoveWorktree remove_worktree = 258;
-
-    LanguageServerLog language_server_log = 260;
 
     Toast toast = 261;
     HideToast hide_toast = 262;
@@ -256,9 +190,6 @@ message Envelope {
     GetPermalinkToLineResponse get_permalink_to_line_response = 265;
 
     FlushBufferedMessages flush_buffered_messages = 267;
-
-    LanguageServerPromptRequest language_server_prompt_request = 268;
-    LanguageServerPromptResponse language_server_prompt_response = 269;
 
     GitBranchesResponse git_branches_response = 271;
 
@@ -273,19 +204,12 @@ message Envelope {
     GetPathMetadata get_path_metadata = 278;
     GetPathMetadataResponse get_path_metadata_response = 279;
 
-    CancelLanguageServerWork cancel_language_server_work = 282;
-
-    LspExtOpenDocs lsp_ext_open_docs = 283;
-    LspExtOpenDocsResponse lsp_ext_open_docs_response = 284;
-
     SyncExtensions sync_extensions = 285;
     SyncExtensionsResponse sync_extensions_response = 286;
     InstallExtension install_extension = 287;
 
     OpenUnstagedDiff open_unstaged_diff = 288;
     OpenUnstagedDiffResponse open_unstaged_diff_response = 289;
-
-    RegisterBufferWithLanguageServers register_buffer_with_language_servers = 290;
 
     Stage stage = 293;
     Unstage unstage = 294;
@@ -308,9 +232,6 @@ message Envelope {
     GetRemotesResponse get_remotes_response = 307;
     Pull pull = 308;
 
-    ApplyCodeActionKind apply_code_action_kind = 309;
-    ApplyCodeActionKindResponse apply_code_action_kind_response = 310;
-
     RemoteMessageResponse remote_message_response = 311;
 
     GitGetBranches git_get_branches = 312;
@@ -327,41 +248,11 @@ message Envelope {
     GitDiffResponse git_diff_response = 320;
     GitInit git_init = 321;
 
-    CodeLens code_lens = 322;
-    GetCodeLens get_code_lens = 323;
-    GetCodeLensResponse get_code_lens_response = 324;
-    RefreshCodeLens refresh_code_lens = 325;
-
-    reserved 326, 327, 339 to 342, 348, 369 to 370;
-
     UpdateRepository update_repository = 328;
     RemoveRepository remove_repository = 329;
 
-    GetDocumentSymbols get_document_symbols = 330;
-    GetDocumentSymbolsResponse get_document_symbols_response = 331;
-
     LoadCommitDiff load_commit_diff = 334;
     LoadCommitDiffResponse load_commit_diff_response = 335;
-
-    StopLanguageServers stop_language_servers = 336;
-
-    LspExtRunnables lsp_ext_runnables = 337;
-    LspExtRunnablesResponse lsp_ext_runnables_response = 338;
-
-    LspExtGoToParentModule lsp_ext_go_to_parent_module = 343;
-    LspExtGoToParentModuleResponse lsp_ext_go_to_parent_module_response = 344;
-    LspExtCancelFlycheck lsp_ext_cancel_flycheck = 345;
-    LspExtRunFlycheck lsp_ext_run_flycheck = 346;
-    LspExtClearFlycheck lsp_ext_clear_flycheck = 347;
-
-    GetDocumentDiagnostics get_document_diagnostics = 350;
-    GetDocumentDiagnosticsResponse get_document_diagnostics_response = 351;
-    PullWorkspaceDiagnostics pull_workspace_diagnostics = 352;
-
-    GetDocumentColor get_document_color = 353;
-    GetDocumentColorResponse get_document_color_response = 354;
-    GetColorPresentation get_color_presentation = 355;
-    GetColorPresentationResponse get_color_presentation_response = 356;
 
     Stash stash = 357;
     StashPop stash_pop = 358;
@@ -374,10 +265,6 @@ message Envelope {
 
     GitClone git_clone = 363;
     GitCloneResponse git_clone_response = 364;
-
-    LspQuery lsp_query = 365;
-    LspQueryResponse lsp_query_response = 366;
-    ToggleLspLogs toggle_lsp_logs = 367;
 
     UpdateUserSettings update_user_settings = 368;
 
@@ -439,12 +326,6 @@ message Envelope {
     DownloadFileResponse download_file_response = 416;
     CreateFileForPeer create_file_for_peer = 417;
 
-    SemanticTokens semantic_tokens = 418;
-    SemanticTokensResponse semantic_tokens_response = 419;
-    RefreshSemanticTokens refresh_semantic_tokens = 420;
-    GetFoldingRanges get_folding_ranges = 421;
-    GetFoldingRangesResponse get_folding_ranges_response = 422;
-
     GetRemoteProfilingData get_remote_profiling_data = 423;
     GetRemoteProfilingDataResponse get_remote_profiling_data_response = 424;
 
@@ -473,15 +354,9 @@ message Envelope {
     SearchCommitsResponse search_commits_response = 450;
     GetInitialGraphData get_initial_graph_data = 451;
     GetInitialGraphDataResponse get_initial_graph_data_response = 452;
-    GetDocumentLinks get_document_links = 453;
-    GetDocumentLinksResponse get_document_links_response = 454;
-    ResolveDocumentLink resolve_document_link = 455;
-    ResolveDocumentLinkResponse resolve_document_link_response = 456;
     GitWorktreeCreatedAt git_worktree_created_at = 457;
     GitWorktreeCreatedAtResponse git_worktree_created_at_response = 458;
     TelemetryEvent telemetry_event = 459;
-    ResolveCodeAction resolve_code_action = 460;
-    ResolveCodeActionResponse resolve_code_action_response = 461;
     TrashProjectEntry trash_project_entry = 466;
     TrashProjectEntryResponse trash_project_entry_response = 467;
     RestoreProjectEntry restore_project_entry = 468;
@@ -490,15 +365,15 @@ message Envelope {
     GitAddPathToGitInfoExclude git_add_path_to_git_info_exclude = 471;
     LoadCommitTemplate load_commit_template = 472;
     LoadCommitTemplateResponse load_commit_template_response = 473;
-    RefreshDocumentColors refresh_document_colors = 474;
-    RefreshDocumentLinks refresh_document_links = 475;
-    RefreshFoldingRanges refresh_folding_ranges = 476;
-    RefreshDocumentSymbols refresh_document_symbols = 477;
     BlameBufferAtRevision blame_buffer_at_revision = 478;
     BlameBufferAtRevisionResponse blame_buffer_at_revision_response = 479; // current max
   }
 
   reserved 87 to 88;
+  reserved 326 to 327;
+  reserved 339 to 342;
+  reserved 348;
+  reserved 369 to 370;
   reserved 90;
   reserved 102 to 103;
   reserved 158 to 161;
@@ -524,6 +399,32 @@ message Envelope {
   reserved 211 to 216, 232 to 233;
   reserved 397 to 398;
   reserved 406 to 408;
+  reserved 32 to 43;
+  reserved 53 to 55;
+  reserved 71 to 86;
+  reserved 105 to 106;
+  reserved 108 to 112;
+  reserved 154 to 155;
+  reserved 162 to 163;
+  reserved 208 to 210;
+  reserved 217 to 218;
+  reserved 237 to 238;
+  reserved 241 to 242;
+  reserved 260;
+  reserved 268 to 269;
+  reserved 282 to 284;
+  reserved 290;
+  reserved 309 to 310;
+  reserved 322 to 325;
+  reserved 330 to 331;
+  reserved 336 to 338;
+  reserved 343 to 347;
+  reserved 350 to 356;
+  reserved 365 to 367;
+  reserved 418 to 422;
+  reserved 453 to 456;
+  reserved 460 to 465;
+  reserved 474 to 477;
 }
 
 message Hello {

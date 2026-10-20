@@ -1,6 +1,6 @@
 ---
 title: Diff
-description: "Configure Diff language support in Zed, including language servers, formatting, and debugging."
+description: "Configure Diff language support in Zed, including formatting and syntax highlighting."
 ---
 
 # Diff

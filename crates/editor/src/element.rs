@@ -7,14 +7,14 @@ pub use header::file_status_label_color;
 pub(crate) use header::{header_jump_data, render_buffer_header};
 
 use crate::{
-    BUFFER_HEADER_PADDING, BlockId, ChunkRendererContext, ChunkReplacement, CodeActionSource,
-    ConflictsOurs, ConflictsOursMarker, ConflictsOuter, ConflictsTheirs, ConflictsTheirsMarker,
+    BUFFER_HEADER_PADDING, BlockId, ChunkRendererContext, ChunkReplacement, ConflictsOurs,
+    ConflictsOursMarker, ConflictsOuter, ConflictsTheirs, ConflictsTheirsMarker,
     ContextMenuPlacement, CursorShape, CustomBlockId, DisplayDiffHunk, DisplayPoint, DisplayRow,
     EditDisplayMode, EditPrediction, Editor, EditorMode, EditorSettings, EditorSnapshot,
     EditorStyle, FILE_HEADER_HEIGHT, FocusedBlock, GutterDimensions, HalfPageDown, HalfPageUp,
-    HandleInput, HoveredCursor, InlayHintRefreshReason, LineDown, LineHighlight, LineUp,
-    MAX_LINE_LEN, MINIMAP_FONT_SIZE, PageDown, PageUp, Point, RowExt, RowRangeExt, Selection,
-    SelectionDragState, SizingBehavior, SoftWrap, ToPoint,
+    HandleInput, HoveredCursor, LineDown, LineHighlight, LineUp, MAX_LINE_LEN, MINIMAP_FONT_SIZE,
+    PageDown, PageUp, Point, RowExt, RowRangeExt, Selection, SelectionDragState, SizingBehavior,
+    SoftWrap, ToPoint,
     code_context_menus::{CodeActionsMenu, MENU_ASIDE_MAX_WIDTH, MENU_ASIDE_MIN_WIDTH, MENU_GAP},
     column_pixels,
     display_map::{
@@ -22,15 +22,14 @@ use crate::{
         HighlightKey, HighlightedChunk, ToDisplayPoint,
     },
     editor_settings::{
-        CurrentLineHighlight, DocumentColorsRenderMode, GitGutterWidth, Minimap, MinimapThumb,
-        MinimapThumbBorder, ScrollBeyondLastLine, ScrollbarAxes, ScrollbarDiagnostics, ShowMinimap,
+        CurrentLineHighlight, GitGutterWidth, Minimap, MinimapThumb, MinimapThumbBorder,
+        ScrollBeyondLastLine, ScrollbarAxes, ScrollbarDiagnostics, ShowMinimap,
     },
     git::blame::{BlameRenderer, GitBlame, GlobalBlameRenderer},
     hover_popover::{
         self, HOVER_POPOVER_GAP, MIN_POPOVER_CHARACTER_WIDTH, MIN_POPOVER_LINE_HEIGHT,
         POPOVER_RIGHT_OFFSET,
     },
-    inlay_hint_settings,
     scroll::{
         ActiveScrollbarState, ScrollOffset, ScrollPixelOffset, ScrollbarThumbState,
         scroll_amount::ScrollAmount,
@@ -47,9 +46,9 @@ use gpui::{
     GlobalElementId, Hitbox, HitboxBehavior, Hsla, InteractiveElement, IntoElement, IsZero,
     ModifiersChangedEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, PaintQuad,
     ParentElement, Pixels, ScrollHandle, ShapedLine, SharedString, Size,
-    StatefulInteractiveElement, Style, Styled, StyledText, TaskExt, TextAlign, TextRun,
-    TextStyleRefinement, WeakEntity, Window, div, fill, outline, pattern_slash, point, px, quad,
-    relative, size, solid_background, transparent_black,
+    StatefulInteractiveElement, Style, Styled, StyledText, TextAlign, TextRun, TextStyleRefinement,
+    WeakEntity, Window, div, fill, outline, pattern_slash, point, px, quad, relative, size,
+    solid_background, transparent_black,
 };
 use itertools::Itertools;
 use language::{
@@ -264,9 +263,6 @@ impl EditorElement {
             }
         });
 
-        crate::rust_analyzer_ext::apply_related_actions(editor, window, cx);
-        crate::clangd_ext::apply_related_actions(editor, window, cx);
-
         register_action(editor, window, Editor::open_context_menu);
         register_action(editor, window, Editor::move_left);
         register_action(editor, window, Editor::move_right);
@@ -388,52 +384,8 @@ impl EditorElement {
             register_action(editor, window, Editor::expand_excerpts_up);
             register_action(editor, window, Editor::expand_excerpts_down);
         }
-        register_action(editor, window, Editor::go_to_diagnostic);
-        register_action(editor, window, Editor::go_to_prev_diagnostic);
         register_action(editor, window, Editor::go_to_next_hunk);
         register_action(editor, window, Editor::go_to_prev_hunk);
-        register_action(editor, window, Editor::go_to_next_document_highlight);
-        register_action(editor, window, Editor::go_to_prev_document_highlight);
-        register_action(editor, window, |editor, action, window, cx| {
-            editor
-                .go_to_definition(action, window, cx)
-                .detach_and_log_err(cx);
-        });
-        register_action(editor, window, |editor, action, window, cx| {
-            editor
-                .go_to_definition_split(action, window, cx)
-                .detach_and_log_err(cx);
-        });
-        register_action(editor, window, |editor, action, window, cx| {
-            editor
-                .go_to_declaration(action, window, cx)
-                .detach_and_log_err(cx);
-        });
-        register_action(editor, window, |editor, action, window, cx| {
-            editor
-                .go_to_declaration_split(action, window, cx)
-                .detach_and_log_err(cx);
-        });
-        register_action(editor, window, |editor, action, window, cx| {
-            editor
-                .go_to_implementation(action, window, cx)
-                .detach_and_log_err(cx);
-        });
-        register_action(editor, window, |editor, action, window, cx| {
-            editor
-                .go_to_implementation_split(action, window, cx)
-                .detach_and_log_err(cx);
-        });
-        register_action(editor, window, |editor, action, window, cx| {
-            editor
-                .go_to_type_definition(action, window, cx)
-                .detach_and_log_err(cx);
-        });
-        register_action(editor, window, |editor, action, window, cx| {
-            editor
-                .go_to_type_definition_split(action, window, cx)
-                .detach_and_log_err(cx);
-        });
         register_action(editor, window, Editor::open_url);
         register_action(editor, window, Editor::open_selected_filename);
         register_action(editor, window, Editor::fold);
@@ -471,17 +423,7 @@ impl EditorElement {
         register_action(editor, window, Editor::toggle_line_numbers);
         register_action(editor, window, Editor::toggle_relative_line_numbers);
         register_action(editor, window, Editor::toggle_indent_guides);
-        register_action(editor, window, Editor::toggle_inline_values);
         register_action(editor, window, Editor::toggle_edit_predictions);
-        if editor.read(cx).lsp_data_enabled() {
-            register_action(editor, window, Editor::toggle_inlay_hints);
-            register_action(editor, window, Editor::toggle_code_lens_action);
-            register_action(editor, window, Editor::toggle_semantic_highlights);
-            register_action(editor, window, Editor::toggle_diagnostics);
-        }
-        if editor.read(cx).inline_diagnostics_enabled() {
-            register_action(editor, window, Editor::toggle_inline_diagnostics);
-        }
         if editor.read(cx).supports_minimap(cx) {
             register_action(editor, window, Editor::toggle_minimap);
         }
@@ -517,12 +459,8 @@ impl EditorElement {
         register_action(editor, window, Editor::cancel_edit_review_comment_action);
         register_action(editor, window, Editor::go_to_previous_change);
         register_action(editor, window, Editor::go_to_next_change);
-        register_action(editor, window, Editor::go_to_prev_reference);
-        register_action(editor, window, Editor::go_to_next_reference);
         register_action(editor, window, Editor::go_to_previous_symbol);
         register_action(editor, window, Editor::go_to_next_symbol);
-        register_action(editor, window, Editor::restart_language_server);
-        register_action(editor, window, Editor::stop_language_server);
         register_action(editor, window, Editor::show_character_palette);
         register_action(editor, window, |editor, action, window, cx| {
             if let Some(task) = editor.compose_completion(action, window, cx) {
@@ -531,16 +469,6 @@ impl EditorElement {
                 cx.propagate();
             }
         });
-        register_action(editor, window, |editor, action, window, cx| {
-            if let Some(task) = editor.find_all_references(action, window, cx) {
-                task.detach_and_log_err(cx);
-            } else {
-                cx.propagate();
-            }
-        });
-        register_action(editor, window, Editor::show_signature_help);
-        register_action(editor, window, Editor::signature_help_prev);
-        register_action(editor, window, Editor::signature_help_next);
         register_action(editor, window, Editor::show_edit_prediction);
         register_action(editor, window, Editor::context_menu_first);
         register_action(editor, window, Editor::context_menu_prev);
@@ -663,13 +591,6 @@ impl EditorElement {
                 });
             }
             register_action(editor, window, |editor, action, window, cx| {
-                if let Some(task) = editor.organize_imports(action, window, cx) {
-                    editor.detach_and_notify_err(task, window, cx);
-                } else {
-                    cx.propagate();
-                }
-            });
-            register_action(editor, window, |editor, action, window, cx| {
                 if let Some(task) = editor.confirm_completion(action, window, cx) {
                     editor.detach_and_notify_err(task, window, cx);
                 } else {
@@ -697,20 +618,6 @@ impl EditorElement {
                     cx.propagate();
                 }
             });
-            register_action(editor, window, |editor, action, window, cx| {
-                if let Some(task) = editor.rename(action, window, cx) {
-                    editor.detach_and_notify_err(task, window, cx);
-                } else {
-                    cx.propagate();
-                }
-            });
-            register_action(editor, window, |editor, action, window, cx| {
-                if let Some(task) = editor.confirm_rename(action, window, cx) {
-                    editor.detach_and_notify_err(task, window, cx);
-                } else {
-                    cx.propagate();
-                }
-            });
         }
     }
 
@@ -723,25 +630,6 @@ impl EditorElement {
                     return;
                 }
                 editor.update(cx, |editor, cx| {
-                    let inlay_hint_settings = inlay_hint_settings(
-                        editor.selections.newest_anchor().head(),
-                        &editor.buffer.read(cx).snapshot(cx),
-                        cx,
-                    );
-
-                    if let Some(inlay_modifiers) = inlay_hint_settings
-                        .toggle_on_modifiers_press
-                        .as_ref()
-                        .filter(|modifiers| modifiers.modified())
-                    {
-                        editor.refresh_inlay_hints(
-                            InlayHintRefreshReason::ModifiersChanged(
-                                inlay_modifiers == &event.modifiers,
-                            ),
-                            cx,
-                        );
-                    }
-
                     if editor.hover_state.focused(window, cx) {
                         return;
                     }
@@ -1674,328 +1562,6 @@ impl EditorElement {
         display_hunks
     }
 
-    fn layout_inline_diagnostics(
-        &self,
-        line_layouts: &[LineWithInvisibles],
-        crease_trailers: &[Option<CreaseTrailerLayout>],
-        row_block_types: &HashMap<DisplayRow, bool>,
-        content_origin: gpui::Point<Pixels>,
-        scroll_position: gpui::Point<ScrollOffset>,
-        scroll_pixel_position: gpui::Point<ScrollPixelOffset>,
-        edit_prediction_popover_origin: Option<gpui::Point<Pixels>>,
-        start_row: DisplayRow,
-        end_row: DisplayRow,
-        line_height: Pixels,
-        em_width: Pixels,
-        style: &EditorStyle,
-        window: &mut Window,
-        cx: &mut App,
-    ) -> HashMap<DisplayRow, AnyElement> {
-        let max_severity = match self
-            .editor
-            .read(cx)
-            .inline_diagnostics_enabled()
-            .then(|| {
-                ProjectSettings::get_global(cx)
-                    .diagnostics
-                    .inline
-                    .max_severity
-                    .unwrap_or_else(|| self.editor.read(cx).diagnostics_max_severity)
-                    .into_lsp()
-            })
-            .flatten()
-        {
-            Some(max_severity) => max_severity,
-            None => return HashMap::default(),
-        };
-
-        let active_diagnostics_group = self.editor.read(cx).active_diagnostic_group_id();
-
-        let diagnostics_by_rows = self.editor.update(cx, |editor, cx| {
-            let snapshot = editor.snapshot(window, cx);
-            editor
-                .inline_diagnostics
-                .iter()
-                .filter(|(_, diagnostic)| diagnostic.severity <= max_severity)
-                .filter(|(_, diagnostic)| match active_diagnostics_group {
-                    Some(active_diagnostics_group) => {
-                        // Active diagnostics are all shown in the editor already, no need to display them inline
-                        diagnostic.group_id != active_diagnostics_group
-                    }
-                    None => true,
-                })
-                .map(|(point, diag)| (point.to_display_point(&snapshot), diag.clone()))
-                .skip_while(|(point, _)| point.row() < start_row)
-                .take_while(|(point, _)| point.row() < end_row)
-                .filter(|(point, _)| !row_block_types.contains_key(&point.row()))
-                .fold(HashMap::default(), |mut acc, (point, diagnostic)| {
-                    acc.entry(point.row())
-                        .or_insert_with(Vec::new)
-                        .push(diagnostic);
-                    acc
-                })
-        });
-
-        if diagnostics_by_rows.is_empty() {
-            return HashMap::default();
-        }
-
-        let severity_to_color = |sev: &lsp::DiagnosticSeverity| match sev {
-            &lsp::DiagnosticSeverity::ERROR => Color::Error,
-            &lsp::DiagnosticSeverity::WARNING => Color::Warning,
-            &lsp::DiagnosticSeverity::INFORMATION => Color::Info,
-            &lsp::DiagnosticSeverity::HINT => Color::Hint,
-            _ => Color::Error,
-        };
-
-        let padding = ProjectSettings::get_global(cx).diagnostics.inline.padding as f32 * em_width;
-        let min_x = column_pixels(
-            &self.style,
-            ProjectSettings::get_global(cx)
-                .diagnostics
-                .inline
-                .min_column as usize,
-            window,
-        );
-
-        let mut elements = HashMap::default();
-        for (row, mut diagnostics) in diagnostics_by_rows {
-            diagnostics.sort_by_key(|diagnostic| {
-                (
-                    diagnostic.severity,
-                    std::cmp::Reverse(diagnostic.is_primary),
-                    diagnostic.start.row,
-                    diagnostic.start.column,
-                )
-            });
-
-            let Some(diagnostic_to_render) = diagnostics
-                .iter()
-                .find(|diagnostic| diagnostic.is_primary)
-                .or_else(|| diagnostics.first())
-            else {
-                continue;
-            };
-
-            let pos_y = content_origin.y + line_height * (row.0 as f64 - scroll_position.y) as f32;
-
-            let window_ix = row.0.saturating_sub(start_row.0) as usize;
-            let pos_x = {
-                let crease_trailer_layout = &crease_trailers[window_ix];
-                let line_layout = &line_layouts[window_ix];
-
-                let line_end = if let Some(crease_trailer) = crease_trailer_layout {
-                    crease_trailer.bounds.right()
-                } else {
-                    Pixels::from(
-                        ScrollPixelOffset::from(content_origin.x + line_layout.width)
-                            - scroll_pixel_position.x,
-                    )
-                };
-
-                let padded_line = line_end + padding;
-                let min_start = Pixels::from(
-                    ScrollPixelOffset::from(content_origin.x + min_x) - scroll_pixel_position.x,
-                );
-
-                cmp::max(padded_line, min_start)
-            };
-
-            let behind_edit_prediction_popover = edit_prediction_popover_origin
-                .as_ref()
-                .is_some_and(|edit_prediction_popover_origin| {
-                    (pos_y..pos_y + line_height).contains(&edit_prediction_popover_origin.y)
-                });
-            let opacity = if behind_edit_prediction_popover {
-                0.5
-            } else {
-                1.0
-            };
-
-            let mut element = h_flex()
-                .id(("diagnostic", row.0))
-                .h(line_height)
-                .w_full()
-                .px_1()
-                .rounded_xs()
-                .opacity(opacity)
-                .bg(severity_to_color(&diagnostic_to_render.severity)
-                    .color(cx)
-                    .opacity(0.05))
-                .text_color(severity_to_color(&diagnostic_to_render.severity).color(cx))
-                .text_sm()
-                .font(style.text.font())
-                .child(diagnostic_to_render.message.clone())
-                .into_any();
-
-            element.prepaint_as_root(point(pos_x, pos_y), AvailableSpace::min_size(), window, cx);
-
-            elements.insert(row, element);
-        }
-
-        elements
-    }
-
-    fn layout_inline_code_actions(
-        &self,
-        display_point: DisplayPoint,
-        content_origin: gpui::Point<Pixels>,
-        scroll_position: gpui::Point<ScrollOffset>,
-        scroll_pixel_position: gpui::Point<ScrollPixelOffset>,
-        line_height: Pixels,
-        snapshot: &EditorSnapshot,
-        window: &mut Window,
-        cx: &mut App,
-    ) -> Option<AnyElement> {
-        // Don't show code actions in split diff view
-        if self.split_side.is_some() {
-            return None;
-        }
-
-        if !snapshot
-            .show_code_actions
-            .unwrap_or(EditorSettings::get_global(cx).inline_code_actions)
-        {
-            return None;
-        }
-
-        let icon_size = ui::IconSize::XSmall;
-        let mut button = self.editor.update(cx, |editor, cx| {
-            if !editor.has_available_code_actions_for_selection() {
-                return None;
-            }
-            let active = editor
-                .context_menu
-                .borrow()
-                .as_ref()
-                .and_then(|menu| {
-                    if let crate::CodeContextMenu::CodeActions(CodeActionsMenu {
-                        deployed_from,
-                        ..
-                    }) = menu
-                    {
-                        deployed_from.as_ref()
-                    } else {
-                        None
-                    }
-                })
-                .is_some_and(|source| matches!(source, CodeActionSource::Indicator(..)));
-            Some(editor.render_inline_code_actions(icon_size, display_point.row(), active, cx))
-        })?;
-
-        let buffer_point = display_point.to_point(&snapshot.display_snapshot);
-
-        // do not show code action for folded line
-        if snapshot.is_line_folded(MultiBufferRow(buffer_point.row)) {
-            return None;
-        }
-
-        // do not show code action for blank line with cursor
-        let line_indent = snapshot
-            .display_snapshot
-            .buffer_snapshot()
-            .line_indent_for_row(MultiBufferRow(buffer_point.row));
-        if line_indent.is_line_blank() {
-            return None;
-        }
-
-        const INLINE_SLOT_CHAR_LIMIT: u32 = 4;
-        const MAX_ALTERNATE_DISTANCE: u32 = 8;
-
-        let is_valid_row = |row_candidate: u32| -> bool {
-            // move to other row if folded row
-            if snapshot.is_line_folded(MultiBufferRow(row_candidate)) {
-                return false;
-            }
-            if buffer_point.row == row_candidate {
-                // move to other row if cursor is in slot
-                if buffer_point.column < INLINE_SLOT_CHAR_LIMIT {
-                    return false;
-                }
-            } else {
-                let candidate_point = MultiBufferPoint {
-                    row: row_candidate,
-                    column: 0,
-                };
-                // move to other row if different excerpt
-                let range = if candidate_point < buffer_point {
-                    candidate_point..buffer_point
-                } else {
-                    buffer_point..candidate_point
-                };
-                if snapshot
-                    .display_snapshot
-                    .buffer_snapshot()
-                    .excerpt_containing(range)
-                    .is_none()
-                {
-                    return false;
-                }
-            }
-            let line_indent = snapshot
-                .display_snapshot
-                .buffer_snapshot()
-                .line_indent_for_row(MultiBufferRow(row_candidate));
-            // use this row if it's blank
-            if line_indent.is_line_blank() {
-                true
-            } else {
-                // use this row if code starts after slot
-                let indent_size = snapshot
-                    .display_snapshot
-                    .buffer_snapshot()
-                    .indent_size_for_line(MultiBufferRow(row_candidate));
-                indent_size.len >= INLINE_SLOT_CHAR_LIMIT
-            }
-        };
-
-        let new_buffer_row = if is_valid_row(buffer_point.row) {
-            Some(buffer_point.row)
-        } else {
-            let max_row = snapshot.display_snapshot.buffer_snapshot().max_point().row;
-            (1..=MAX_ALTERNATE_DISTANCE).find_map(|offset| {
-                let row_above = buffer_point.row.saturating_sub(offset);
-                let row_below = buffer_point.row + offset;
-                if row_above != buffer_point.row && is_valid_row(row_above) {
-                    Some(row_above)
-                } else if row_below <= max_row && is_valid_row(row_below) {
-                    Some(row_below)
-                } else {
-                    None
-                }
-            })
-        }?;
-
-        let new_display_row = snapshot
-            .display_snapshot
-            .point_to_display_point(
-                Point {
-                    row: new_buffer_row,
-                    column: buffer_point.column,
-                },
-                text::Bias::Left,
-            )
-            .row();
-
-        let start_y = content_origin.y
-            + (((new_display_row.as_f64() - scroll_position.y) as f32) * line_height)
-            + (line_height / 2.0)
-            - (icon_size.square(window, cx) / 2.);
-        let start_x = (ScrollPixelOffset::from(content_origin.x) - scroll_pixel_position.x
-            + ScrollPixelOffset::from(window.rem_size() * 0.1))
-        .into();
-
-        let absolute_offset = gpui::point(start_x, start_y);
-        button.layout_as_root(gpui::AvailableSpace::min_size(), window, cx);
-        button.prepaint_as_root(
-            absolute_offset,
-            gpui::AvailableSpace::min_size(),
-            window,
-            cx,
-        );
-        Some(button)
-    }
-
     fn layout_inline_blame(
         &self,
         display_row: DisplayRow,
@@ -2550,18 +2116,13 @@ impl EditorElement {
             let active_task_indicator_row =
                 // TODO: add edit button on the right side of each row in the context menu
                 if let Some(crate::CodeContextMenu::CodeActions(CodeActionsMenu {
-                    deployed_from,
-                    actions,
-                    ..
+                    actions, ..
                 })) = editor.context_menu.borrow().as_ref()
                 {
                     actions
                         .tasks()
                         .map(|tasks| tasks.position.to_display_point(gutter.snapshot).row())
-                        .or_else(|| match deployed_from {
-                            Some(CodeActionSource::Indicator(row)) => Some(*row),
-                            _ => None,
-                        })
+
                 } else {
                     None
                 };
@@ -3064,10 +2625,8 @@ impl EditorElement {
                 })
                 .collect()
         } else {
-            let use_tree_sitter = !snapshot.semantic_tokens_enabled
-                || snapshot.use_tree_sitter_for_syntax(rows.start, cx);
             let language_aware = LanguageAwareStyling {
-                tree_sitter: use_tree_sitter,
+                tree_sitter: true,
                 diagnostics: true,
             };
             let chunks = snapshot.highlighted_chunks(rows.clone(), language_aware, style);
@@ -4710,144 +4269,6 @@ impl EditorElement {
         (controls, control_bounds)
     }
 
-    fn layout_signature_help(
-        &self,
-        hitbox: &Hitbox,
-        content_origin: gpui::Point<Pixels>,
-        scroll_pixel_position: gpui::Point<ScrollPixelOffset>,
-        newest_selection_head: Option<DisplayPoint>,
-        start_row: DisplayRow,
-        line_layouts: &[LineWithInvisibles],
-        line_height: Pixels,
-        em_width: Pixels,
-        context_menu_layout: Option<ContextMenuLayout>,
-        window: &mut Window,
-        cx: &mut App,
-    ) {
-        if !self.editor.focus_handle(cx).is_focused(window) {
-            return;
-        }
-        let Some(newest_selection_head) = newest_selection_head else {
-            return;
-        };
-
-        let max_size = size(
-            (120. * em_width) // Default size
-                .min(hitbox.size.width / 2.) // Shrink to half of the editor width
-                .max(MIN_POPOVER_CHARACTER_WIDTH * em_width), // Apply minimum width of 20 characters
-            (16. * line_height) // Default size
-                .min(hitbox.size.height / 2.) // Shrink to half of the editor height
-                .max(MIN_POPOVER_LINE_HEIGHT * line_height), // Apply minimum height of 4 lines
-        );
-
-        let maybe_element = self.editor.update(cx, |editor, cx| {
-            if let Some(popover) = editor.signature_help_state.popover_mut() {
-                let element = popover.render(max_size, window, cx);
-                Some(element)
-            } else {
-                None
-            }
-        });
-        let Some(mut element) = maybe_element else {
-            return;
-        };
-
-        let selection_row = newest_selection_head.row();
-        let Some(cursor_row_layout) = (selection_row >= start_row)
-            .then(|| line_layouts.get(selection_row.minus(start_row) as usize))
-            .flatten()
-        else {
-            return;
-        };
-
-        let target_x = cursor_row_layout.x_for_index(newest_selection_head.column() as usize)
-            - Pixels::from(scroll_pixel_position.x);
-        let target_y = Pixels::from(
-            selection_row.as_f64() * ScrollPixelOffset::from(line_height) - scroll_pixel_position.y,
-        );
-        let target_point = content_origin + point(target_x, target_y);
-
-        let actual_size = element.layout_as_root(Size::<AvailableSpace>::default(), window, cx);
-
-        let (popover_bounds_above, popover_bounds_below) = {
-            let horizontal_offset = (hitbox.top_right().x
-                - POPOVER_RIGHT_OFFSET
-                - (target_point.x + actual_size.width))
-                .min(Pixels::ZERO);
-            let initial_x = target_point.x + horizontal_offset;
-            (
-                Bounds::new(
-                    point(initial_x, target_point.y - actual_size.height),
-                    actual_size,
-                ),
-                Bounds::new(
-                    point(initial_x, target_point.y + line_height + HOVER_POPOVER_GAP),
-                    actual_size,
-                ),
-            )
-        };
-
-        let intersects_menu = |bounds: Bounds<Pixels>| -> bool {
-            context_menu_layout
-                .as_ref()
-                .is_some_and(|menu| bounds.intersects(&menu.bounds))
-        };
-
-        let final_origin = if popover_bounds_above.is_contained_within(hitbox)
-            && !intersects_menu(popover_bounds_above)
-        {
-            // try placing above cursor
-            popover_bounds_above.origin
-        } else if popover_bounds_below.is_contained_within(hitbox)
-            && !intersects_menu(popover_bounds_below)
-        {
-            // try placing below cursor
-            popover_bounds_below.origin
-        } else {
-            // try surrounding context menu if exists
-            let origin_surrounding_menu = context_menu_layout.as_ref().and_then(|menu| {
-                let y_for_horizontal_positioning = if menu.y_flipped {
-                    menu.bounds.bottom() - actual_size.height
-                } else {
-                    menu.bounds.top()
-                };
-                let possible_origins = [
-                    // left of context menu
-                    point(
-                        menu.bounds.left() - actual_size.width - HOVER_POPOVER_GAP,
-                        y_for_horizontal_positioning,
-                    ),
-                    // right of context menu
-                    point(
-                        menu.bounds.right() + HOVER_POPOVER_GAP,
-                        y_for_horizontal_positioning,
-                    ),
-                    // top of context menu
-                    point(
-                        menu.bounds.left(),
-                        menu.bounds.top() - actual_size.height - HOVER_POPOVER_GAP,
-                    ),
-                    // bottom of context menu
-                    point(menu.bounds.left(), menu.bounds.bottom() + HOVER_POPOVER_GAP),
-                ];
-                possible_origins
-                    .into_iter()
-                    .find(|&origin| Bounds::new(origin, actual_size).is_contained_within(hitbox))
-            });
-            origin_surrounding_menu.unwrap_or_else(|| {
-                // fallback to existing above/below cursor logic
-                // this might overlap menu or overflow in rare case
-                if popover_bounds_above.is_contained_within(hitbox) {
-                    popover_bounds_above.origin
-                } else {
-                    popover_bounds_below.origin
-                }
-            })
-        };
-
-        window.defer_draw(element, final_origin, 2, None);
-    }
-
     fn paint_background(&self, layout: &EditorLayout, window: &mut Window, cx: &mut App) {
         window.paint_layer(layout.hitbox.bounds, |window| {
             let scroll_top = layout.position_map.scroll_position.y;
@@ -5523,14 +4944,11 @@ impl EditorElement {
 
                 self.paint_lines_background(layout, window, cx);
                 let invisible_display_ranges = self.paint_highlights(layout, window, cx);
-                self.paint_document_colors(layout, window);
                 self.paint_lines(&invisible_display_ranges, layout, window, cx);
                 self.paint_redactions(layout, window);
                 self.paint_navigation_overlays(layout, window, cx);
                 self.paint_cursors(layout, window, cx);
-                self.paint_inline_diagnostics(layout, window, cx);
                 self.paint_inline_blame(layout, window, cx);
-                self.paint_inline_code_actions(layout, window, cx);
                 self.paint_diff_hunk_controls(layout, window, cx);
                 window.with_element_namespace("crease_trailers", |window| {
                     for trailer in layout.crease_trailers.iter_mut().flatten() {
@@ -5671,48 +5089,6 @@ impl EditorElement {
                 label.element.paint(window, cx);
             }
         });
-    }
-
-    fn paint_document_colors(&self, layout: &mut EditorLayout, window: &mut Window) {
-        let Some((colors_render_mode, image_colors)) = &layout.document_colors else {
-            return;
-        };
-        if image_colors.is_empty()
-            || colors_render_mode == &DocumentColorsRenderMode::None
-            || colors_render_mode == &DocumentColorsRenderMode::Inlay
-        {
-            return;
-        }
-
-        let line_end_overshoot = layout.line_end_overshoot();
-
-        for (range, color) in image_colors {
-            match colors_render_mode {
-                DocumentColorsRenderMode::Inlay | DocumentColorsRenderMode::None => return,
-                DocumentColorsRenderMode::Background => {
-                    self.paint_highlighted_range(
-                        range.clone(),
-                        true,
-                        *color,
-                        Pixels::ZERO,
-                        line_end_overshoot,
-                        layout,
-                        window,
-                    );
-                }
-                DocumentColorsRenderMode::Border => {
-                    self.paint_highlighted_range(
-                        range.clone(),
-                        false,
-                        *color,
-                        Pixels::ZERO,
-                        line_end_overshoot,
-                        layout,
-                        window,
-                    );
-                }
-            }
-        }
     }
 
     fn paint_cursors(&mut self, layout: &mut EditorLayout, window: &mut Window, cx: &mut App) {
@@ -6235,34 +5611,10 @@ impl EditorElement {
         }
     }
 
-    fn paint_inline_diagnostics(
-        &mut self,
-        layout: &mut EditorLayout,
-        window: &mut Window,
-        cx: &mut App,
-    ) {
-        for mut inline_diagnostic in layout.inline_diagnostics.drain() {
-            inline_diagnostic.1.paint(window, cx);
-        }
-    }
-
     fn paint_inline_blame(&mut self, layout: &mut EditorLayout, window: &mut Window, cx: &mut App) {
         if let Some(mut blame_layout) = layout.inline_blame_layout.take() {
             window.paint_layer(layout.position_map.text_hitbox.bounds, |window| {
                 blame_layout.element.paint(window, cx);
-            })
-        }
-    }
-
-    fn paint_inline_code_actions(
-        &mut self,
-        layout: &mut EditorLayout,
-        window: &mut Window,
-        cx: &mut App,
-    ) {
-        if let Some(mut inline_code_actions) = layout.inline_code_actions.take() {
-            window.paint_layer(layout.position_map.text_hitbox.bounds, |window| {
-                inline_code_actions.paint(window, cx);
             })
         }
     }
@@ -8286,12 +7638,6 @@ impl Element for EditorElement {
                             cx,
                         );
 
-                    let document_colors = self
-                        .editor
-                        .read(cx)
-                        .colors
-                        .as_ref()
-                        .map(|colors| colors.editor_display_highlights(&snapshot));
                     let redacted_ranges = self.editor.read(cx).redacted_ranges(
                         start_anchor..end_anchor,
                         &snapshot.display_snapshot,
@@ -8497,11 +7843,7 @@ impl Element for EditorElement {
                     let bg_segments_per_row = Self::bg_segments_per_row(
                         start_row..end_row,
                         &selections,
-                        highlighted_ranges.iter().cloned().chain(
-                            document_colors
-                                .iter()
-                                .flat_map(|(_, colors)| colors.iter().cloned()),
-                        ),
+                        highlighted_ranges.iter().cloned(),
                         self.style.background,
                     );
 
@@ -8806,7 +8148,7 @@ impl Element for EditorElement {
                             )
                         });
 
-                    let (edit_prediction_popover, edit_prediction_popover_origin) = self
+                    let (edit_prediction_popover, _edit_prediction_popover_origin) = self
                         .editor
                         .update(cx, |editor, cx| {
                             editor.render_edit_prediction_popover(
@@ -8830,41 +8172,12 @@ impl Element for EditorElement {
                         })
                         .unzip();
 
-                    let mut inline_diagnostics = self.layout_inline_diagnostics(
-                        &line_layouts,
-                        &crease_trailers,
-                        &row_block_types,
-                        content_origin,
-                        scroll_position,
-                        scroll_pixel_position,
-                        edit_prediction_popover_origin,
-                        start_row,
-                        end_row,
-                        line_height,
-                        em_width,
-                        style,
-                        window,
-                        cx,
-                    );
-
                     let mut inline_blame_layout = None;
-                    let mut inline_code_actions = None;
                     if let Some(newest_selection_head) = newest_selection_head {
                         let display_row = newest_selection_head.row();
                         if (start_row..end_row).contains(&display_row)
                             && !row_block_types.contains_key(&display_row)
                         {
-                            inline_code_actions = self.layout_inline_code_actions(
-                                newest_selection_head,
-                                content_origin,
-                                scroll_position,
-                                scroll_pixel_position,
-                                line_height,
-                                &snapshot,
-                                window,
-                                cx,
-                            );
-
                             let line_ix = display_row.minus(start_row) as usize;
                             if let (Some(row_info), Some(line_layout), Some(crease_trailer)) = (
                                 row_infos.get(line_ix),
@@ -8886,8 +8199,6 @@ impl Element for EditorElement {
                                     cx,
                                 ) {
                                     inline_blame_layout = Some(layout);
-                                    // Blame overrides inline diagnostics
-                                    inline_diagnostics.remove(&display_row);
                                 }
                             } else {
                                 log::error!(
@@ -9128,20 +8439,6 @@ impl Element for EditorElement {
                             gutter.prepaint_button(button, display_row, window, cx)
                         });
 
-                    self.layout_signature_help(
-                        &hitbox,
-                        content_origin,
-                        scroll_pixel_position,
-                        newest_selection_head,
-                        start_row,
-                        &line_layouts,
-                        line_height,
-                        em_width,
-                        context_menu_layout,
-                        window,
-                        cx,
-                    );
-
                     if !cx.has_active_drag() {
                         self.layout_hover_popovers(
                             &snapshot,
@@ -9352,13 +8649,10 @@ impl Element for EditorElement {
                         highlighted_ranges,
                         highlighted_gutter_ranges,
                         redacted_ranges,
-                        document_colors,
                         line_elements,
                         line_numbers,
                         blamed_display_rows,
-                        inline_diagnostics,
                         inline_blame_layout,
-                        inline_code_actions,
                         blocks,
                         spacer_blocks,
                         cursors,
@@ -9571,9 +8865,7 @@ pub struct EditorLayout {
     line_numbers: Arc<HashMap<MultiBufferRow, LineNumberLayout>>,
     display_hunks: Vec<(DisplayDiffHunk, Option<Hitbox>)>,
     blamed_display_rows: Option<Vec<AnyElement>>,
-    inline_diagnostics: HashMap<DisplayRow, AnyElement>,
     inline_blame_layout: Option<InlineBlameLayout>,
-    inline_code_actions: Option<AnyElement>,
     blocks: Vec<BlockLayout>,
     spacer_blocks: Vec<BlockLayout>,
     highlighted_ranges: Vec<(Range<DisplayPoint>, Hsla)>,
@@ -9597,7 +8889,6 @@ pub struct EditorLayout {
     space_invisible: ShapedLine,
     sticky_buffer_header: Option<AnyElement>,
     sticky_headers: Option<header::StickyHeaders>,
-    document_colors: Option<(DocumentColorsRenderMode, Vec<(Range<DisplayPoint>, Hsla)>)>,
     text_align: TextAlign,
     content_width: Pixels,
 }
@@ -10214,10 +9505,8 @@ pub fn layout_line(
     window: &mut Window,
     cx: &mut App,
 ) -> LineWithInvisibles {
-    let use_tree_sitter =
-        !snapshot.semantic_tokens_enabled || snapshot.use_tree_sitter_for_syntax(row, cx);
     let language_aware = LanguageAwareStyling {
-        tree_sitter: use_tree_sitter,
+        tree_sitter: true,
         diagnostics: true,
     };
     let chunks = snapshot.highlighted_chunks(row..row + DisplayRow(1), language_aware, style);

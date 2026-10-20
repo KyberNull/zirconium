@@ -200,7 +200,6 @@ impl MultiDiffView {
             let mut editor =
                 Editor::for_multibuffer(multibuffer, Some(project.clone()), window, cx);
             editor.set_diff_hunk_delegate(Some(Arc::new(RestoreOnlyUnstagedDiffHunkDelegate)), cx);
-            editor.disable_diagnostics(cx);
             editor.set_expand_all_diff_hunks(cx);
             editor
         });

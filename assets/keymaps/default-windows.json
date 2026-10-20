@@ -33,7 +33,6 @@
       "ctrl-alt-,": "zed::OpenSettingsFile",
       "ctrl-q": "zed::Quit",
       "ctrl-shift-i": "edit_prediction::ToggleMenu",
-      "shift-alt-l": "lsp_tool::ToggleMenu",
       "ctrl-shift-alt-c": "editor::DisplayCursorNames",
       "ctrl-shift-alt-s": "workspace::ToggleWorktreeSecurity",
     },
@@ -105,14 +104,12 @@
       "ctrl-a": "editor::SelectAll",
       "ctrl-l": "editor::SelectLine",
       "shift-alt-f": "editor::Format",
-      "shift-alt-o": "editor::OrganizeImports",
       "shift-home": ["editor::SelectToBeginningOfLine", { "stop_at_soft_wraps": true, "stop_at_indent": true }],
       "shift-end": ["editor::SelectToEndOfLine", { "stop_at_soft_wraps": true }],
       "ctrl-alt-space": "editor::ShowCharacterPalette",
       "ctrl-;": "editor::ToggleLineNumbers",
       "ctrl-'": "editor::ToggleSelectedDiffHunks",
       "ctrl-\"": "editor::ExpandAllDiffHunks",
-      "ctrl-i": "editor::ShowSignatureHelp",
       "alt-g b": "git::Blame",
       "alt-g m": "git::OpenModifiedFiles",
       "alt-g r": "git::ReviewDiff",
@@ -560,13 +557,6 @@
       "ctrl-k ctrl-c": ["editor::ToggleComments", { "advance_downwards": false }],
       "ctrl-k ctrl-/": "editor::ToggleBlockComments",
       "shift-alt-a": "editor::ToggleBlockComments",
-      "f8": ["editor::GoToDiagnostic", { "severity": { "min": "hint", "max": "error" } }],
-      "shift-f8": ["editor::GoToPreviousDiagnostic", { "severity": { "min": "hint", "max": "error" } }],
-      "f2": "editor::Rename",
-      "f12": "editor::GoToDefinition",
-      "alt-f12": "editor::GoToDefinitionSplit",
-      "ctrl-f12": "editor::GoToImplementation",
-      "shift-alt-f12": "editor::FindAllReferences",
       "ctrl-shift-\\": "editor::MoveToEnclosingBracket",
       "ctrl-shift-[": "editor::Fold",
       "ctrl-shift-]": "editor::UnfoldLines",
@@ -675,14 +665,12 @@
       "ctrl-k ctrl-t": "theme_selector::Toggle",
       "ctrl-k ctrl-shift-t": "theme::ToggleMode",
       "ctrl-alt-super-p": "settings_profile_selector::Toggle",
-      "ctrl-t": "project_symbols::Toggle",
       "ctrl-p": "file_finder::Toggle",
       "ctrl-shift-tab": ["tab_switcher::Toggle", { "select_last": true }],
       "ctrl-tab": "tab_switcher::Toggle",
       "ctrl-e": "file_finder::Toggle",
       "f1": "command_palette::Toggle",
       "ctrl-shift-p": "command_palette::Toggle",
-      "ctrl-shift-m": "diagnostics::Deploy",
       "ctrl-shift-e": "project_panel::ToggleFocus",
       "ctrl-shift-b": "outline_panel::ToggleFocus",
       "ctrl-shift-g": "git_panel::ToggleFocus",
@@ -785,13 +773,6 @@
   },
   // Bindings that should be unified with bindings for more general actions
   {
-    "context": "Editor && renaming",
-    "use_key_equivalents": true,
-    "bindings": {
-      "enter": "editor::ConfirmRename",
-    },
-  },
-  {
     "context": "Editor && showing_completions",
     "use_key_equivalents": true,
     "bindings": {
@@ -854,14 +835,6 @@
       "pagedown": "editor::ContextMenuLast",
     },
   },
-  {
-    "context": "Editor && showing_signature_help && !showing_completions",
-    "use_key_equivalents": true,
-    "bindings": {
-      "up": "editor::SignatureHelpPrevious",
-      "down": "editor::SignatureHelpNext",
-    },
-  },
   // Custom bindings
   {
     "use_key_equivalents": true,
@@ -886,7 +859,6 @@
       "ctrl-f8": "editor::GoToHunk",
       "ctrl-shift-f8": "editor::GoToPreviousHunk",
       "ctrl-enter": "assistant::InlineAssist",
-      "ctrl-shift-;": "editor::ToggleInlayHints",
     },
   },
   {
@@ -1232,13 +1204,6 @@
     },
   },
   {
-    "context": "Diagnostics",
-    "use_key_equivalents": true,
-    "bindings": {
-      "ctrl-r": "diagnostics::ToggleDiagnosticsRefresh",
-    },
-  },
-  {
     "context": "DebugConsole > Editor",
     "use_key_equivalents": true,
     "bindings": {
@@ -1399,13 +1364,6 @@
       "pagedown": "settings_editor::FocusNextRootNavEntry",
       "home": "settings_editor::FocusFirstNavEntry",
       "end": "settings_editor::FocusLastNavEntry",
-    },
-  },
-  {
-    "context": "EditPredictionContext > Editor",
-    "bindings": {
-      "alt-left": "dev::EditPredictionContextGoBack",
-      "alt-right": "dev::EditPredictionContextGoForward",
     },
   },
   {

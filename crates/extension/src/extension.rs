@@ -8,11 +8,9 @@ mod types;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use ::lsp::LanguageServerName;
 use anyhow::{Context as _, Result, bail};
 use async_trait::async_trait;
 use gpui::{App, Task};
-use language::LanguageName;
 use semver::Version;
 use util::rel_path::RelPath;
 
@@ -57,64 +55,6 @@ pub trait Extension: Send + Sync + 'static {
     fn path_from_extension(&self, path: &Path) -> PathBuf {
         path::normalize_path(&self.work_dir().join(path))
     }
-
-    async fn language_server_command(
-        &self,
-        language_server_id: LanguageServerName,
-        language_name: LanguageName,
-        worktree: Arc<dyn WorktreeDelegate>,
-    ) -> Result<Command>;
-
-    async fn language_server_initialization_options(
-        &self,
-        language_server_id: LanguageServerName,
-        language_name: LanguageName,
-        worktree: Arc<dyn WorktreeDelegate>,
-    ) -> Result<Option<String>>;
-
-    async fn language_server_workspace_configuration(
-        &self,
-        language_server_id: LanguageServerName,
-        worktree: Arc<dyn WorktreeDelegate>,
-    ) -> Result<Option<String>>;
-
-    async fn language_server_initialization_options_schema(
-        &self,
-        language_server_id: LanguageServerName,
-        worktree: Arc<dyn WorktreeDelegate>,
-    ) -> Result<Option<String>>;
-
-    async fn language_server_workspace_configuration_schema(
-        &self,
-        language_server_id: LanguageServerName,
-        worktree: Arc<dyn WorktreeDelegate>,
-    ) -> Result<Option<String>>;
-
-    async fn language_server_additional_initialization_options(
-        &self,
-        language_server_id: LanguageServerName,
-        target_language_server_id: LanguageServerName,
-        worktree: Arc<dyn WorktreeDelegate>,
-    ) -> Result<Option<String>>;
-
-    async fn language_server_additional_workspace_configuration(
-        &self,
-        language_server_id: LanguageServerName,
-        target_language_server_id: LanguageServerName,
-        worktree: Arc<dyn WorktreeDelegate>,
-    ) -> Result<Option<String>>;
-
-    async fn labels_for_completions(
-        &self,
-        language_server_id: LanguageServerName,
-        completions: Vec<Completion>,
-    ) -> Result<Vec<Option<CodeLabel>>>;
-
-    async fn labels_for_symbols(
-        &self,
-        language_server_id: LanguageServerName,
-        symbols: Vec<Symbol>,
-    ) -> Result<Vec<Option<CodeLabel>>>;
 
     async fn complete_slash_command_argument(
         &self,

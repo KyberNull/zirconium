@@ -165,11 +165,6 @@ pub struct ItemSettingsContent {
     ///
     /// Default: history
     pub activate_on_close: Option<ActivateOnClose>,
-    /// Which files containing diagnostic errors/warnings to mark in the tabs.
-    /// This setting can take the following three values:
-    ///
-    /// Default: off
-    pub show_diagnostics: Option<ShowDiagnostics>,
     /// Whether to always show the close button on tabs.
     ///
     /// Default: false
@@ -250,28 +245,6 @@ pub enum ShowCloseButton {
     #[default]
     Hover,
     Hidden,
-}
-
-#[derive(
-    Copy,
-    Clone,
-    Debug,
-    Default,
-    Serialize,
-    Deserialize,
-    JsonSchema,
-    MergeFrom,
-    PartialEq,
-    Eq,
-    strum::VariantArray,
-    strum::VariantNames,
-)]
-#[serde(rename_all = "snake_case")]
-pub enum ShowDiagnostics {
-    #[default]
-    Off,
-    Errors,
-    All,
 }
 
 #[derive(
@@ -811,10 +784,6 @@ pub struct ProjectPanelSettingsContent {
     pub starts_open: Option<bool>,
     /// Scrollbar-related settings
     pub scrollbar: Option<ProjectPanelScrollbarSettingsContent>,
-    /// Which files containing diagnostic errors/warnings to mark in the project panel.
-    ///
-    /// Default: all
-    pub show_diagnostics: Option<ShowDiagnostics>,
     /// Settings related to indent guides in the project panel.
     pub indent_guides: Option<ProjectPanelIndentGuidesSettings>,
     /// Whether to hide the root entry when only one folder is open in the window.
@@ -845,10 +814,6 @@ pub struct ProjectPanelSettingsContent {
     ///
     /// Default: default
     pub sort_order: Option<ProjectPanelSortOrder>,
-    /// Whether to show error and warning count badges next to file names in the project panel.
-    ///
-    /// Default: false
-    pub diagnostic_badges: Option<bool>,
     /// Whether to show a git status indicator next to file names in the project panel.
     ///
     /// Default: false
@@ -981,108 +946,6 @@ pub struct ProjectPanelIndentGuidesSettings {
 }
 
 /// Controls how semantic tokens from language servers are used for syntax highlighting.
-#[derive(
-    Debug,
-    PartialEq,
-    Eq,
-    Clone,
-    Copy,
-    Default,
-    Serialize,
-    Deserialize,
-    JsonSchema,
-    MergeFrom,
-    strum::VariantArray,
-    strum::VariantNames,
-    strum::EnumMessage,
-)]
-#[serde(rename_all = "snake_case")]
-pub enum SemanticTokens {
-    /// Do not request semantic tokens from language servers.
-    #[default]
-    Off,
-    /// Use LSP semantic tokens together with tree-sitter highlighting.
-    Combined,
-    /// Use LSP semantic tokens exclusively, replacing tree-sitter highlighting.
-    Full,
-}
-
-impl SemanticTokens {
-    /// Returns true if semantic tokens should be requested from language servers.
-    pub fn enabled(&self) -> bool {
-        self != &Self::Off
-    }
-
-    /// Returns true if tree-sitter syntax highlighting should be used.
-    /// In `full` mode, tree-sitter is disabled in favor of LSP semantic tokens.
-    pub fn use_tree_sitter(&self) -> bool {
-        self != &Self::Full
-    }
-}
-
-#[derive(
-    Debug,
-    PartialEq,
-    Eq,
-    Clone,
-    Copy,
-    Default,
-    Serialize,
-    Deserialize,
-    JsonSchema,
-    MergeFrom,
-    strum::VariantArray,
-    strum::VariantNames,
-)]
-#[serde(rename_all = "snake_case")]
-pub enum DocumentFoldingRanges {
-    /// Do not request folding ranges from language servers; use tree-sitter and indent-based folding.
-    #[default]
-    Off,
-    /// Use LSP folding wherever possible, falling back to tree-sitter and indent-based folding when no results were returned by the server.
-    On,
-}
-
-impl DocumentFoldingRanges {
-    /// Returns true if LSP folding ranges should be requested from language servers.
-    pub fn enabled(&self) -> bool {
-        self != &Self::Off
-    }
-}
-
-#[derive(
-    Debug,
-    PartialEq,
-    Eq,
-    Clone,
-    Copy,
-    Default,
-    Serialize,
-    Deserialize,
-    JsonSchema,
-    MergeFrom,
-    strum::VariantArray,
-    strum::VariantNames,
-)]
-#[serde(rename_all = "snake_case")]
-pub enum DocumentSymbols {
-    /// Use tree-sitter queries to compute document symbols for outlines and breadcrumbs (default).
-    #[default]
-    #[serde(alias = "tree_sitter")]
-    Off,
-    /// Use the language server's `textDocument/documentSymbol` LSP response for outlines and
-    /// breadcrumbs. When enabled, tree-sitter is not used for document symbols.
-    #[serde(alias = "language_server")]
-    On,
-}
-
-impl DocumentSymbols {
-    /// Returns true if LSP document symbols should be used instead of tree-sitter.
-    pub fn lsp_enabled(&self) -> bool {
-        self == &Self::On
-    }
-}
-
 #[with_fallible_options]
 #[derive(Copy, Clone, PartialEq, Default, Serialize, Deserialize, JsonSchema, MergeFrom, Debug)]
 pub struct FocusFollowsMouse {

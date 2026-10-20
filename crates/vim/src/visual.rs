@@ -684,7 +684,7 @@ impl Vim {
                         });
                     });
                 }
-                editor.delete_selections_with_linked_edits(window, cx);
+                editor.delete_selections(window, cx);
 
                 // Fixup cursor position after the deletion. Helix keeps the
                 // cursor on the trailing newline, so only clip in Vim modes.

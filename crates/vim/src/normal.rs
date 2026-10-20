@@ -28,7 +28,7 @@ use editor::Editor;
 use editor::{Anchor, SelectionEffects};
 use editor::{Bias, ToPoint};
 use editor::{display_map::ToDisplayPoint, movement};
-use gpui::{Context, TaskExt, Window, actions};
+use gpui::{Context, Window, actions};
 use language::{AutoIndentMode, Point, SelectionGoal};
 use log::error;
 use multi_buffer::MultiBufferRow;
@@ -102,10 +102,6 @@ actions!(
         GoToTab,
         /// Go to previous tab page (with count support).
         GoToPreviousTab,
-        /// Goes to the previous reference to the symbol under the cursor.
-        GoToPreviousReference,
-        /// Goes to the next reference to the symbol under the cursor.
-        GoToNextReference,
     ]
 );
 
@@ -220,36 +216,6 @@ pub(crate) fn register(editor: &mut Editor, cx: &mut Context<Vim>) {
 
     Vim::action(editor, cx, |vim, _: &JoinLinesNoWhitespace, window, cx| {
         vim.join_lines_impl(false, window, cx);
-    });
-
-    Vim::action(editor, cx, |vim, _: &GoToPreviousReference, window, cx| {
-        let count = Vim::take_count(cx);
-        vim.update_editor(cx, |_, editor, cx| {
-            let task = editor.go_to_reference_before_or_after_position(
-                editor::Direction::Prev,
-                count.unwrap_or(1),
-                window,
-                cx,
-            );
-            if let Some(task) = task {
-                task.detach_and_log_err(cx);
-            };
-        });
-    });
-
-    Vim::action(editor, cx, |vim, _: &GoToNextReference, window, cx| {
-        let count = Vim::take_count(cx);
-        vim.update_editor(cx, |_, editor, cx| {
-            let task = editor.go_to_reference_before_or_after_position(
-                editor::Direction::Next,
-                count.unwrap_or(1),
-                window,
-                cx,
-            );
-            if let Some(task) = task {
-                task.detach_and_log_err(cx);
-            };
-        });
     });
 
     Vim::action(editor, cx, |vim, _: &Undo, window, cx| {

@@ -1208,7 +1208,6 @@ impl PromptCompletionProviderDelegate for PromptEditorCompletionProviderDelegate
     fn supported_modes(&self, _cx: &App) -> Vec<PromptContextType> {
         vec![
             PromptContextType::File,
-            PromptContextType::Symbol,
             PromptContextType::Thread,
             PromptContextType::Fetch,
             PromptContextType::Skill,

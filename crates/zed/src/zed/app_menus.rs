@@ -43,8 +43,6 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
         MenuItem::action("Agent Panel", assistant::ToggleFocus),
         MenuItem::action("Git Panel", git_panel::ToggleFocus),
         MenuItem::separator(),
-        MenuItem::action("Diagnostics", diagnostics::Deploy),
-        MenuItem::separator(),
     ];
 
     if ReleaseChannel::try_global(cx) == Some(ReleaseChannel::Dev) {
@@ -222,35 +220,11 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
                 MenuItem::action("Command Palette...", zed_actions::command_palette::Toggle),
                 MenuItem::separator(),
                 MenuItem::action("Go to File...", workspace::ToggleFileFinder::default()),
-                // MenuItem::action("Go to Symbol in Project", project_symbols::Toggle),
                 MenuItem::action(
                     "Go to Symbol in Editor...",
                     zed_actions::outline::ToggleOutline,
                 ),
                 MenuItem::action("Go to Line/Column...", editor::actions::ToggleGoToLine),
-                MenuItem::separator(),
-                MenuItem::action(
-                    "Go to Definition",
-                    editor::actions::GoToDefinition::default(),
-                ),
-                MenuItem::action(
-                    "Go to Declaration",
-                    editor::actions::GoToDeclaration::default(),
-                ),
-                MenuItem::action(
-                    "Go to Type Definition",
-                    editor::actions::GoToTypeDefinition::default(),
-                ),
-                MenuItem::action(
-                    "Find All References",
-                    editor::actions::FindAllReferences::default(),
-                ),
-                MenuItem::separator(),
-                MenuItem::action("Next Problem", editor::actions::GoToDiagnostic::default()),
-                MenuItem::action(
-                    "Previous Problem",
-                    editor::actions::GoToPreviousDiagnostic::default(),
-                ),
             ],
         },
         Menu {

@@ -1,6 +1,6 @@
 ---
 title: Rego
-description: "Configure Rego language support in Zed, including language servers, formatting, and debugging."
+description: "Configure Rego language support in Zed, including formatting and syntax highlighting."
 ---
 
 # Rego
@@ -8,11 +8,6 @@ description: "Configure Rego language support in Zed, including language servers
 Rego language support in Zed is provided by the community-maintained [Rego extension](https://github.com/StyraInc/zed-rego).
 
 - Tree-sitter: [FallenAngel97/tree-sitter-rego](https://github.com/FallenAngel97/tree-sitter-rego)
-- Language Server: [open-policy-agent/regal](https://github.com/open-policy-agent/regal)
-
-## Installation
-
-The extension is largely based on the [Regal](https://docs.styra.com/regal/language-server) language server which should be installed to make use of the extension. Read the [getting started](https://docs.styra.com/regal#getting-started) instructions for more information.
 
 ## Configuration
 

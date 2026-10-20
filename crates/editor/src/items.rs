@@ -1,6 +1,6 @@
 use crate::{
-    Anchor, Autoscroll, BufferSerialization, Capability, Editor, EditorEvent,
-    EditorSettings, ExcerptRange, FormatTarget, MultiBuffer, MultiBufferSnapshot, NavigationData,
+    Anchor, Autoscroll, BufferSerialization, Capability, Editor, EditorEvent, EditorSettings,
+    ExcerptRange, FormatTarget, MultiBuffer, MultiBufferSnapshot, NavigationData,
     ReportEditorEvent, SelectionEffects, ToPoint as _,
     display_map::HighlightKey,
     editor_settings::SeedQuerySetting,
@@ -23,10 +23,9 @@ use language::{
     language_settings::{FormatOnSave, LanguageSettings},
     proto::serialize_anchor as serialize_text_anchor,
 };
-use lsp::DiagnosticSeverity;
 use multi_buffer::{BufferOffset, MultiBufferOffset, MultiBufferRow, PathKey};
 use project::{
-    File, Project, ProjectItem as _, ProjectPath, git_store::GitStore, lsp_store::FormatTrigger,
+    File, FormatTrigger, Project, ProjectItem as _, ProjectPath, git_store::GitStore,
     project_settings::ProjectSettings, search::SearchQuery,
 };
 use rope::TextSummary;
@@ -42,7 +41,7 @@ use std::{
     sync::Arc,
 };
 use text::{BufferId, BufferSnapshot, OffsetRangeExt, Selection, ToPoint as _};
-use ui::{IconDecorationKind, prelude::*};
+use ui::prelude::*;
 use util::{ResultExt, TryFutureExt, debug_panic, paths::PathExt, rel_path::RelPath};
 use workspace::item::{Dedup, ItemSettings, SerializableItem, TabContentParams};
 use workspace::{
@@ -2198,26 +2197,6 @@ pub fn entry_label_color(selected: bool) -> Color {
         Color::Default
     } else {
         Color::Muted
-    }
-}
-
-pub fn entry_diagnostic_aware_icon_name_and_color(
-    diagnostic_severity: Option<DiagnosticSeverity>,
-) -> Option<(IconName, Color)> {
-    match diagnostic_severity {
-        Some(DiagnosticSeverity::ERROR) => Some((IconName::Close, Color::Error)),
-        Some(DiagnosticSeverity::WARNING) => Some((IconName::Triangle, Color::Warning)),
-        _ => None,
-    }
-}
-
-pub fn entry_diagnostic_aware_icon_decoration_and_color(
-    diagnostic_severity: Option<DiagnosticSeverity>,
-) -> Option<(IconDecorationKind, Color)> {
-    match diagnostic_severity {
-        Some(DiagnosticSeverity::ERROR) => Some((IconDecorationKind::X, Color::Error)),
-        Some(DiagnosticSeverity::WARNING) => Some((IconDecorationKind::Triangle, Color::Warning)),
-        _ => None,
     }
 }
 

@@ -502,24 +502,6 @@ When enabled, this setting will automatically close tabs for files that have bee
 
 > Note: Dirty files (files with unsaved changes) will not be automatically closed even when this setting is enabled, ensuring you don't lose unsaved work.
 
-## Code Lens
-
-- Description: Whether and how to display code lenses from language servers. Code lenses show contextual information such as reference counts, implementations, and other metadata provided by the language server.
-- Setting: `code_lens`
-- Default: `off`
-
-**Options**
-
-1. `off`: Do not query and display code lenses.
-2. `on`: Display code lenses from language servers above code elements.
-3. `menu`: Display code lenses in the code action menu.
-
-```json [settings]
-{
-  "code_lens": "on"
-}
-```
-
 ## Confirm Quit
 
 - Description: Whether or not to prompt the user to confirm before closing the application.
@@ -1458,8 +1440,7 @@ or
     "file_icons": false,
     "git_status": false,
     "activate_on_close": "history",
-    "show_close_button": "hover",
-    "show_diagnostics": "off"
+    "show_close_button": "hover"
   }
 }
 ```
@@ -1580,54 +1561,6 @@ or
 }
 ```
 
-### Show Diagnostics
-
-- Description: Whether to show diagnostics indicators in tabs. This setting only works when file icons are active and controls which files with diagnostic issues to mark.
-- Setting: `show_diagnostics`
-- Default: `off`
-
-**Options**
-
-1. Do not mark any files:
-
-```json [settings]
-{
-  "tabs": {
-    "show_diagnostics": "off"
-  }
-}
-```
-
-2. Only mark files with errors:
-
-```json [settings]
-{
-  "tabs": {
-    "show_diagnostics": "errors"
-  }
-}
-```
-
-3. Mark files with errors and warnings:
-
-```json [settings]
-{
-  "tabs": {
-    "show_diagnostics": "all"
-  }
-}
-```
-
-### Show Inline Code Actions
-
-- Description: Whether to show code action button at start of buffer line.
-- Setting: `inline_code_actions`
-- Default: `true`
-
-**Options**
-
-`boolean` values
-
 ### Session
 
 - Description: Controls Zed lifecycle-related behavior.
@@ -1739,16 +1672,6 @@ This setting enables integration with macOS’s native window tabbing feature. W
   "fullscreen_mode": "simple"
 }
 ```
-
-## Enable Language Server
-
-- Description: Whether or not to use language servers to provide code intelligence.
-- Setting: `enable_language_server`
-- Default: `true`
-
-**Options**
-
-`boolean` values
 
 ## Ensure Final Newline On Save
 
@@ -1864,93 +1787,23 @@ There is an experimental setting that completely hides the status bar. This caus
 }
 ```
 
-## LSP
-
-- Description: Configuration for language servers.
-- Setting: `lsp`
-- Default: `null`
-
-**Options**
-
-The following settings can be overridden for specific language servers:
-
-- `initialization_options`
-- `settings`
-
-To override configuration for a language server, add an entry for that language server's name to the `lsp` value.
-
-Some options are passed via `initialization_options` to the language server. These are for options which must be specified at language server startup and when changed will require restarting the language server.
-
-For example to pass the `check` option to `rust-analyzer`, use the following configuration:
-
-```json [settings]
-{
-  "lsp": {
-    "rust-analyzer": {
-      "initialization_options": {
-        "check": {
-          "command": "clippy" // rust-analyzer.check.command (default: "check")
-        }
-      }
-    }
-  }
-}
-```
-
-While other options may be changed at a runtime and should be placed under `settings`:
-
-```json [settings]
-{
-  "lsp": {
-    "yaml-language-server": {
-      "settings": {
-        "yaml": {
-          "keyOrdering": true // Enforces alphabetical ordering of keys in maps
-        }
-      }
-    }
-  }
-}
-```
-
 ## Global LSP Settings
 
-- Description: Configuration for global LSP settings that apply to all language servers
+- Description: Configuration for the language server connections used by Copilot and Prettier
 - Setting: `global_lsp_settings`
 - Default:
 
 ```json [settings]
 {
   "global_lsp_settings": {
-    "button": true,
-    "request_timeout": 120,
-    "max_buffer_line_length": 20000,
-    "notifications": {
-      // Timeout in milliseconds for automatically dismissing language server notifications.
-      // Set to 0 to disable auto-dismiss.
-      "dismiss_timeout_ms": 5000
-    }
+    "request_timeout": 120
   }
 }
 ```
 
 **Options**
 
-- `button`: Whether to show the LSP status button in the status bar
-- `request_timeout`: The maximum amount of time to wait for responses from language servers, in seconds. A value of `0` will result in no timeout being applied (causing all LSP responses to wait indefinitely until completed). Default: `120`
-- `max_buffer_line_length`: The maximum line length a buffer may contain before Zed disables all language server features for that entire buffer. If any line exceeds this value, Zed does not open the buffer with language servers or send them buffer-specific requests. Default: `20000`
-- `notifications`: Notification-related settings.
-  - `dismiss_timeout_ms`: Timeout in milliseconds for automatically dismissing language server notifications. Set to 0 to disable auto-dismiss.
-
-## LSP Highlight Debounce
-
-- Description: The debounce delay in milliseconds before querying highlights from the language server based on the current cursor location.
-- Setting: `lsp_highlight_debounce`
-- Default: `75`
-
-**Options**
-
-`integer` values representing milliseconds
+- `request_timeout`: The maximum amount of time to wait for responses from these connections, in seconds. A value of `0` will result in no timeout being applied (causing all responses to wait indefinitely until completed). Default: `120`
 
 ## Features
 
@@ -2124,7 +1977,7 @@ WARNING: `{buffer_path}` should not be used to direct your formatter to read fro
 Here `rust-analyzer` will be used first to format the code, followed by a call of sed.
 If any of the formatters fails, the subsequent ones will still be executed.
 
-6. To disable the formatter, use `"none"`. This setting disables the configured formatter, but any actions in `code_actions_on_format` will still be executed:
+6. To disable the formatter, use `"none"`. This setting disables the configured formatter:
 
 ```json [settings]
 {
@@ -2303,115 +2156,6 @@ To interpret all `.c` files as C++, files called `MyLockFile` as TOML and files 
     "C++": ["c"],
     "TOML": ["MyLockFile"],
     "Dockerfile": ["Dockerfile*"]
-  }
-}
-```
-
-## Diagnostics
-
-- Description: Configuration for diagnostics-related features.
-- Setting: `diagnostics`
-- Default:
-
-```json [settings]
-{
-  "diagnostics": {
-    "button": true,
-    "include_warnings": true,
-    "inline": {
-      "enabled": false
-    }
-  }
-}
-```
-
-**Options**
-
-- `button`: Whether to show the project diagnostics button in the status bar
-- `include_warnings`: Whether to show warnings or not by default
-
-### Inline Diagnostics
-
-- Description: Whether or not to show diagnostics information inline.
-- Setting: `inline`
-- Default:
-
-```json [settings]
-{
-  "diagnostics": {
-    "inline": {
-      "enabled": false,
-      "update_debounce_ms": 150,
-      "padding": 4,
-      "min_column": 0,
-      "max_severity": null
-    }
-  }
-}
-```
-
-**Options**
-
-1. Enable inline diagnostics.
-
-```json [settings]
-{
-  "diagnostics": {
-    "inline": {
-      "enabled": true
-    }
-  }
-}
-```
-
-2. Delay diagnostic updates until some time after the last diagnostic update.
-
-```json [settings]
-{
-  "diagnostics": {
-    "inline": {
-      "enabled": true,
-      "update_debounce_ms": 150
-    }
-  }
-}
-```
-
-3. Set padding between the end of the source line and the start of the diagnostic.
-
-```json [settings]
-{
-  "diagnostics": {
-    "inline": {
-      "enabled": true,
-      "padding": 4
-    }
-  }
-}
-```
-
-4. Horizontally align inline diagnostics at the given column.
-
-```json [settings]
-{
-  "diagnostics": {
-    "inline": {
-      "enabled": true,
-      "min_column": 80
-    }
-  }
-}
-```
-
-5. Show only warning and error diagnostics.
-
-```json [settings]
-{
-  "diagnostics": {
-    "inline": {
-      "enabled": true,
-      "max_severity": "warning"
-    }
   }
 }
 ```
@@ -2675,30 +2419,6 @@ Example:
   "git": {
     "diff_base": "default_branch"
   }
-}
-```
-
-## Go to Definition Fallback
-
-- Description: What to do when the {#action editor::GoToDefinition} action fails to find a definition
-- Setting: `go_to_definition_fallback`
-- Default: `"find_all_references"`
-
-**Options**
-
-1. Do nothing:
-
-```json [settings]
-{
-  "go_to_definition_fallback": "none"
-}
-```
-
-2. Find references for the same symbol (default):
-
-```json [settings]
-{
-  "go_to_definition_fallback": "find_all_references"
 }
 ```
 
@@ -3002,63 +2722,6 @@ Run the {#action icon_theme_selector::Toggle} action in the command palette to s
 }
 ```
 
-## Inlay hints
-
-- Description: Configuration for displaying extra text with hints in the editor.
-- Setting: `inlay_hints`
-- Default:
-
-```json [settings]
-{
-  "inlay_hints": {
-    "enabled": false,
-    "show_type_hints": true,
-    "show_parameter_hints": true,
-    "show_other_hints": true,
-    "show_background": false,
-    "edit_debounce_ms": 700,
-    "scroll_debounce_ms": 50,
-    "toggle_on_modifiers_press": null
-  }
-}
-```
-
-**Options**
-
-Inlay hints querying consists of two parts: editor (client) and LSP server.
-When the inlay settings above are changed to enable the hints, the editor will start to query certain types of hints and react on LSP hint refresh request from the server.
-At this point, the server may or may not return hints depending on its implementation, further configuration might be needed, refer to the corresponding LSP server documentation.
-
-The following languages have inlay hints preconfigured by Zed:
-
-- [Go](../languages/go.md)
-- [Rust](../languages/rust.md)
-- [Svelte](../languages/svelte.md)
-- [TypeScript](../languages/typescript.md)
-
-Use the `lsp` section for the server configuration. Examples are provided in the corresponding language documentation.
-
-Hints are not instantly queried in Zed, two kinds of debounces are used, either may be set to 0 to be disabled.
-Settings-related hint updates are not debounced.
-
-All possible config values for `toggle_on_modifiers_press` are:
-
-```json [settings]
-{
-  "inlay_hints": {
-    "toggle_on_modifiers_press": {
-      "control": true,
-      "shift": true,
-      "alt": true,
-      "platform": true,
-      "function": true
-    }
-  }
-}
-```
-
-Unspecified values have a `false` value, hints won't be toggled if all the modifiers are `false` or not all the modifiers are pressed.
-
 ## Journal
 
 - Description: Configuration for the journal.
@@ -3157,7 +2820,6 @@ To override settings for a language, add an entry for that language's name to th
 
 The following settings can be overridden for each specific language:
 
-- [`enable_language_server`](#enable-language-server)
 - [`ensure_final_newline_on_save`](#ensure-final-newline-on-save)
 - [`line_ending`](#line-ending)
 - [`format_on_save`](#format-on-save)
@@ -3165,7 +2827,6 @@ The following settings can be overridden for each specific language:
 - [`hard_tabs`](#hard-tabs)
 - [`preferred_line_length`](#preferred-line-length)
 - [`remove_trailing_whitespace_on_save`](#remove-trailing-whitespace-on-save)
-- [`semantic_tokens`](#semantic-tokens)
 - [`show_edit_predictions`](#show-edit-predictions)
 - [`show_whitespaces`](#show-whitespaces)
 - [`whitespace_map`](#whitespace-map)
@@ -3175,31 +2836,6 @@ The following settings can be overridden for each specific language:
 - [`always_treat_brackets_as_autoclosed`](#always-treat-brackets-as-autoclosed)
 
 These values take in the same options as the root-level settings with the same name.
-
-### Document Symbols
-
-- Description: Controls the source of document symbols used for outlines and breadcrumbs.
-- Setting: `document_symbols`
-- Default: `off`
-
-**Options**
-
-- `"off"`: Use tree-sitter queries to compute document symbols (default)
-- `"on"`: Use the language server's `textDocument/documentSymbol` LSP response. When enabled, tree-sitter is not used for document symbols
-
-LSP document symbols can provide more accurate symbols for complex language features (e.g., generic types, macros, decorators) that tree-sitter may not handle well. Use this when your language server provides better symbol information than the tree-sitter grammar.
-
-Example:
-
-```json [settings]
-{
-  "languages": {
-    "TypeScript": {
-      "document_symbols": "on"
-    }
-  }
-}
-```
 
 ## Language Models
 
@@ -3253,39 +2889,6 @@ Configuration for various AI model providers including API URLs and authenticati
   "line_indicator_format": "long"
 }
 ```
-
-## Linked Edits
-
-- Description: Whether to perform linked edits of associated ranges, if the language server supports it. For example, when editing opening `<html>` tag, the contents of the closing `</html>` tag will be edited as well.
-- Setting: `linked_edits`
-- Default: `true`
-
-**Options**
-
-`boolean` values
-
-## LSP Document Colors
-
-- Description: How to render LSP `textDocument/documentColor` colors in the editor
-- Setting: `lsp_document_colors`
-- Default: `inlay`
-
-**Options**
-
-1. `inlay`: Render document colors as inlay hints near the color text.
-2. `background`: Draw a background behind the color text.
-3. `border`: Draw a border around the color text.
-4. `none`: Do not query and render document colors.
-
-## LSP Document Links
-
-- Description: Whether to query and display LSP `textDocument/documentLink` links in the editor
-- Setting: `lsp_document_links`
-- Default: `true`
-
-**Options**
-
-`boolean` values
 
 ## Max Tabs
 
@@ -3955,102 +3558,6 @@ Non-negative `integer` values
 2. `selection` only populate the search query when there is text selected
 3. `never` never populate the search query
 
-## Semantic Tokens
-
-- Description: Controls how semantic tokens from language servers are used for syntax highlighting.
-- Setting: `semantic_tokens`
-- Default: `off`
-
-**Options**
-
-1. `off`: Do not request semantic tokens from language servers.
-2. `combined`: Use LSP semantic tokens together with tree-sitter highlighting.
-3. `full`: Use LSP semantic tokens exclusively, replacing tree-sitter highlighting.
-
-To enable semantic tokens globally:
-
-```json [settings]
-{
-  "semantic_tokens": "combined"
-}
-```
-
-To enable semantic tokens for a specific language:
-
-```json [settings]
-{
-  "languages": {
-    "Rust": {
-      "semantic_tokens": "full"
-    }
-  }
-}
-```
-
-May require language server restart to properly apply.
-
-## LSP Folding Ranges
-
-- Description: Controls whether folding ranges from language servers are used instead of tree-sitter and indent-based folding. Tree-sitter and indent-based folding is the default; it is used as a fallback when LSP folding data is not returned or this setting is turned off.
-- Setting: `document_folding_ranges`
-- Default: `off`
-
-**Options**
-
-1. `off`: Use tree-sitter and indent-based folding.
-2. `on`: Use LSP folding wherever possible, falling back to tree-sitter and indent-based folding when no results were returned by the server.
-
-To enable LSP folding ranges globally:
-
-```json [settings]
-{
-  "document_folding_ranges": "on"
-}
-```
-
-To enable LSP folding ranges for a specific language:
-
-```json [settings]
-{
-  "languages": {
-    "Rust": {
-      "document_folding_ranges": "on"
-    }
-  }
-}
-```
-
-## LSP Document Symbols
-
-- Description: Controls the source of document symbols used for outlines and breadcrumbs. This is an LSP feature — when enabled, tree-sitter is not used for document symbols, and the language server's `textDocument/documentSymbol` response is used instead.
-- Setting: `document_symbols`
-- Default: `off`
-
-**Options**
-
-1. `off`: Use tree-sitter queries to compute document symbols.
-2. `on`: Use the language server's `textDocument/documentSymbol` LSP response. When enabled, tree-sitter is not used for document symbols.
-
-To enable LSP document symbols globally:
-
-```json [settings]
-{
-  "document_symbols": "on"
-}
-```
-
-To enable LSP document symbols for a specific language:
-
-```json [settings]
-{
-  "languages": {
-    "Rust": {
-      "document_symbols": "on"
-    }
-  }
-}
-```
-
 ## Use Smartcase Search
 
 - Description: When enabled, automatically adjusts search case sensitivity based on your query. If your search query contains any uppercase letters, the search becomes case-sensitive; if it contains only lowercase letters, the search becomes case-insensitive. \
@@ -4087,10 +3594,7 @@ Examples:
 {
   "completions": {
     "words": "fallback",
-    "words_min_length": 3,
-    "lsp": true,
-    "lsp_fetch_timeout_ms": 0,
-    "lsp_insert_mode": "replace_suffix"
+    "words_min_length": 3
   }
 }
 ```
@@ -4117,39 +3621,6 @@ Examples:
 **Options**
 
 Positive integer values
-
-### LSP
-
-- Description: Whether to fetch LSP completions or not.
-- Setting: `lsp`
-- Default: `true`
-
-**Options**
-
-`boolean` values
-
-### LSP Fetch Timeout (ms)
-
-- Description: When fetching LSP completions, determines how long to wait for a response of a particular server. When set to 0, waits indefinitely.
-- Setting: `lsp_fetch_timeout_ms`
-- Default: `0`
-
-**Options**
-
-`integer` values representing milliseconds
-
-### LSP Insert Mode
-
-- Description: Controls what range to replace when accepting LSP completions.
-- Setting: `lsp_insert_mode`
-- Default: `replace_suffix`
-
-**Options**
-
-1. `insert` - Replaces text before the cursor, using the `insert` range described in the LSP specification
-2. `replace` - Replaces text before and after the cursor, using the `replace` range described in the LSP specification
-3. `replace_subsequence` - Behaves like `"replace"` if the text that would be replaced is a subsequence of the completion text, and like `"insert"` otherwise
-4. `replace_suffix` - Behaves like `"replace"` if the text after the cursor is a suffix of the completion, and like `"insert"` otherwise
 
 ## Show Completions On Input
 
@@ -4232,16 +3703,6 @@ Positive integer values
 
 `boolean` values
 
-## Use On Type Format
-
-- Description: Whether to use additional LSP queries to format (and amend) the code after every "trigger" symbol input, defined by LSP server capabilities
-- Setting: `use_on_type_format`
-- Default: `true`
-
-**Options**
-
-`boolean` values
-
 ## Use Auto Surround
 
 - Description: Whether to automatically surround selected text when typing opening parenthesis, bracket, brace, single or double quote characters. For example, when you select text and type '(', Zed will surround the text with ().
@@ -4302,8 +3763,7 @@ List of `integer` column numbers
 {
   "tasks": {
     "variables": {},
-    "enabled": true,
-    "prefer_lsp": false
+    "enabled": true
   }
 }
 ```
@@ -4312,7 +3772,6 @@ List of `integer` column numbers
 
 - `variables`: Custom variables for task configuration
 - `enabled`: Whether tasks are enabled
-- `prefer_lsp`: Whether to prefer LSP-provided tasks over Zed language extension ones
 
 ## Telemetry
 
@@ -5257,7 +4716,6 @@ Run the {#action theme_selector::Toggle} action in the command palette to see a 
       "horizontal_scroll": true
     },
     "sticky_scroll": true,
-    "show_diagnostics": "all",
     "indent_guides": {
       "show": "always"
     },

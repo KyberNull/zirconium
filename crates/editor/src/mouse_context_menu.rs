@@ -1,8 +1,7 @@
 use crate::{
-    Copy, CopyAndTrim, CopyPermalinkToLine, Cut, DisplayPoint, DisplaySnapshot, Editor,
-    FindAllReferences, GoToDeclaration, GoToDefinition, GoToImplementation,
-    GoToTypeDefinition, Paste, Rename, RevealInFileManager, SelectMode,
-    SelectionEffects, SelectionExt, ToDisplayPoint, ToggleCodeActions,
+    Copy, CopyAndTrim, CopyPermalinkToLine, Cut, DisplayPoint, DisplaySnapshot, Editor, Paste,
+    RevealInFileManager, SelectMode, SelectionEffects, SelectionExt, ToDisplayPoint,
+    ToggleCodeActions,
     actions::{Format, FormatSelections},
     selections_collection::SelectionsCollection,
 };
@@ -244,22 +243,6 @@ pub fn deploy_context_menu(
         ui::ContextMenu::build(window, cx, |menu, _window, _cx| {
             let builder = menu
                 .on_blur_subscription(Subscription::new(|| {}))
-                .action("Go to Definition", Box::new(GoToDefinition::default()))
-                .action("Go to Declaration", Box::new(GoToDeclaration::default()))
-                .action(
-                    "Go to Type Definition",
-                    Box::new(GoToTypeDefinition::default()),
-                )
-                .action(
-                    "Go to Implementation",
-                    Box::new(GoToImplementation::default()),
-                )
-                .action(
-                    "Find All References",
-                    Box::new(FindAllReferences::default()),
-                )
-                .separator()
-                .action("Rename Symbol", Box::new(Rename))
                 .action("Format Buffer", Box::new(Format))
                 .when(format_selections, |cx| {
                     cx.action("Format Selections", Box::new(FormatSelections))
@@ -346,7 +329,8 @@ mod tests {
     use crate::{
         editor_tests::init_test,
         test::{
-            editor_lsp_test_context::EditorLspTestContext, editor_test_context::EditorTestContext,
+            editor_language_test_context::EditorLanguageTestContext,
+            editor_test_context::EditorTestContext,
         },
     };
     use indoc::indoc;
@@ -355,14 +339,7 @@ mod tests {
     async fn test_mouse_context_menu(cx: &mut gpui::TestAppContext) {
         init_test(cx, |_| {});
 
-        let mut cx = EditorLspTestContext::new_rust(
-            lsp::ServerCapabilities {
-                hover_provider: Some(lsp::HoverProviderCapability::Simple(true)),
-                ..Default::default()
-            },
-            cx,
-        )
-        .await;
+        let mut cx = EditorLanguageTestContext::new_rust(cx).await;
 
         cx.set_state(indoc! {"
             fn teˇst() {

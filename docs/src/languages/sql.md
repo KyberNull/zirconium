@@ -1,13 +1,11 @@
 ---
 title: SQL
-description: "Configure SQL language support in Zed, including language servers, formatting, and debugging."
+description: "Configure SQL language support in Zed, including formatting and syntax highlighting."
 ---
 
 # SQL
 
 SQL files are handled by the [SQL Extension](https://github.com/zed-extensions/sql).
-
-- Tree-sitter: [nervenes/tree-sitter-sql](https://github.com/nervenes/tree-sitter-sql)
 
 ### Formatting
 
@@ -29,16 +27,6 @@ sql-formatter --version
 3. Configure formatting in Settings ({#kb zed::OpenSettings}) under Languages > SQL, or add to your settings file:
 
 ```json [settings]
-  "languages": {
-    "SQL": {
-      "formatter": {
-        "external": {
-          "command": "sql-formatter",
-          "arguments": ["--language", "mysql"]
-        }
-      }
-    }
-  },
 ```
 
 Substitute your preferred [SQL Dialect] for `mysql` above (`duckdb`, `hive`, `mariadb`, `postgresql`, `redshift`, `snowflake`, `sqlite`, `spark`, etc).
@@ -51,10 +39,6 @@ Sql-formatter also allows more precise control by providing [sql-formatter confi
 
 ```json
 {
-  "language": "postgresql",
-  "tabWidth": 2,
-  "keywordCase": "upper",
-  "linesBetweenQueries": 2
 }
 ```
 
@@ -62,6 +46,24 @@ When using a `.sql-formatter.json` file you can use a simplified Zed settings co
 
 ```json [settings]
 {
+}
+```
+
+- Tree-sitter: [nervenes/tree-sitter-sql](https://github.com/nervenes/tree-sitter-sql)
+  "languages": {
+    "SQL": {
+      "formatter": {
+        "external": {
+          "command": "sql-formatter",
+          "arguments": ["--language", "mysql"]
+        }
+      }
+    }
+  },
+  "language": "postgresql",
+  "tabWidth": 2,
+  "keywordCase": "upper",
+  "linesBetweenQueries": 2
   "languages": {
     "SQL": {
       "formatter": {
@@ -71,5 +73,3 @@ When using a `.sql-formatter.json` file you can use a simplified Zed settings co
       }
     }
   }
-}
-```

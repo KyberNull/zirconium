@@ -4,8 +4,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use fs::Fs;
 use gpui::{App, Global, ReadGlobal, SharedString, Task};
-use language::{BinaryStatus, LanguageLoader, LanguageMatcher, LanguageName};
-use lsp::LanguageServerName;
+use language::{LanguageLoader, LanguageMatcher, LanguageName};
 use parking_lot::RwLock;
 
 use crate::Extension;
@@ -27,7 +26,6 @@ pub struct ExtensionHostProxy {
     theme_proxy: RwLock<Option<Arc<dyn ExtensionThemeProxy>>>,
     grammar_proxy: RwLock<Option<Arc<dyn ExtensionGrammarProxy>>>,
     language_proxy: RwLock<Option<Arc<dyn ExtensionLanguageProxy>>>,
-    language_server_proxy: RwLock<Option<Arc<dyn ExtensionLanguageServerProxy>>>,
     snippet_proxy: RwLock<Option<Arc<dyn ExtensionSnippetProxy>>>,
     context_server_proxy: RwLock<Option<Arc<dyn ExtensionContextServerProxy>>>,
     language_model_provider_proxy: RwLock<Option<Arc<dyn ExtensionLanguageModelProviderProxy>>>,
@@ -51,7 +49,6 @@ impl ExtensionHostProxy {
             theme_proxy: RwLock::default(),
             grammar_proxy: RwLock::default(),
             language_proxy: RwLock::default(),
-            language_server_proxy: RwLock::default(),
             snippet_proxy: RwLock::default(),
             context_server_proxy: RwLock::default(),
             language_model_provider_proxy: RwLock::default(),
@@ -68,10 +65,6 @@ impl ExtensionHostProxy {
 
     pub fn register_language_proxy(&self, proxy: impl ExtensionLanguageProxy) {
         self.language_proxy.write().replace(Arc::new(proxy));
-    }
-
-    pub fn register_language_server_proxy(&self, proxy: impl ExtensionLanguageServerProxy) {
-        self.language_server_proxy.write().replace(Arc::new(proxy));
     }
 
     pub fn register_snippet_proxy(&self, proxy: impl ExtensionSnippetProxy) {
@@ -263,68 +256,6 @@ impl ExtensionLanguageProxy for ExtensionHostProxy {
         };
 
         proxy.remove_languages(languages_to_remove, grammars_to_remove)
-    }
-}
-
-pub trait ExtensionLanguageServerProxy: Send + Sync + 'static {
-    fn register_language_server(
-        &self,
-        extension: Arc<dyn Extension>,
-        language_server_id: LanguageServerName,
-        language: LanguageName,
-    );
-
-    fn remove_language_server(
-        &self,
-        language: &LanguageName,
-        language_server_id: &LanguageServerName,
-        cx: &mut App,
-    ) -> Task<Result<()>>;
-
-    fn update_language_server_status(
-        &self,
-        language_server_id: LanguageServerName,
-        status: BinaryStatus,
-    );
-}
-
-impl ExtensionLanguageServerProxy for ExtensionHostProxy {
-    fn register_language_server(
-        &self,
-        extension: Arc<dyn Extension>,
-        language_server_id: LanguageServerName,
-        language: LanguageName,
-    ) {
-        let Some(proxy) = self.language_server_proxy.read().clone() else {
-            return;
-        };
-
-        proxy.register_language_server(extension, language_server_id, language)
-    }
-
-    fn remove_language_server(
-        &self,
-        language: &LanguageName,
-        language_server_id: &LanguageServerName,
-        cx: &mut App,
-    ) -> Task<Result<()>> {
-        let Some(proxy) = self.language_server_proxy.read().clone() else {
-            return Task::ready(Ok(()));
-        };
-
-        proxy.remove_language_server(language, language_server_id, cx)
-    }
-
-    fn update_language_server_status(
-        &self,
-        language_server_id: LanguageServerName,
-        status: BinaryStatus,
-    ) {
-        let Some(proxy) = self.language_server_proxy.read().clone() else {
-            return;
-        };
-
-        proxy.update_language_server_status(language_server_id, status)
     }
 }
 

@@ -1,7 +1,6 @@
 //! This module contains all actions supported by [`Editor`].
 use super::*;
 use gpui::{Action, actions};
-use project::project_settings::GoToDiagnosticSeverityFilter;
 use schemars::JsonSchema;
 use util::serde::default_true;
 
@@ -107,9 +106,7 @@ pub struct ToggleCodeActions {
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum CodeActionSource {
-    Indicator(DisplayRow),
     RunMenu(DisplayRow),
-    QuickActionBar,
 }
 
 /// Confirms and accepts the currently selected completion suggestion.
@@ -323,26 +320,6 @@ pub struct SplitSelectionIntoLines {
     pub keep_selections: bool,
 }
 
-/// Expands the diagnostic under the cursor, if any, in case diagnostics are not
-/// yet active. Otherwise, goes to the next diagnostic in the file.
-#[derive(PartialEq, Clone, Default, Debug, Deserialize, JsonSchema, Action)]
-#[action(namespace = editor)]
-#[serde(deny_unknown_fields)]
-pub struct GoToDiagnostic {
-    #[serde(default)]
-    pub severity: GoToDiagnosticSeverityFilter,
-}
-
-/// Expands the diagnostic under the cursor, if any, in case diagnostics are not
-/// yet active. Otherwise, goes to the previous diagnostic in the file.
-#[derive(PartialEq, Clone, Default, Debug, Deserialize, JsonSchema, Action)]
-#[action(namespace = editor)]
-#[serde(deny_unknown_fields)]
-pub struct GoToPreviousDiagnostic {
-    #[serde(default)]
-    pub severity: GoToDiagnosticSeverityFilter,
-}
-
 /// Adds a cursor above the current selection.
 #[derive(PartialEq, Clone, Default, Debug, Deserialize, JsonSchema, Action)]
 #[action(namespace = editor)]
@@ -415,14 +392,6 @@ actions!(
         BlameHover,
         /// Cancels the current operation.
         Cancel,
-        /// Cancels the running flycheck operation.
-        CancelFlycheck,
-        /// Cancels pending language server work.
-        CancelLanguageServerWork,
-        /// Clears flycheck results.
-        ClearFlycheck,
-        /// Confirms the rename operation.
-        ConfirmRename,
         /// Confirms completion by inserting at cursor.
         ConfirmCompletionInsert,
         /// Confirms completion by replacing existing text.
@@ -505,8 +474,6 @@ actions!(
         /// Toggles all diff hunks in the editor. Collapses all hunks if any are
         /// currently expanded, otherwise expands all hunks.
         ToggleAllDiffHunks,
-        /// Expands macros recursively at cursor position.
-        ExpandMacroRecursively,
         /// Finds the next match in the search.
         FindNextMatch,
         /// Finds the previous match in the search.
@@ -568,22 +535,14 @@ actions!(
         /// edits outside the selected ranges are discarded. External command formatters do not
         /// support range formatting and are skipped.
         FormatSelections,
-        /// Goes to declaration in a split pane.
-        GoToDeclarationSplit,
-        /// Goes to definition in a split pane.
-        GoToDefinitionSplit,
         /// Goes to the next diff hunk.
         GoToHunk,
         /// Goes to the previous diff hunk.
         GoToPreviousHunk,
-        /// Goes to implementation in a split pane.
-        GoToImplementationSplit,
         /// Goes to the next bookmark in the file.
         GoToNextBookmark,
         /// Goes to the next change in the file.
         GoToNextChange,
-        /// Goes to the parent module of the current file.
-        GoToParentModule,
         /// Goes to the previous bookmark in the file.
         GoToPreviousBookmark,
         /// Goes to the previous change in the file.
@@ -592,16 +551,6 @@ actions!(
         GoToNextSymbol,
         /// Goes to the previous symbol.
         GoToPreviousSymbol,
-        /// Goes to the next reference to the symbol under the cursor.
-        GoToNextReference,
-        /// Goes to the previous reference to the symbol under the cursor.
-        GoToPreviousReference,
-        /// Goes to type definition in a split pane.
-        GoToTypeDefinitionSplit,
-        /// Goes to the next document highlight.
-        GoToNextDocumentHighlight,
-        /// Goes to the previous document highlight.
-        GoToPreviousDocumentHighlight,
         /// Scrolls down by half a page.
         HalfPageDown,
         /// Scrolls up by half a page.
@@ -699,8 +648,6 @@ actions!(
         OpenExcerptsSplit,
         /// Opens the proposed changes editor.
         OpenProposedChangesEditor,
-        /// Opens documentation for the symbol at cursor.
-        OpenDocs,
         /// Opens a permalink to the current line.
         OpenPermalinkToLine,
         /// Opens the file whose name is selected in the editor.
@@ -710,8 +657,6 @@ actions!(
         OpenSelectionsInMultibuffer,
         /// Opens the URL at cursor position.
         OpenUrl,
-        /// Organizes import statements.
-        OrganizeImports,
         /// Decreases indentation of selected lines.
         Outdent,
         /// Automatically adjusts indentation based on context.
@@ -730,10 +675,6 @@ actions!(
         Redo,
         /// Redoes the last selection change.
         RedoSelection,
-        /// Renames the symbol at cursor.
-        Rename,
-        /// Restarts the language server for the current file.
-        RestartLanguageServer,
         /// Reverses the order of selected lines.
         ReverseLines,
         /// Reloads the file from disk.
@@ -744,8 +685,6 @@ actions!(
         RotateSelectionsBackward,
         /// Rotates selections or lines forward.
         RotateSelectionsForward,
-        /// Runs flycheck diagnostics.
-        RunFlycheck,
         /// Scrolls the cursor to the bottom of the viewport.
         ScrollCursorBottom,
         /// Scrolls the cursor to the center of the viewport.
@@ -816,26 +755,16 @@ actions!(
         ShowCharacterPalette,
         /// Shows edit prediction at cursor.
         ShowEditPrediction,
-        /// Shows signature help for the current function.
-        ShowSignatureHelp,
         /// Shows word completions.
         ShowWordCompletions,
         /// Randomly shuffles selected lines.
         ShuffleLines,
-        /// Navigates to the next signature in the signature help popup.
-        SignatureHelpNext,
-        /// Navigates to the previous signature in the signature help popup.
-        SignatureHelpPrevious,
         /// Sorts selected lines by length.
         SortLinesByLength,
         /// Sorts selected lines case-insensitively.
         SortLinesCaseInsensitive,
         /// Sorts selected lines case-sensitively.
         SortLinesCaseSensitive,
-        /// Stops the language server for the current file.
-        StopLanguageServer,
-        /// Switches between source and header files.
-        SwitchSourceHeader,
         /// Inserts a tab character or indents.
         Tab,
         /// Removes a tab character or outdents.
@@ -856,8 +785,6 @@ actions!(
         EnableBreakpoint,
         /// Edits the log message for a breakpoint.
         EditLogBreakpoint,
-        /// Toggles automatic signature help.
-        ToggleAutoSignatureHelp,
         /// Toggles inline git blame display.
         ToggleGitBlameInline,
         /// Opens the git commit for the blame at cursor.
@@ -866,20 +793,8 @@ actions!(
         BlameRevision,
         /// Opens a blame of the file at the revision preceding the blame entry at cursor.
         BlamePreviousRevision,
-        /// Toggles the diagnostics panel.
-        ToggleDiagnostics,
         /// Toggles indent guides display.
         ToggleIndentGuides,
-        /// Toggles inlay hints display.
-        ToggleInlayHints,
-        /// Toggles code lens display.
-        ToggleCodeLens,
-        /// Toggles semantic highlights display.
-        ToggleSemanticHighlights,
-        /// Toggles inline values display.
-        ToggleInlineValues,
-        /// Toggles inline diagnostics display.
-        ToggleInlineDiagnostics,
         /// Toggles edit prediction feature.
         ToggleEditPrediction,
         /// Toggles line numbers display.
@@ -936,72 +851,6 @@ actions!(
         ToggleBreadcrumb,
     ]
 );
-
-/// Goes to the definition of the symbol at cursor.
-#[derive(PartialEq, Clone, Default, Deserialize, JsonSchema, Action)]
-#[action(namespace = editor)]
-#[serde(deny_unknown_fields)]
-pub struct GoToDefinition {
-    /// Where to show the definitions. Falls back to the `lsp_results_location`
-    /// setting when omitted. A single result is always opened directly.
-    #[serde(default)]
-    pub open_results_in: Option<OpenResultsIn>,
-}
-
-/// Goes to the declaration of the symbol at cursor.
-#[derive(PartialEq, Clone, Default, Deserialize, JsonSchema, Action)]
-#[action(namespace = editor)]
-#[serde(deny_unknown_fields)]
-pub struct GoToDeclaration {
-    /// Where to show the declarations. Falls back to the `lsp_results_location`
-    /// setting when omitted. A single result is always opened directly.
-    #[serde(default)]
-    pub open_results_in: Option<OpenResultsIn>,
-}
-
-/// Goes to the implementation of the symbol at cursor.
-#[derive(PartialEq, Clone, Default, Deserialize, JsonSchema, Action)]
-#[action(namespace = editor)]
-#[serde(deny_unknown_fields)]
-pub struct GoToImplementation {
-    /// Where to show the implementations. Falls back to the `lsp_results_location`
-    /// setting when omitted. A single result is always opened directly.
-    #[serde(default)]
-    pub open_results_in: Option<OpenResultsIn>,
-}
-
-/// Goes to the type definition of the symbol at cursor.
-#[derive(PartialEq, Clone, Default, Deserialize, JsonSchema, Action)]
-#[action(namespace = editor)]
-#[serde(deny_unknown_fields)]
-pub struct GoToTypeDefinition {
-    /// Where to show the definitions. Falls back to the `lsp_results_location`
-    /// setting when omitted. A single result is always opened directly.
-    #[serde(default)]
-    pub open_results_in: Option<OpenResultsIn>,
-}
-
-/// Finds all references to the symbol at cursor.
-#[derive(PartialEq, Clone, Deserialize, JsonSchema, Action)]
-#[action(namespace = editor)]
-#[serde(deny_unknown_fields)]
-pub struct FindAllReferences {
-    #[serde(default = "default_true")]
-    pub always_open_multibuffer: bool,
-    /// Where to show the references. Falls back to the `lsp_results_location`
-    /// setting when omitted. A single result is always opened directly.
-    #[serde(default)]
-    pub open_results_in: Option<OpenResultsIn>,
-}
-
-impl Default for FindAllReferences {
-    fn default() -> Self {
-        Self {
-            always_open_multibuffer: true,
-            open_results_in: None,
-        }
-    }
-}
 
 /// Edits a stored review comment inline.
 #[derive(PartialEq, Clone, Deserialize, JsonSchema, Action)]

@@ -3307,7 +3307,7 @@ impl ActionArgumentsEditor {
                     )
                 })?;
 
-                let file_name = json_schema_store::normalized_action_file_name(action_name);
+                let file_name = format!("{}.json", action_name.replace("::", "__"));
 
                 let (buffer, backup_temp_dir) =
                     Self::create_temp_buffer(temp_dir, file_name.clone(), project.clone(), fs, cx)

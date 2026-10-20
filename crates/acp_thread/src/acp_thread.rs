@@ -22,11 +22,11 @@ use language::{
 };
 use markdown::{Markdown, MarkdownOptions};
 pub use mention::*;
-use project::lsp_store::{FormatTrigger, LspFormatTarget};
 use project::{
     AgentLocation, Project,
     git_store::{GitStoreCheckpoint, GitStoreEvent, RepositoryEvent},
 };
+use project::{FormatTarget, FormatTrigger};
 use serde::{Deserialize, Serialize};
 use serde_json::to_string_pretty;
 use std::collections::HashMap;
@@ -4365,7 +4365,7 @@ impl AcpThread {
                 let format_task = project.update(cx, |project, cx| {
                     project.format(
                         HashSet::from_iter([buffer.clone()]),
-                        LspFormatTarget::Buffers,
+                        FormatTarget::Buffers,
                         false,
                         FormatTrigger::Save,
                         cx,

@@ -400,7 +400,8 @@ mod tests {
         display_map::{DisplayRow, ToDisplayPoint},
         editor_tests::init_test,
         test::{
-            editor_lsp_test_context::EditorLspTestContext, editor_test_context::EditorTestContext,
+            editor_language_test_context::EditorLanguageTestContext,
+            editor_test_context::EditorTestContext,
         },
     };
     use collections::HashSet;
@@ -570,12 +571,8 @@ mod tests {
         init_test(cx, |language_settings| {
             language_settings.defaults.colorize_brackets = Some(true);
         });
-        let mut cx = EditorLspTestContext::new(
-            Arc::into_inner(rust_lang()).unwrap(),
-            lsp::ServerCapabilities::default(),
-            cx,
-        )
-        .await;
+        let mut cx =
+            EditorLanguageTestContext::new(Arc::into_inner(rust_lang()).unwrap(), cx).await;
 
         cx.set_state(indoc! {r#"ˇuse std::{collections::HashMap, future::Future};
 
@@ -691,12 +688,8 @@ where
         init_test(cx, |language_settings| {
             language_settings.defaults.colorize_brackets = Some(true);
         });
-        let mut cx = EditorLspTestContext::new(
-            Arc::into_inner(markdown_lang()).unwrap(),
-            lsp::ServerCapabilities::default(),
-            cx,
-        )
-        .await;
+        let mut cx =
+            EditorLanguageTestContext::new(Arc::into_inner(markdown_lang()).unwrap(), cx).await;
 
         cx.set_state(indoc! {r#"ˇ[LLM-powered features](./ai/overview.md), [bring and configure your own API keys](./ai/llm-providers.md#use-your-own-keys)"#});
         cx.executor().advance_clock(Duration::from_millis(100));
@@ -743,12 +736,8 @@ where
         init_test(cx, |language_settings| {
             language_settings.defaults.colorize_brackets = Some(true);
         });
-        let mut cx = EditorLspTestContext::new(
-            Arc::into_inner(markdown_lang()).unwrap(),
-            lsp::ServerCapabilities::default(),
-            cx,
-        )
-        .await;
+        let mut cx =
+            EditorLanguageTestContext::new(Arc::into_inner(markdown_lang()).unwrap(), cx).await;
 
         let rows = 100;
         let footer = "1 hsla(207.80, 81.00%, 66.00%, 1.00)\n";
@@ -898,12 +887,8 @@ where
         init_test(cx, |language_settings| {
             language_settings.defaults.colorize_brackets = Some(true);
         });
-        let mut cx = EditorLspTestContext::new(
-            Arc::into_inner(rust_lang()).unwrap(),
-            lsp::ServerCapabilities::default(),
-            cx,
-        )
-        .await;
+        let mut cx =
+            EditorLanguageTestContext::new(Arc::into_inner(rust_lang()).unwrap(), cx).await;
 
         cx.set_state(indoc! {r#"
 struct Foo<'a, T> {
@@ -1038,12 +1023,8 @@ fn process_data«1()1» «1{
         init_test(cx, |language_settings| {
             language_settings.defaults.colorize_brackets = Some(true);
         });
-        let mut cx = EditorLspTestContext::new(
-            Arc::into_inner(rust_lang()).unwrap(),
-            lsp::ServerCapabilities::default(),
-            cx,
-        )
-        .await;
+        let mut cx =
+            EditorLanguageTestContext::new(Arc::into_inner(rust_lang()).unwrap(), cx).await;
 
         cx.set_state(&separate_with_comment_lines(
             indoc! {r#"
@@ -1250,12 +1231,8 @@ mod foo «1{
         init_test(cx, |language_settings| {
             language_settings.defaults.colorize_brackets = Some(true);
         });
-        let mut cx = EditorLspTestContext::new(
-            Arc::into_inner(rust_lang()).unwrap(),
-            lsp::ServerCapabilities::default(),
-            cx,
-        )
-        .await;
+        let mut cx =
+            EditorLanguageTestContext::new(Arc::into_inner(rust_lang()).unwrap(), cx).await;
 
         // taken from r-a https://github.com/rust-lang/rust-analyzer/blob/d733c07552a2dc0ec0cc8f4df3f0ca969a93fd90/crates/ide/src/inlay_hints.rs#L81-L297
         cx.set_state(indoc! {r#"ˇ
@@ -1955,12 +1932,8 @@ mod foo «1{
         init_test(cx, |language_settings| {
             language_settings.defaults.colorize_brackets = Some(true);
         });
-        let mut cx = EditorLspTestContext::new(
-            Arc::into_inner(rust_lang()).unwrap(),
-            lsp::ServerCapabilities::default(),
-            cx,
-        )
-        .await;
+        let mut cx =
+            EditorLanguageTestContext::new(Arc::into_inner(rust_lang()).unwrap(), cx).await;
 
         // Generate a large function body. When folded, this collapses
         // to a single display line, making small_function visible on screen.

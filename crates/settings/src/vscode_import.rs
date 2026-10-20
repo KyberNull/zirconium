@@ -2,7 +2,6 @@ use crate::*;
 use anyhow::{Context as _, Result, anyhow};
 use collections::HashMap;
 use fs::Fs;
-use gpui::Rgba;
 use paths::{cursor_settings_file_paths, vscode_settings_file_paths};
 use serde::Deserialize;
 use serde_json::{Map, Value};
@@ -178,16 +177,12 @@ impl VsCodeSettings {
             auto_update: None,
             base_keymap: Some(BaseKeymapContent::VSCode),
             credentials_url: None,
-            diagnostics: None,
             editor: self.editor_settings_content(),
             extension: ExtensionSettingsContent::default(),
             file_finder: None,
             git: self.git_settings_content(),
             git_panel: self.git_panel_settings_content(),
-            global_lsp_settings: skip_default(GlobalLspSettingsContent {
-                semantic_token_rules: self.semantic_token_rules(),
-                ..GlobalLspSettingsContent::default()
-            }),
+            global_lsp_settings: None,
             helix_mode: None,
             hide_mouse: None,
             image_viewer: None,
@@ -260,28 +255,21 @@ impl VsCodeSettings {
                 "all" => Some(CurrentLineHighlight::All),
                 _ => None,
             }),
-            diagnostics_max_severity: None,
             double_click_in_multibuffer: None,
+            diagnostics_max_severity: None,
             drag_and_drop_selection: None,
             excerpt_context_lines: None,
             expand_excerpt_lines: None,
             fast_scroll_sensitivity: self.read_f32("editor.fastScrollSensitivity"),
             sticky_scroll: self.sticky_scroll_content(),
-            go_to_definition_fallback: None,
             go_to_definition_scroll_strategy: None,
-            lsp_results_location: None,
             gutter: self.gutter_content(),
             horizontal_scroll_margin: None,
             hover_popover_delay: self.read_u64("editor.hover.delay").map(Into::into),
             hover_popover_enabled: self.read_bool("editor.hover.enabled"),
             hover_popover_sticky: self.read_bool("editor.hover.sticky"),
             hover_popover_hiding_delay: self.read_u64("editor.hover.hidingDelay").map(Into::into),
-            inline_code_actions: None,
-            code_lens: None,
             jupyter: None,
-            lsp_document_colors: None,
-            lsp_document_links: self.read_bool("editor.links"),
-            lsp_highlight_debounce: None,
             middle_click_paste: None,
             minimap: self.minimap_content(),
             minimum_contrast_for_highlights: None,
@@ -378,105 +366,6 @@ impl VsCodeSettings {
         })
     }
 
-    fn semantic_token_rules(&self) -> Option<SemanticTokenRules> {
-        let customizations = self
-            .read_value("editor.semanticTokenColorCustomizations")?
-            .as_object()?;
-
-        skip_default(SemanticTokenRules {
-            rules: customizations
-                .get("rules")
-                .and_then(|v| {
-                    Some(
-                        v.as_object()?
-                            .iter()
-                            .filter_map(|(k, v)| {
-                                let v = v.as_object()?;
-
-                                let mut underline = v
-                                    .get("underline")
-                                    .and_then(|b| b.as_bool())
-                                    .unwrap_or(false);
-                                let strikethrough = v
-                                    .get("strikethrough")
-                                    .and_then(|b| b.as_bool())
-                                    .unwrap_or(false);
-                                let mut font_weight =
-                                    v.get("bold").and_then(|b| b.as_bool()).map(|b| {
-                                        if b {
-                                            SemanticTokenFontWeight::Bold
-                                        } else {
-                                            SemanticTokenFontWeight::Normal
-                                        }
-                                    });
-                                let mut font_style =
-                                    v.get("italic").and_then(|b| b.as_bool()).map(|b| {
-                                        if b {
-                                            SemanticTokenFontStyle::Italic
-                                        } else {
-                                            SemanticTokenFontStyle::Normal
-                                        }
-                                    });
-
-                                match v.get("fontStyle").and_then(|s| s.as_str()).unwrap_or("") {
-                                    "bold" => {
-                                        font_style = Some(SemanticTokenFontStyle::Normal);
-                                        font_weight = Some(SemanticTokenFontWeight::Bold);
-                                    }
-                                    "italic" => {
-                                        font_style = Some(SemanticTokenFontStyle::Italic);
-                                        font_weight = Some(SemanticTokenFontWeight::Normal);
-                                    }
-                                    "underline" => {
-                                        underline = true;
-                                    }
-                                    "bold italic" | "italic bold" => {
-                                        font_style = Some(SemanticTokenFontStyle::Italic);
-                                        font_weight = Some(SemanticTokenFontWeight::Bold);
-                                    }
-                                    "normal" => {
-                                        font_style = Some(SemanticTokenFontStyle::Normal);
-                                        font_weight = Some(SemanticTokenFontWeight::Normal);
-                                    }
-                                    _ => {}
-                                }
-
-                                let foreground = v
-                                    .get("foreground")
-                                    .and_then(|v| Rgba::try_from(v.as_str()?).ok())
-                                    .map(|s| s.to_owned());
-                                let background = v
-                                    .get("background")
-                                    .and_then(|v| Rgba::try_from(v.as_str()?).ok())
-                                    .map(|s| s.to_owned());
-
-                                Some(SemanticTokenRule {
-                                    token_type: Some(k.clone()),
-                                    token_modifiers: vec![],
-                                    style: vec![],
-                                    underline: if underline {
-                                        Some(SemanticTokenColorOverride::InheritForeground(true))
-                                    } else {
-                                        None
-                                    },
-                                    strikethrough: if strikethrough {
-                                        Some(SemanticTokenColorOverride::InheritForeground(true))
-                                    } else {
-                                        None
-                                    },
-                                    foreground_color: foreground,
-                                    background_color: background,
-                                    font_weight,
-                                    font_style,
-                                })
-                            })
-                            .collect(),
-                    )
-                })
-                .unwrap_or_default(),
-        })
-    }
-
     fn minimap_content(&self) -> Option<MinimapContent> {
         let minimap_enabled = self.read_bool("editor.minimap.enabled").unwrap_or(true);
         let autohide = self.read_bool("editor.minimap.autohide").unwrap_or(false);
@@ -517,7 +406,6 @@ impl VsCodeSettings {
                 file_types: self.file_types(),
             },
             worktree: self.worktree_settings_content(),
-            lsp: Default::default(),
             terminal: None,
             context_servers: self.context_servers(),
             context_server_timeout: None,
@@ -533,7 +421,6 @@ impl VsCodeSettings {
             always_treat_brackets_as_autoclosed: None,
             auto_indent: None,
             auto_indent_on_paste: self.read_bool("editor.formatOnPaste"),
-            code_actions_on_format: None,
             completions: skip_default(CompletionSettingsContent {
                 words: self.read_bool("editor.suggest.showWords").map(|b| {
                     if b {
@@ -545,7 +432,6 @@ impl VsCodeSettings {
                 ..Default::default()
             }),
             edit_predictions_disabled_in: None,
-            enable_language_server: None,
             ensure_final_newline_on_save: self.read_bool("files.insertFinalNewline"),
             line_ending: self.read_enum("files.eol", |s| match s {
                 "\n" => Some(LineEndingSetting::PreferLf),
@@ -575,21 +461,7 @@ impl VsCodeSettings {
                 enabled: self.read_bool("editor.guides.indentation"),
                 ..Default::default()
             }),
-            inlay_hints: None,
             jsx_tag_auto_close: None,
-            language_servers: None,
-            semantic_tokens: self
-                .read_bool("editor.semanticHighlighting.enabled")
-                .map(|enabled| {
-                    if enabled {
-                        SemanticTokens::Full
-                    } else {
-                        SemanticTokens::Off
-                    }
-                }),
-            document_folding_ranges: None,
-            document_symbols: None,
-            linked_edits: self.read_bool("editor.linkedEditing"),
             preferred_line_length: self.read_u32("editor.wordWrapColumn"),
             prettier: None,
             remove_trailing_whitespace_on_save: self.read_bool("editor.trimAutoWhitespace"),
@@ -624,7 +496,6 @@ impl VsCodeSettings {
                 _ => None,
             }),
             use_autoclose: None,
-            use_on_type_format: self.read_bool("editor.formatOnType"),
             whitespace_map: None,
             wrap_guides: self
                 .read_value("editor.rulers")
@@ -752,7 +623,6 @@ impl VsCodeSettings {
                         ActivateOnClose::LeftNeighbour
                     }
                 }),
-            show_diagnostics: None,
             show_close_button: self
                 .read_bool("workbench.editor.tabActionCloseVisibility")
                 .map(|b| {
@@ -829,9 +699,6 @@ impl VsCodeSettings {
                     horizontal_scroll: Some(horizontal_scrolling),
                 },
             ),
-            show_diagnostics: self
-                .read_bool("problems.decorations.enabled")
-                .and_then(|b| if b { Some(ShowDiagnostics::Off) } else { None }),
             sort_mode: self.read_enum("explorer.sortOrder", |s| match s {
                 "default" | "foldersNestsFiles" => Some(ProjectPanelSortMode::DirectoriesFirst),
                 "mixed" => Some(ProjectPanelSortMode::Mixed),
@@ -848,7 +715,6 @@ impl VsCodeSettings {
             starts_open: None,
             sticky_scroll: None,
             auto_open: None,
-            diagnostic_badges: None,
             git_status_indicator: None,
         };
 
@@ -857,7 +723,6 @@ impl VsCodeSettings {
             self.read_bool("explorer.decorations.colors"),
         ) {
             project_panel_settings.git_status = Some(false);
-            project_panel_settings.show_diagnostics = Some(ShowDiagnostics::Off);
         }
 
         skip_default(project_panel_settings)

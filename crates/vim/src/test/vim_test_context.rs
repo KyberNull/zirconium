@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use editor::test::editor_lsp_test_context::EditorLspTestContext;
+use editor::test::editor_language_test_context::EditorLanguageTestContext;
 use gpui::{Context, Entity, UpdateGlobal};
 use search::{BufferSearchBar, project_search::ProjectSearchBar};
 use semver::Version;
@@ -8,7 +8,7 @@ use semver::Version;
 use crate::{state::Operator, *};
 
 pub struct VimTestContext {
-    cx: EditorLspTestContext,
+    cx: EditorLanguageTestContext,
 }
 
 impl VimTestContext {
@@ -36,63 +36,31 @@ impl VimTestContext {
 
     pub async fn new(cx: &mut gpui::TestAppContext, enabled: bool) -> VimTestContext {
         Self::init(cx);
-        let lsp = EditorLspTestContext::new_rust(Default::default(), cx).await;
-        Self::new_with_lsp(lsp, enabled)
+        let lsp = EditorLanguageTestContext::new_rust(cx).await;
+        Self::new_with_language(lsp, enabled)
     }
 
     pub async fn new_html(cx: &mut gpui::TestAppContext) -> VimTestContext {
         Self::init(cx);
-        Self::new_with_lsp(EditorLspTestContext::new_html(cx).await, true)
+        Self::new_with_language(EditorLanguageTestContext::new_html(cx).await, true)
     }
 
     pub async fn new_markdown_with_rust(cx: &mut gpui::TestAppContext) -> VimTestContext {
         Self::init(cx);
-        Self::new_with_lsp(EditorLspTestContext::new_markdown_with_rust(cx).await, true)
+        Self::new_with_language(
+            EditorLanguageTestContext::new_markdown_with_rust(cx).await,
+            true,
+        )
     }
 
     pub async fn new_typescript(cx: &mut gpui::TestAppContext) -> VimTestContext {
         Self::init(cx);
-        Self::new_with_lsp(
-            EditorLspTestContext::new_typescript(
-                lsp::ServerCapabilities {
-                    completion_provider: Some(lsp::CompletionOptions {
-                        trigger_characters: Some(vec![".".to_string()]),
-                        ..Default::default()
-                    }),
-                    rename_provider: Some(lsp::OneOf::Right(lsp::RenameOptions {
-                        prepare_provider: Some(true),
-                        work_done_progress_options: Default::default(),
-                    })),
-                    definition_provider: Some(lsp::OneOf::Left(true)),
-                    ..Default::default()
-                },
-                cx,
-            )
-            .await,
-            true,
-        )
+        Self::new_with_language(EditorLanguageTestContext::new_typescript(cx).await, true)
     }
 
     pub async fn new_tsx(cx: &mut gpui::TestAppContext) -> VimTestContext {
         Self::init(cx);
-        Self::new_with_lsp(
-            EditorLspTestContext::new_tsx(
-                lsp::ServerCapabilities {
-                    completion_provider: Some(lsp::CompletionOptions {
-                        trigger_characters: Some(vec![".".to_string()]),
-                        ..Default::default()
-                    }),
-                    rename_provider: Some(lsp::OneOf::Right(lsp::RenameOptions {
-                        prepare_provider: Some(true),
-                        work_done_progress_options: Default::default(),
-                    })),
-                    ..Default::default()
-                },
-                cx,
-            )
-            .await,
-            true,
-        )
+        Self::new_with_language(EditorLanguageTestContext::new_tsx(cx).await, true)
     }
 
     pub fn init_keybindings(enabled: bool, cx: &mut App) {
@@ -119,7 +87,7 @@ impl VimTestContext {
         }
     }
 
-    pub fn new_with_lsp(mut cx: EditorLspTestContext, enabled: bool) -> VimTestContext {
+    pub fn new_with_language(mut cx: EditorLanguageTestContext, enabled: bool) -> VimTestContext {
         cx.update(|_, cx| {
             Self::init_keybindings(enabled, cx);
         });
@@ -277,7 +245,7 @@ impl VimClipboard {
 }
 
 impl Deref for VimTestContext {
-    type Target = EditorLspTestContext;
+    type Target = EditorLanguageTestContext;
 
     fn deref(&self) -> &Self::Target {
         &self.cx

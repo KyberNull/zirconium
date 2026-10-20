@@ -46,9 +46,6 @@ use gpui::{
 };
 use image_viewer::ImageInfo;
 use language::Capability;
-use language_onboarding::BasedPyrightBanner;
-use language_tools::lsp_button::{self, LspButton};
-use language_tools::lsp_log_view::LspLogToolbarItemView;
 use markdown::{Markdown, MarkdownElement, MarkdownFont, MarkdownStyle};
 use migrate::{MigrationBanner, MigrationEvent, MigrationNotification, MigrationType};
 use migrator::migrate_keymap;
@@ -132,8 +129,6 @@ actions!(
         OpenProjectSettingsFile,
         /// Opens the tasks panel.
         OpenTasks,
-        /// Shows the default semantic token rules (read-only).
-        ShowDefaultSemanticTokenRules,
         /// Resets the application database.
         ResetDatabase,
         /// Shows all hidden windows.
@@ -272,18 +267,6 @@ pub fn init(cx: &mut App) {
             open_settings_file(
                 paths::tasks_file(),
                 || settings::initial_tasks_content().as_ref().into(),
-                window,
-                cx,
-            );
-        });
-    })
-    .on_action(|_: &ShowDefaultSemanticTokenRules, cx| {
-        with_active_or_new_workspace(cx, |workspace, window, cx| {
-            open_bundled_file(
-                workspace,
-                settings::default_semantic_token_rules(),
-                "Default Semantic Token Rules",
-                "JSONC",
                 window,
                 cx,
             );
@@ -585,30 +568,14 @@ pub fn initialize_workspace(app_state: Arc<AppState>, cx: &mut App) {
         });
 
         let search_button = cx.new(|_| search::search_status_button::SearchButton::new());
-        let diagnostic_summary =
-            cx.new(|cx| diagnostics::items::DiagnosticIndicator::new(workspace, cx));
         let active_file_name = cx.new(|_| workspace::active_file_name::ActiveFileName::new());
-        let activity_indicator = activity_indicator::ActivityIndicator::new(
-            workspace,
-            workspace.project().read(cx).languages().clone(),
-            window,
-            cx,
-        );
+        let activity_indicator = activity_indicator::ActivityIndicator::new(workspace, window, cx);
         let active_buffer_encoding =
             cx.new(|_| encoding_selector::ActiveBufferEncoding::new(workspace));
         let active_buffer_language =
             cx.new(|_| language_selector::ActiveBufferLanguage::new(workspace));
         let vim_mode_indicator = cx.new(|cx| vim::ModeIndicator::new(window, cx));
         let image_info = cx.new(|_cx| ImageInfo::new(workspace));
-
-        let lsp_button_menu_handle = PopoverMenuHandle::default();
-        let lsp_button =
-            cx.new(|cx| LspButton::new(workspace, lsp_button_menu_handle.clone(), window, cx));
-        workspace.register_action({
-            move |_, _: &lsp_button::ToggleMenu, window, cx| {
-                lsp_button_menu_handle.toggle(window, cx);
-            }
-        });
 
         let cursor_position =
             cx.new(|_| go_to_line::cursor_position::CursorPosition::new(workspace));
@@ -619,8 +586,6 @@ pub fn initialize_workspace(app_state: Arc<AppState>, cx: &mut App) {
             cx.new(|cx| git_ui::MergeConflictIndicator::new(workspace, cx));
         workspace.status_bar().update(cx, |status_bar, cx| {
             status_bar.add_left_item(search_button, window, cx);
-            status_bar.add_left_item(lsp_button, window, cx);
-            status_bar.add_left_item(diagnostic_summary, window, cx);
             status_bar.add_left_item(active_file_name, window, cx);
             status_bar.add_left_item(git_blame_status, window, cx);
             status_bar.add_left_item(merge_conflict_indicator, window, cx);
@@ -1460,12 +1425,8 @@ fn initialize_pane(
             let quick_action_bar =
                 cx.new(|cx| QuickActionBar::new(buffer_search_bar, workspace, cx));
             toolbar.add_item(quick_action_bar, window, cx);
-            let diagnostic_editor_controls = cx.new(|_| diagnostics::ToolbarControls::new());
-            toolbar.add_item(diagnostic_editor_controls, window, cx);
             let project_search_bar = cx.new(|_| ProjectSearchBar::new());
             toolbar.add_item(project_search_bar, window, cx);
-            let lsp_log_item = cx.new(|_| LspLogToolbarItemView::new());
-            toolbar.add_item(lsp_log_item, window, cx);
             let acp_tools_item = cx.new(|_| acp_tools::AcpToolsToolbarItemView::new());
             toolbar.add_item(acp_tools_item, window, cx);
             let telemetry_log_item =
@@ -1493,8 +1454,6 @@ fn initialize_pane(
             toolbar.add_item(commit_view_toolbar, window, cx);
             let agent_diff_toolbar = cx.new(AgentDiffToolbar::new);
             toolbar.add_item(agent_diff_toolbar, window, cx);
-            let basedpyright_banner = cx.new(|cx| BasedPyrightBanner::new(workspace, cx));
-            toolbar.add_item(basedpyright_banner, window, cx);
             let image_view_toolbar = cx.new(|_| image_viewer::ImageViewToolbarControls::new());
             toolbar.add_item(image_view_toolbar, window, cx);
         })
@@ -2951,9 +2910,8 @@ mod tests {
             cx.add_window_view(|window, cx| MultiWorkspace::test_new(project.clone(), window, cx));
         let workspace =
             multi_workspace.read_with(cx, |multi_workspace, _| multi_workspace.workspace().clone());
-        let languages = project.read_with(cx, |project, _| project.languages().clone());
         let indicator = workspace.update_in(cx, |workspace, window, cx| {
-            activity_indicator::ActivityIndicator::new(workspace, languages, window, cx)
+            activity_indicator::ActivityIndicator::new(workspace, window, cx)
         });
         cx.run_until_parked();
 
@@ -5685,14 +5643,14 @@ mod tests {
         // From the Atom keymap
         use workspace::ActivatePreviousPane;
         // From the JetBrains keymap
-        use diagnostics::Deploy;
+        use outline_panel::ToggleFocus;
 
         window
             .update(cx, |_, _, cx| {
                 workspace.update(cx, |workspace, cx| {
                     workspace.register_action(|_, _: &ActionA, _window, _cx| {});
                     workspace.register_action(|_, _: &ActionB, _window, _cx| {});
-                    workspace.register_action(|_, _: &Deploy, _window, _cx| {});
+                    workspace.register_action(|_, _: &ToggleFocus, _window, _cx| {});
                     cx.notify();
                 });
             })
@@ -5771,7 +5729,7 @@ mod tests {
 
         cx.background_executor.run_until_parked();
 
-        assert_key_bindings_for(window.into(), cx, vec![("6", &Deploy)], line!());
+        assert_key_bindings_for(window.into(), cx, vec![("7", &ToggleFocus)], line!());
     }
 
     #[gpui::test]
@@ -6000,7 +5958,6 @@ mod tests {
             tasks_ui::init(cx);
             initialize_workspace(app_state.clone(), cx);
             search::init(cx);
-            lsp_locations::init(cx);
             cx.set_global(workspace::PaneSearchBarCallbacks {
                 setup_search_bar: |languages, toolbar, window, cx| {
                     let search_bar =

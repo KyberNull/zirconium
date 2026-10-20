@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use settings::{
     DockSide, IntoGpui, ProjectPanelEntrySpacing, ProjectPanelSortMode, ProjectPanelSortOrder,
-    RegisterSetting, Settings, ShowDiagnostics, ShowIndentGuides,
+    RegisterSetting, Settings, ShowIndentGuides,
 };
 use ui::scrollbars::{ScrollbarVisibility, ShowScrollbar};
 
@@ -26,14 +26,12 @@ pub struct ProjectPanelSettings {
     pub bold_folder_labels: bool,
     pub starts_open: bool,
     pub scrollbar: ScrollbarSettings,
-    pub show_diagnostics: ShowDiagnostics,
     pub hide_root: bool,
     pub hide_hidden: bool,
     pub drag_and_drop: bool,
     pub auto_open: AutoOpenSettings,
     pub sort_mode: ProjectPanelSortMode,
     pub sort_order: ProjectPanelSortOrder,
-    pub diagnostic_badges: bool,
     pub git_status_indicator: bool,
 }
 
@@ -126,7 +124,6 @@ impl Settings for ProjectPanelSettings {
                     horizontal_scroll: scrollbar.horizontal_scroll.unwrap(),
                 }
             },
-            show_diagnostics: project_panel.show_diagnostics.unwrap(),
             hide_root: project_panel.hide_root.unwrap(),
             hide_hidden: project_panel.hide_hidden.unwrap(),
             drag_and_drop: project_panel.drag_and_drop.unwrap(),
@@ -140,7 +137,6 @@ impl Settings for ProjectPanelSettings {
             },
             sort_mode: project_panel.sort_mode.unwrap(),
             sort_order: project_panel.sort_order.unwrap(),
-            diagnostic_badges: project_panel.diagnostic_badges.unwrap(),
             git_status_indicator: project_panel.git_status_indicator.unwrap(),
         }
     }

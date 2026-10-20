@@ -79,13 +79,10 @@ impl Editor {
         self.unfold_buffers_with_selections(cx);
 
         let selections = self.selections.all_adjusted(&self.display_snapshot(cx));
-        let mut bracket_inserted = false;
         let mut edits = Vec::new();
-        let mut linked_edits = LinkedEdits::new();
         let mut new_selections = Vec::with_capacity(selections.len());
         let mut new_autoclose_regions = Vec::new();
         let snapshot = self.buffer.read(cx).read(cx);
-        let mut clear_linked_edit_ranges = false;
         let mut all_selections_read_only = true;
         let mut has_adjacent_edits = false;
         let mut in_adjacent_group = false;
@@ -258,7 +255,6 @@ impl Editor {
                                     selection.range(),
                                     format!("{}{}", text, bracket_pair.end).into(),
                                 ));
-                                bracket_inserted = true;
                                 continue;
                             }
                         }
@@ -305,7 +301,6 @@ impl Editor {
                             selection.end..selection.end,
                             bracket_pair.end.as_str().into(),
                         ));
-                        bracket_inserted = true;
                         new_selections.push((
                             Selection {
                                 id: selection.id,
@@ -373,31 +368,6 @@ impl Editor {
                 snapshot.anchor_after(selection.end)
             };
 
-            if !self.linked_edit_ranges.is_empty() {
-                let start_anchor = snapshot.anchor_before(selection.start);
-                let classifier = snapshot
-                    .char_classifier_at(start_anchor)
-                    .scope_context(Some(CharScopeContext::LinkedEdit));
-
-                if let Some((_, anchor_range)) =
-                    snapshot.anchor_range_to_buffer_anchor_range(start_anchor..anchor)
-                {
-                    let is_word_char = text
-                        .chars()
-                        .next()
-                        .is_none_or(|char| classifier.is_word(char));
-
-                    let is_dot = text.as_ref() == ".";
-                    let should_apply_linked_edit = is_word_char || is_dot;
-
-                    if should_apply_linked_edit {
-                        linked_edits.push(&self, anchor_range, text.clone(), cx);
-                    } else {
-                        clear_linked_edit_ranges = true;
-                    }
-                }
-            }
-
             new_selections.push((selection.map(|_| anchor), 0));
             edits.push((selection.start..selection.end, text.clone()));
 
@@ -413,9 +383,6 @@ impl Editor {
         drop(snapshot);
 
         self.transact(window, cx, |this, window, cx| {
-            if clear_linked_edit_ranges {
-                this.linked_edit_ranges.clear();
-            }
             let initial_buffer_versions =
                 jsx_tag_auto_close::construct_initial_buffer_versions_map(this, &edits, cx);
 
@@ -426,7 +393,6 @@ impl Editor {
                     buffer.edit(edits, this.autoindent_mode.clone(), cx);
                 }
             });
-            linked_edits.apply(cx);
             let new_anchor_selections = new_selections.iter().map(|e| &e.0);
             let new_selection_deltas = new_selections.iter().map(|e| e.1);
             let map = this.display_map.update(cx, |map, cx| map.snapshot(cx));
@@ -484,21 +450,6 @@ impl Editor {
                 |s| s.select(new_selections),
             );
 
-            if !bracket_inserted
-                && let Some(on_type_format_task) =
-                    this.trigger_on_type_formatting(text.to_string(), window, cx)
-            {
-                on_type_format_task.detach_and_log_err(cx);
-            }
-
-            let editor_settings = EditorSettings::get_global(cx);
-            if bracket_inserted
-                && (editor_settings.auto_signature_help
-                    || editor_settings.show_signature_help_after_edits)
-            {
-                this.show_signature_help(&ShowSignatureHelp, window, cx);
-            }
-
             let trigger_in_words =
                 this.show_edit_predictions_in_menu() || !had_active_edit_prediction;
             if this.hard_wrap.is_some() {
@@ -522,7 +473,6 @@ impl Editor {
                 }
             }
             this.trigger_completion_on_input(&text, trigger_in_words, window, cx);
-            refresh_linked_ranges(this, window, cx);
             this.refresh_edit_prediction(
                 true,
                 false,
@@ -779,9 +729,6 @@ impl Editor {
                 window,
                 cx,
             );
-            if let Some(task) = this.trigger_on_type_formatting("\n".to_owned(), window, cx) {
-                task.detach_and_log_err(cx);
-            }
         });
     }
 
@@ -848,9 +795,6 @@ impl Editor {
                 }
             }
             editor.edit(indent_edits, cx);
-            if let Some(format) = editor.trigger_on_type_formatting("\n".to_owned(), window, cx) {
-                format.detach_and_log_err(cx);
-            }
         });
     }
 
@@ -932,9 +876,6 @@ impl Editor {
                 }
             }
             editor.edit(indent_edits, cx);
-            if let Some(format) = editor.trigger_on_type_formatting("\n".to_owned(), window, cx) {
-                format.detach_and_log_err(cx);
-            }
         });
     }
 
@@ -942,35 +883,12 @@ impl Editor {
         let autoindent = text.is_empty().not().then(|| AutoindentMode::Block {
             original_indent_columns: Vec::new(),
         });
-        self.replace_selections(text, autoindent, window, cx, false);
+        self.replace_selections(text, autoindent, window, cx);
     }
 
-    /// Collects linked edits for the current selections, pairing each linked
-    /// range with `text`.
-    pub fn linked_edits_for_selections(&self, text: Arc<str>, cx: &App) -> LinkedEdits {
-        let multibuffer_snapshot = self.buffer().read(cx).snapshot(cx);
-        let mut linked_edits = LinkedEdits::new();
-        if !self.linked_edit_ranges.is_empty() {
-            for selection in self.selections.disjoint_anchors() {
-                let Some((_, range)) =
-                    multibuffer_snapshot.anchor_range_to_buffer_anchor_range(selection.range())
-                else {
-                    continue;
-                };
-                linked_edits.push(self, range, text.clone(), cx);
-            }
-        }
-        linked_edits
-    }
-
-    /// Deletes the content covered by the current selections and applies
-    /// linked edits.
-    pub fn delete_selections_with_linked_edits(
-        &mut self,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        self.replace_selections("", None, window, cx, true);
+    /// Deletes the content covered by the current selections.
+    pub fn delete_selections(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.replace_selections("", None, window, cx);
     }
 
     pub fn delete_to_previous_word_start(
@@ -1861,74 +1779,6 @@ impl Editor {
         }
     }
 
-    pub(super) fn linked_editing_ranges_for(
-        &self,
-        query_range: Range<text::Anchor>,
-        cx: &App,
-    ) -> Option<HashMap<Entity<Buffer>, Vec<Range<text::Anchor>>>> {
-        use text::ToOffset as TO;
-
-        if self.linked_edit_ranges.is_empty() {
-            return None;
-        }
-        if query_range.start.buffer_id != query_range.end.buffer_id {
-            return None;
-        };
-        let multibuffer_snapshot = self.buffer.read(cx).snapshot(cx);
-        let buffer = self.buffer.read(cx).buffer(query_range.end.buffer_id)?;
-        let buffer_snapshot = buffer.read(cx).snapshot();
-        let (base_range, linked_ranges) = self.linked_edit_ranges.get(
-            buffer_snapshot.remote_id(),
-            query_range.clone(),
-            &buffer_snapshot,
-        )?;
-        // find offset from the start of current range to current cursor position
-        let start_byte_offset = TO::to_offset(&base_range.start, &buffer_snapshot);
-
-        let start_offset = TO::to_offset(&query_range.start, &buffer_snapshot);
-        let start_difference = start_offset - start_byte_offset;
-        let end_offset = TO::to_offset(&query_range.end, &buffer_snapshot);
-        let end_difference = end_offset - start_byte_offset;
-
-        // Current range has associated linked ranges.
-        let mut linked_edits = HashMap::<_, Vec<_>>::default();
-        for range in linked_ranges.iter() {
-            let start_offset = TO::to_offset(&range.start, &buffer_snapshot);
-            let end_offset = start_offset + end_difference;
-            let start_offset = start_offset + start_difference;
-            if start_offset > buffer_snapshot.len() || end_offset > buffer_snapshot.len() {
-                continue;
-            }
-            if self.selections.disjoint_anchor_ranges().any(|s| {
-                let Some((selection_start, _)) =
-                    multibuffer_snapshot.anchor_to_buffer_anchor(s.start)
-                else {
-                    return false;
-                };
-                let Some((selection_end, _)) = multibuffer_snapshot.anchor_to_buffer_anchor(s.end)
-                else {
-                    return false;
-                };
-                if selection_start.buffer_id != query_range.start.buffer_id
-                    || selection_end.buffer_id != query_range.end.buffer_id
-                {
-                    return false;
-                }
-                TO::to_offset(&selection_start, &buffer_snapshot) <= end_offset
-                    && TO::to_offset(&selection_end, &buffer_snapshot) >= start_offset
-            }) {
-                continue;
-            }
-            let start = buffer_snapshot.anchor_after(start_offset);
-            let end = buffer_snapshot.anchor_after(end_offset);
-            linked_edits
-                .entry(buffer.clone())
-                .or_default()
-                .push(start..end);
-        }
-        Some(linked_edits)
-    }
-
     pub(super) fn marked_text_ranges(
         &self,
         cx: &App,
@@ -1956,7 +1806,6 @@ impl Editor {
         autoindent_mode: Option<AutoindentMode>,
         window: &mut Window,
         cx: &mut Context<Self>,
-        apply_linked_edits: bool,
     ) {
         if self.read_only(cx) {
             return;
@@ -1965,12 +1814,6 @@ impl Editor {
         let text: Arc<str> = text.into();
         self.transact(window, cx, |this, window, cx| {
             let old_selections = this.selections.all_adjusted(&this.display_snapshot(cx));
-            let linked_edits = if apply_linked_edits {
-                this.linked_edits_for_selections(text.clone(), cx)
-            } else {
-                LinkedEdits::new()
-            };
-
             let selection_anchors = this.buffer.update(cx, |buffer, cx| {
                 let anchors = {
                     let snapshot = buffer.read(cx);
@@ -1992,15 +1835,9 @@ impl Editor {
                 anchors
             });
 
-            linked_edits.apply(cx);
-
             this.change_selections(Default::default(), window, cx, |s| {
                 s.select_anchors(selection_anchors);
             });
-
-            if apply_linked_edits {
-                refresh_linked_ranges(this, window, cx);
-            }
 
             cx.notify();
         });
@@ -2227,36 +2064,6 @@ impl Editor {
 
 #[cfg(any(test, feature = "test-support"))]
 impl Editor {
-    pub fn set_linked_edit_ranges_for_testing(
-        &mut self,
-        ranges: Vec<(Range<Point>, Vec<Range<Point>>)>,
-        cx: &mut Context<Self>,
-    ) -> Option<()> {
-        let Some((buffer, _)) = self
-            .buffer
-            .read(cx)
-            .text_anchor_for_position(self.selections.newest_anchor().start, cx)
-        else {
-            return None;
-        };
-        let buffer = buffer.read(cx);
-        let buffer_id = buffer.remote_id();
-        let mut linked_ranges = Vec::with_capacity(ranges.len());
-        for (base_range, linked_ranges_points) in ranges {
-            let base_anchor =
-                buffer.anchor_before(base_range.start)..buffer.anchor_after(base_range.end);
-            let linked_anchors = linked_ranges_points
-                .into_iter()
-                .map(|range| buffer.anchor_before(range.start)..buffer.anchor_after(range.end))
-                .collect();
-            linked_ranges.push((base_anchor, linked_anchors));
-        }
-        let mut map = HashMap::default();
-        map.insert(buffer_id, linked_ranges);
-        self.linked_edit_ranges = linked_editing_ranges::LinkedEditingRanges(map);
-        Some(())
-    }
-
     #[cfg(test)]
     pub(super) fn set_auto_replace_emoji_shortcode(&mut self, auto_replace: bool) {
         self.auto_replace_emoji_shortcode = auto_replace;

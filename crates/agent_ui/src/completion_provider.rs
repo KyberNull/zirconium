@@ -18,11 +18,10 @@ use gpui::{
 use language::{Buffer, CodeLabel, CodeLabelBuilder, HighlightId};
 use lsp::CompletionContext;
 use multi_buffer::ToOffset as _;
-use ordered_float::OrderedFloat;
-use project::lsp_store::{CompletionDocumentation, SymbolLocation};
+use project::CompletionDocumentation;
 use project::{
     Completion, CompletionDisplayOptions, CompletionGroup, CompletionIntent, CompletionResponse,
-    DiagnosticSummary, PathMatchCandidateSet, Project, ProjectPath, Symbol, WorktreeId,
+    PathMatchCandidateSet, Project, ProjectPath, WorktreeId,
 };
 
 use rope::Point;
@@ -32,7 +31,6 @@ use terminal_view::{TerminalView, terminal_panel::TerminalPanel};
 use text::{Anchor, ToOffset as _, ToPoint as _};
 use ui::IconName;
 use ui::prelude::*;
-use util::ResultExt as _;
 use util::paths::PathStyle;
 use util::rel_path::RelPath;
 use util::truncate_and_remove_front;
@@ -157,11 +155,9 @@ impl PromptContextEntry {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum PromptContextType {
     File,
-    Symbol,
     Fetch,
     Thread,
     Skill,
-    Diagnostics,
     BranchDiff,
 }
 
@@ -241,11 +237,9 @@ impl TryFrom<&str> for PromptContextType {
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
             "file" => Ok(Self::File),
-            "symbol" => Ok(Self::Symbol),
             "fetch" => Ok(Self::Fetch),
             "thread" => Ok(Self::Thread),
             "skill" => Ok(Self::Skill),
-            "diagnostics" => Ok(Self::Diagnostics),
             "diff" => Ok(Self::BranchDiff),
             _ => Err(format!("Invalid context picker mode: {}", value)),
         }
@@ -256,11 +250,9 @@ impl PromptContextType {
     pub fn keyword(&self) -> &'static str {
         match self {
             Self::File => "file",
-            Self::Symbol => "symbol",
             Self::Fetch => "fetch",
             Self::Thread => "thread",
             Self::Skill => "skill",
-            Self::Diagnostics => "diagnostics",
             Self::BranchDiff => "branch diff",
         }
     }
@@ -268,11 +260,9 @@ impl PromptContextType {
     pub fn label(&self) -> &'static str {
         match self {
             Self::File => "Files & Directories",
-            Self::Symbol => "Symbols",
             Self::Fetch => "Fetch",
             Self::Thread => "Threads",
             Self::Skill => "Skills",
-            Self::Diagnostics => "Diagnostics",
             Self::BranchDiff => "Branch Diff",
         }
     }
@@ -280,11 +270,9 @@ impl PromptContextType {
     pub fn icon(&self) -> IconName {
         match self {
             Self::File => IconName::File,
-            Self::Symbol => IconName::Code,
             Self::Fetch => IconName::ToolWeb,
             Self::Thread => IconName::Thread,
             Self::Skill => IconName::Sparkle,
-            Self::Diagnostics => IconName::Warning,
             Self::BranchDiff => IconName::GitBranch,
         }
     }
@@ -292,7 +280,6 @@ impl PromptContextType {
 
 pub(crate) enum Match {
     File(FileMatch),
-    Symbol(SymbolMatch),
     Thread(SessionMatch),
     RecentThread(SessionMatch),
     Fetch(SharedString),
@@ -313,7 +300,6 @@ impl Match {
             Match::Entry(mode) => mode.mat.as_ref().map(|mat| mat.score).unwrap_or(1.),
             Match::Thread(_) => 1.,
             Match::RecentThread(_) => 1.,
-            Match::Symbol(_) => 1.,
             Match::Skill(_) => 1.,
             Match::Fetch(_) => 1.,
             Match::BranchDiff(_) => 1.,
@@ -708,73 +694,6 @@ impl<T: PromptCompletionProviderDelegate> PromptCompletionProvider<T> {
         })
     }
 
-    fn completion_for_symbol(
-        symbol: Symbol,
-        source_range: Range<Anchor>,
-        source: Arc<T>,
-        editor: WeakEntity<Editor>,
-        mention_set: WeakEntity<MentionSet>,
-        workspace: Entity<Workspace>,
-        label_max_chars: usize,
-        cx: &mut App,
-    ) -> Option<Completion> {
-        let project = workspace.read(cx).project().clone();
-
-        let (abs_path, file_name) = match &symbol.path {
-            SymbolLocation::InProject(project_path) => (
-                project.read(cx).absolute_path(&project_path, cx)?,
-                project_path.path.file_name()?.to_string().into(),
-            ),
-            SymbolLocation::OutsideProject {
-                abs_path,
-                signature: _,
-            } => (
-                PathBuf::from(abs_path.as_ref()),
-                abs_path.file_name().map(|f| f.to_string_lossy())?,
-            ),
-        };
-
-        let label = build_code_label_for_path(
-            &symbol.name,
-            Some(&file_name),
-            Some(symbol.range.start.0.row + 1),
-            label_max_chars,
-            cx,
-        );
-
-        let uri = MentionUri::Symbol {
-            abs_path,
-            name: symbol.name.clone(),
-            line_range: symbol.range.start.0.row..=symbol.range.end.0.row,
-        };
-        let new_text = format!("{} ", uri.as_link());
-        let new_text_len = new_text.len();
-        let icon_path = uri.icon_path(cx);
-        Some(Completion {
-            replace_range: source_range.clone(),
-            new_text,
-            label,
-            documentation: None,
-            source: project::CompletionSource::Custom,
-            icon_path: Some(icon_path),
-            icon_color: None,
-            match_start: None,
-            snippet_deduplication_key: None,
-            insert_text_mode: None,
-            confirm: Some(confirm_completion_callback(
-                symbol.name.into(),
-                source_range.start,
-                new_text_len - 1,
-                uri,
-                source,
-                editor,
-                mention_set,
-                workspace,
-            )),
-            group: None,
-        })
-    }
-
     fn completion_for_fetch(
         source_range: Range<Anchor>,
         url_to_fetch: SharedString,
@@ -864,105 +783,6 @@ impl<T: PromptCompletionProviderDelegate> PromptCompletionProvider<T> {
             confirm: Some(on_action),
             group: None,
         })
-    }
-
-    fn completion_for_diagnostics(
-        source_range: Range<Anchor>,
-        source: Arc<T>,
-        editor: WeakEntity<Editor>,
-        mention_set: WeakEntity<MentionSet>,
-        workspace: Entity<Workspace>,
-        cx: &mut App,
-    ) -> Vec<Completion> {
-        let summary = workspace
-            .read(cx)
-            .project()
-            .read(cx)
-            .diagnostic_summary(false, cx);
-        if summary.error_count == 0 && summary.warning_count == 0 {
-            return Vec::new();
-        }
-        let icon_path = MentionUri::Diagnostics {
-            include_errors: true,
-            include_warnings: false,
-        }
-        .icon_path(cx);
-
-        let mut completions = Vec::new();
-
-        let cases = [
-            (summary.error_count > 0, true, false),
-            (summary.warning_count > 0, false, true),
-            (
-                summary.error_count > 0 && summary.warning_count > 0,
-                true,
-                true,
-            ),
-        ];
-
-        for (condition, include_errors, include_warnings) in cases {
-            if condition {
-                completions.push(Self::build_diagnostics_completion(
-                    diagnostics_submenu_label(summary, include_errors, include_warnings),
-                    source_range.clone(),
-                    source.clone(),
-                    editor.clone(),
-                    mention_set.clone(),
-                    workspace.clone(),
-                    icon_path.clone(),
-                    include_errors,
-                    include_warnings,
-                    summary,
-                ));
-            }
-        }
-
-        completions
-    }
-
-    fn build_diagnostics_completion(
-        menu_label: String,
-        source_range: Range<Anchor>,
-        source: Arc<T>,
-        editor: WeakEntity<Editor>,
-        mention_set: WeakEntity<MentionSet>,
-        workspace: Entity<Workspace>,
-        icon_path: SharedString,
-        include_errors: bool,
-        include_warnings: bool,
-        summary: DiagnosticSummary,
-    ) -> Completion {
-        let uri = MentionUri::Diagnostics {
-            include_errors,
-            include_warnings,
-        };
-        let crease_text = diagnostics_crease_label(summary, include_errors, include_warnings);
-        let display_text = format!("@{}", crease_text);
-        let new_text = format!("[{}]({}) ", display_text, uri.to_uri());
-        let new_text_len = new_text.len();
-        Completion {
-            replace_range: source_range.clone(),
-            new_text,
-            label: CodeLabel::plain(menu_label, None),
-            documentation: None,
-            source: project::CompletionSource::Custom,
-            icon_path: Some(icon_path),
-            icon_color: None,
-            match_start: None,
-            snippet_deduplication_key: None,
-            insert_text_mode: None,
-            confirm: Some(confirm_completion_callback(
-                crease_text,
-                source_range.start,
-                new_text_len - 1,
-                uri,
-                source,
-                editor,
-                mention_set,
-                workspace,
-            )),
-            group: None,
-        }
     }
 
     fn build_branch_diff_completion(
@@ -1111,17 +931,6 @@ impl<T: PromptCompletionProviderDelegate> PromptCompletionProvider<T> {
                 })
             }
 
-            Some(PromptContextType::Symbol) => {
-                let search_symbols_task = search_symbols(query, cancellation_flag, &workspace, cx);
-                cx.background_spawn(async move {
-                    search_symbols_task
-                        .await
-                        .into_iter()
-                        .map(Match::Symbol)
-                        .collect()
-                })
-            }
-
             Some(PromptContextType::Thread) => {
                 let sessions = collect_session_matches(cx);
                 if !sessions.is_empty() {
@@ -1154,8 +963,6 @@ impl<T: PromptCompletionProviderDelegate> PromptCompletionProvider<T> {
                         .collect::<Vec<_>>()
                 })
             }
-
-            Some(PromptContextType::Diagnostics) => Task::ready(Vec::new()),
 
             Some(PromptContextType::BranchDiff) => Task::ready(Vec::new()),
 
@@ -1361,10 +1168,7 @@ impl<T: PromptCompletionProviderDelegate> PromptCompletionProvider<T> {
         workspace: &Entity<Workspace>,
         cx: &mut App,
     ) -> Vec<PromptContextEntry> {
-        let mut entries = vec![
-            PromptContextEntry::Mode(PromptContextType::File),
-            PromptContextEntry::Mode(PromptContextType::Symbol),
-        ];
+        let mut entries = vec![PromptContextEntry::Mode(PromptContextType::File)];
 
         if self.source.supports_context(PromptContextType::Thread, cx) {
             entries.push(PromptContextEntry::Mode(PromptContextType::Thread));
@@ -1389,20 +1193,6 @@ impl<T: PromptCompletionProviderDelegate> PromptCompletionProvider<T> {
 
         if self.source.supports_context(PromptContextType::Fetch, cx) {
             entries.push(PromptContextEntry::Mode(PromptContextType::Fetch));
-        }
-
-        if self
-            .source
-            .supports_context(PromptContextType::Diagnostics, cx)
-        {
-            let summary = workspace
-                .read(cx)
-                .project()
-                .read(cx)
-                .diagnostic_summary(false, cx);
-            if summary.error_count > 0 || summary.warning_count > 0 {
-                entries.push(PromptContextEntry::Mode(PromptContextType::Diagnostics));
-            }
         }
 
         entries
@@ -1672,28 +1462,6 @@ impl<T: PromptCompletionProviderDelegate> CompletionProvider for PromptCompletio
                 })
             }
             PromptCompletion::Mention(MentionCompletion { mode, argument, .. }) => {
-                if let Some(PromptContextType::Diagnostics) = mode {
-                    if argument.is_some() {
-                        return Task::ready(Ok(Vec::new()));
-                    }
-
-                    let completions = Self::completion_for_diagnostics(
-                        source_range.clone(),
-                        source.clone(),
-                        editor.clone(),
-                        mention_set.clone(),
-                        workspace.clone(),
-                        cx,
-                    );
-                    if !completions.is_empty() {
-                        return Task::ready(Ok(vec![CompletionResponse {
-                            completions,
-                            display_options: CompletionDisplayOptions::default(),
-                            is_incomplete: false,
-                        }]));
-                    }
-                }
-
                 let show_section_headers = mode.is_none() && argument.is_none();
                 let query = argument.unwrap_or_default();
                 let search_task =
@@ -1791,18 +1559,6 @@ impl<T: PromptCompletionProviderDelegate> CompletionProvider for PromptCompletio
                                             mention_set.clone(),
                                             workspace.clone(),
                                             project.clone(),
-                                            label_max_chars,
-                                            cx,
-                                        )
-                                    }
-                                    Match::Symbol(SymbolMatch { symbol, .. }) => {
-                                        Self::completion_for_symbol(
-                                            symbol,
-                                            source_range.clone(),
-                                            source.clone(),
-                                            editor.clone(),
-                                            mention_set.clone(),
-                                            workspace.clone(),
                                             label_max_chars,
                                             cx,
                                         )
@@ -2159,79 +1915,6 @@ impl MentionCompletion {
     }
 }
 
-fn diagnostics_label(
-    summary: DiagnosticSummary,
-    include_errors: bool,
-    include_warnings: bool,
-) -> String {
-    let mut parts = Vec::new();
-
-    if include_errors && summary.error_count > 0 {
-        parts.push(format!(
-            "{} {}",
-            summary.error_count,
-            pluralize("error", summary.error_count)
-        ));
-    }
-
-    if include_warnings && summary.warning_count > 0 {
-        parts.push(format!(
-            "{} {}",
-            summary.warning_count,
-            pluralize("warning", summary.warning_count)
-        ));
-    }
-
-    if parts.is_empty() {
-        return "Diagnostics".into();
-    }
-
-    let body = if parts.len() == 2 {
-        format!("{} and {}", parts[0], parts[1])
-    } else {
-        parts
-            .pop()
-            .expect("at least one part present after non-empty check")
-    };
-
-    format!("Diagnostics: {body}")
-}
-
-fn diagnostics_submenu_label(
-    summary: DiagnosticSummary,
-    include_errors: bool,
-    include_warnings: bool,
-) -> String {
-    match (include_errors, include_warnings) {
-        (true, true) => format!(
-            "{} {} & {} {}",
-            summary.error_count,
-            pluralize("error", summary.error_count),
-            summary.warning_count,
-            pluralize("warning", summary.warning_count)
-        ),
-        (true, _) => format!(
-            "{} {}",
-            summary.error_count,
-            pluralize("error", summary.error_count)
-        ),
-        (_, true) => format!(
-            "{} {}",
-            summary.warning_count,
-            pluralize("warning", summary.warning_count)
-        ),
-        _ => "Diagnostics".into(),
-    }
-}
-
-fn diagnostics_crease_label(
-    summary: DiagnosticSummary,
-    include_errors: bool,
-    include_warnings: bool,
-) -> SharedString {
-    diagnostics_label(summary, include_errors, include_warnings).into()
-}
-
 pub(crate) fn pluralize(noun: &str, count: usize) -> String {
     if count == 1 {
         noun.to_string()
@@ -2345,87 +2028,6 @@ pub(crate) fn search_files(
     }
 }
 
-pub(crate) fn search_symbols(
-    query: String,
-    cancellation_flag: Arc<AtomicBool>,
-    workspace: &Entity<Workspace>,
-    cx: &mut App,
-) -> Task<Vec<SymbolMatch>> {
-    let symbols_task = workspace.update(cx, |workspace, cx| {
-        workspace
-            .project()
-            .update(cx, |project, cx| project.symbols(&query, cx))
-    });
-    let project = workspace.read(cx).project().clone();
-    cx.spawn(async move |cx| {
-        let Some(symbols) = symbols_task.await.log_err() else {
-            return Vec::new();
-        };
-        let (visible_match_candidates, external_match_candidates): (Vec<_>, Vec<_>) = project
-            .update(cx, |project, cx| {
-                symbols
-                    .iter()
-                    .enumerate()
-                    .map(|(id, symbol)| StringMatchCandidate::new(id, symbol.label.filter_text()))
-                    .partition(|candidate| match &symbols[candidate.id].path {
-                        SymbolLocation::InProject(project_path) => project
-                            .entry_for_path(project_path, cx)
-                            .is_some_and(|e| !e.is_ignored),
-                        SymbolLocation::OutsideProject { .. } => false,
-                    })
-            });
-        // Try to support rust-analyzer's path based symbols feature which
-        // allows to search by rust path syntax, in that case we only want to
-        // filter names by the last segment
-        // Ideally this was a first class LSP feature (rich queries)
-        let query = query
-            .rsplit_once("::")
-            .map_or(&*query, |(_, suffix)| suffix)
-            .to_owned();
-        // Note if you make changes to this filtering below, also change `project_symbols::ProjectSymbolsDelegate::filter`
-        const MAX_MATCHES: usize = 100;
-        let mut visible_matches = cx.foreground_executor().block_on(fuzzy::match_strings(
-            &visible_match_candidates,
-            &query,
-            false,
-            true,
-            MAX_MATCHES,
-            &cancellation_flag,
-            cx.background_executor().clone(),
-        ));
-        let mut external_matches = cx.foreground_executor().block_on(fuzzy::match_strings(
-            &external_match_candidates,
-            &query,
-            false,
-            true,
-            MAX_MATCHES - visible_matches.len().min(MAX_MATCHES),
-            &cancellation_flag,
-            cx.background_executor().clone(),
-        ));
-        let sort_key_for_match = |mat: &StringMatch| {
-            let symbol = &symbols[mat.candidate_id];
-            (Reverse(OrderedFloat(mat.score)), symbol.label.filter_text())
-        };
-
-        visible_matches.sort_unstable_by_key(sort_key_for_match);
-        external_matches.sort_unstable_by_key(sort_key_for_match);
-        let mut matches = visible_matches;
-        matches.append(&mut external_matches);
-
-        matches
-            .into_iter()
-            .map(|mut mat| {
-                let symbol = symbols[mat.candidate_id].clone();
-                let filter_start = symbol.label.filter_range.start;
-                for position in &mut mat.positions {
-                    *position += filter_start;
-                }
-                SymbolMatch { symbol }
-            })
-            .collect()
-    })
-}
-
 fn collect_session_matches(cx: &App) -> Vec<SessionMatch> {
     let Some(store) = ThreadMetadataStore::try_global(cx) else {
         return Vec::new();
@@ -2526,10 +2128,6 @@ pub(crate) fn search_skills(
             .map(|mat| skills[mat.candidate_id].clone())
             .collect()
     })
-}
-
-pub struct SymbolMatch {
-    pub symbol: Symbol,
 }
 
 pub struct FileMatch {
@@ -2852,7 +2450,7 @@ mod tests {
 
     #[test]
     fn test_prompt_completion_parse() {
-        let supported_modes = vec![PromptContextType::File, PromptContextType::Symbol];
+        let supported_modes = vec![PromptContextType::File, PromptContextType::Thread];
 
         assert_eq!(
             PromptCompletion::try_parse("/", 0, &supported_modes),
@@ -3028,12 +2626,7 @@ mod tests {
 
     #[test]
     fn test_mention_completion_parse() {
-        let supported_modes = vec![PromptContextType::File, PromptContextType::Symbol];
-        let supported_modes_with_diagnostics = vec![
-            PromptContextType::File,
-            PromptContextType::Symbol,
-            PromptContextType::Diagnostics,
-        ];
+        let supported_modes = vec![PromptContextType::File, PromptContextType::Thread];
 
         assert_eq!(
             MentionCompletion::try_parse("Lorem Ipsum", 0, &supported_modes),
@@ -3125,48 +2718,35 @@ mod tests {
         // Allowed non-file mentions
 
         assert_eq!(
-            MentionCompletion::try_parse("Lorem @symbol main", 0, &supported_modes),
+            MentionCompletion::try_parse("Lorem @thread main", 0, &supported_modes),
             Some(MentionCompletion {
                 source_range: 6..18,
-                mode: Some(PromptContextType::Symbol),
+                mode: Some(PromptContextType::Thread),
                 argument: Some("main".to_string()),
             })
         );
 
         assert_eq!(
             MentionCompletion::try_parse(
-                "Lorem @symbol agent_ui::completion_provider",
+                "Lorem @thread agent_ui::completion_provider",
                 0,
                 &supported_modes
             ),
             Some(MentionCompletion {
                 source_range: 6..43,
-                mode: Some(PromptContextType::Symbol),
+                mode: Some(PromptContextType::Thread),
                 argument: Some("agent_ui::completion_provider".to_string()),
-            })
-        );
-
-        assert_eq!(
-            MentionCompletion::try_parse(
-                "Lorem @diagnostics",
-                0,
-                &supported_modes_with_diagnostics
-            ),
-            Some(MentionCompletion {
-                source_range: 6..18,
-                mode: Some(PromptContextType::Diagnostics),
-                argument: None,
             })
         );
 
         // Disallowed non-file mentions
         assert_eq!(
-            MentionCompletion::try_parse("Lorem @symbol main", 0, &[PromptContextType::File]),
+            MentionCompletion::try_parse("Lorem @thread main", 0, &[PromptContextType::File]),
             None
         );
 
         assert_eq!(
-            MentionCompletion::try_parse("Lorem@symbol", 0, &supported_modes),
+            MentionCompletion::try_parse("Lorem@thread", 0, &supported_modes),
             None,
             "Should not parse mention inside word"
         );

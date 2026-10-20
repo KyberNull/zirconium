@@ -394,7 +394,6 @@ fn template_and_validate_json_snippets(
         font_names: &[],
         theme_names: &[],
         icon_theme_names: &[],
-        lsp_adapter_names: &[],
         action_names: &[],
         action_documentation: &HashMap::default(),
         deprecations: &HashMap::default(),
@@ -552,16 +551,6 @@ fn template_and_validate_json_snippets(
                 }
 
                 settings::parse_json_with_comments::<theme::IconThemeFamilyContent>(
-                    &snippet_json_fixed,
-                )?;
-            }
-            "semantic_token_rules" => {
-                if !snippet_json_fixed.starts_with('[') || !snippet_json_fixed.ends_with(']') {
-                    snippet_json_fixed.insert(0, '[');
-                    snippet_json_fixed.push_str("\n]");
-                }
-
-                settings::parse_json_with_comments::<settings::SemanticTokenRules>(
                     &snippet_json_fixed,
                 )?;
             }

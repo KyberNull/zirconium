@@ -1,6 +1,6 @@
 ---
 title: JavaScript
-description: "Configure JavaScript language support in Zed, including language servers, formatting, and debugging."
+description: "Configure JavaScript language support in Zed, including formatting and syntax highlighting."
 ---
 
 # JavaScript
@@ -8,8 +8,6 @@ description: "Configure JavaScript language support in Zed, including language s
 JavaScript support is available natively in Zed.
 
 - Tree-sitter: [tree-sitter/tree-sitter-javascript](https://github.com/tree-sitter/tree-sitter-javascript)
-- Language Server: [yioneko/vtsls](https://github.com/yioneko/vtsls)
-- Alternate Language Server: [typescript-language-server/typescript-language-server](https://github.com/typescript-language-server/typescript-language-server)
 
 ## Code formatting
 
@@ -53,181 +51,10 @@ Configure formatting in Settings ({#kb zed::OpenSettings}) under Languages > Jav
 }
 ```
 
-## JSX
-
-Zed supports JSX syntax highlighting out of the box.
-
-In JSX strings, the [`tailwindcss-language-server`](./tailwindcss.md) is used to provide autocompletion for Tailwind CSS classes.
-
 ## JSDoc
 
 Zed supports JSDoc syntax in JavaScript and TypeScript comments that match the JSDoc syntax.
 Zed uses [tree-sitter/tree-sitter-jsdoc](https://github.com/tree-sitter/tree-sitter-jsdoc) for parsing and highlighting JSDoc.
-
-## ESLint
-
-You can configure Zed to format code using `eslint --fix` by running the ESLint code action when formatting.
-
-Configure code actions on format in Settings ({#kb zed::OpenSettings}) under Languages > JavaScript, or add to your settings file:
-
-```json [settings]
-{
-  "languages": {
-    "JavaScript": {
-      "code_actions_on_format": {
-        "source.fixAll.eslint": true
-      }
-    }
-  }
-}
-```
-
-You can also only execute a single ESLint rule when using `fixAll`:
-
-```json [settings]
-{
-  "languages": {
-    "JavaScript": {
-      "code_actions_on_format": {
-        "source.fixAll.eslint": true
-      }
-    }
-  },
-  "lsp": {
-    "eslint": {
-      "settings": {
-        "codeActionOnSave": {
-          "rules": ["import/order"]
-        }
-      }
-    }
-  }
-}
-```
-
-> **Note:** the other formatter you have configured will still run, after ESLint.
-> So if your language server or Prettier configuration doesn't format according to
-> ESLint's rules, then they will overwrite what ESLint fixed and you end up with
-> errors.
-
-If you **only** want to run ESLint on save, you can configure code actions as the formatter.
-
-Configure in Settings ({#kb zed::OpenSettings}) under Languages > JavaScript, or add to your settings file:
-
-```json [settings]
-{
-  "languages": {
-    "JavaScript": {
-      "formatter": [],
-      "code_actions_on_format": {
-        "source.fixAll.eslint": true
-      }
-    }
-  }
-}
-```
-
-### Configure ESLint's `nodePath`:
-
-You can configure ESLint's `nodePath` setting:
-
-```json [settings]
-{
-  "lsp": {
-    "eslint": {
-      "settings": {
-        "nodePath": ".yarn/sdks"
-      }
-    }
-  }
-}
-```
-
-### Configure ESLint's `problems`:
-
-You can configure ESLint's `problems` setting.
-
-For example, here's how to set `problems.shortenToSingleLine`:
-
-```json [settings]
-{
-  "lsp": {
-    "eslint": {
-      "settings": {
-        "problems": {
-          "shortenToSingleLine": true
-        }
-      }
-    }
-  }
-}
-```
-
-### Configure ESLint's `rulesCustomizations`:
-
-You can configure ESLint's `rulesCustomizations` setting:
-
-```json [settings]
-{
-  "lsp": {
-    "eslint": {
-      "settings": {
-        "rulesCustomizations": [
-          // set all eslint errors/warnings to show as warnings
-          { "rule": "*", "severity": "warn" }
-        ]
-      }
-    }
-  }
-}
-```
-
-### Configure ESLint's `workingDirectory`:
-
-You can configure ESLint's `workingDirectory` setting:
-
-```json [settings]
-{
-  "lsp": {
-    "eslint": {
-      "settings": {
-        "workingDirectory": {
-          "mode": "auto"
-        }
-      }
-    }
-  }
-}
-```
-
-## Using the Tailwind CSS Language Server with JavaScript
-
-To get all the features (autocomplete, linting, etc.) from the [Tailwind CSS language server](https://github.com/tailwindlabs/tailwindcss-intellisense/tree/HEAD/packages/tailwindcss-language-server#readme) in vanilla JavaScript files (`.js`), you can customize the `classRegex` field under it in your `settings.json`:
-
-```json [settings]
-{
-  "lsp": {
-    "tailwindcss-language-server": {
-      "settings": {
-        "experimental": {
-          "classRegex": [
-            "\\.className\\s*[+]?=\\s*['\"]([^'\"]*)['\"]",
-            "\\.setAttributeNS\\(.*,\\s*['\"]class['\"],\\s*['\"]([^'\"]*)['\"]",
-            "\\.setAttribute\\(['\"]class['\"],\\s*['\"]([^'\"]*)['\"]",
-            "\\.classList\\.add\\(['\"]([^'\"]*)['\"]",
-            "\\.classList\\.remove\\(['\"]([^'\"]*)['\"]",
-            "\\.classList\\.toggle\\(['\"]([^'\"]*)['\"]",
-            "\\.classList\\.contains\\(['\"]([^'\"]*)['\"]",
-            "\\.classList\\.replace\\(\\s*['\"]([^'\"]*)['\"]",
-            "\\.classList\\.replace\\([^,)]+,\\s*['\"]([^'\"]*)['\"]"
-          ]
-        }
-      }
-    }
-  }
-}
-```
-
 
 ## See also
 

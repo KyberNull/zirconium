@@ -529,8 +529,7 @@ fn main() {
 
         let client = Client::production(cx);
         cx.set_http_client(client.http_client());
-        let mut languages = LanguageRegistry::new(cx.background_executor().clone());
-        languages.set_language_server_download_dir(paths::languages_dir().clone());
+        let languages = LanguageRegistry::new(cx.background_executor().clone());
         let languages = Arc::new(languages);
         let (mut tx, rx) = watch::channel(None);
         cx.observe_global::<SettingsStore>(move |cx| {
@@ -565,24 +564,7 @@ fn main() {
         let user_store = cx.new(|cx| UserStore::new(client.clone(), cx));
         let workspace_store = cx.new(|cx| WorkspaceStore::new(client.clone(), cx));
 
-        language_extension::init(
-            language_extension::LspAccess::ViaWorkspaces({
-                let workspace_store = workspace_store.clone();
-                Arc::new(move |cx: &mut App| {
-                    workspace_store.update(cx, |workspace_store, cx| {
-                        Ok(workspace_store
-                            .workspaces()
-                            .filter_map(|weak| weak.upgrade())
-                            .map(|workspace: gpui::Entity<workspace::Workspace>| {
-                                workspace.read(cx).project().read(cx).lsp_store()
-                            })
-                            .collect())
-                    })
-                })
-            }),
-            extension_host_proxy.clone(),
-            languages.clone(),
-        );
+        language_extension::init(extension_host_proxy.clone(), languages.clone());
 
         Client::set_global(client.clone(), cx);
 
@@ -729,7 +711,6 @@ fn main() {
         editor::init(cx);
         image_viewer::init(cx);
         repl::notebook::init(cx);
-        diagnostics::init(cx);
 
         audio::init(cx);
         workspace::init(app_state.clone(), cx);
@@ -739,14 +720,12 @@ fn main() {
         file_finder::init(cx);
         tab_switcher::init(cx);
         outline::init(cx);
-        project_symbols::init(cx);
         project_panel::init(cx);
         outline_panel::init(cx);
         tasks_ui::init(cx);
         snippets_ui::init(cx);
 
         search::init(cx);
-        lsp_locations::init(cx);
         cx.set_global(workspace::PaneSearchBarCallbacks {
             setup_search_bar: |languages, toolbar, window, cx| {
                 let search_bar = cx.new(|cx| search::BufferSearchBar::new(languages, window, cx));
@@ -779,7 +758,6 @@ fn main() {
         extensions_ui::init(cx);
         edit_prediction::init(cx);
         inspector_ui::init(app_state.clone(), cx);
-        json_schema_store::init(cx);
         miniprofiler_ui::init(*STARTUP_TIME.get().unwrap(), cx);
         which_key::init(cx);
         #[cfg(target_os = "windows")]
@@ -1084,64 +1062,6 @@ fn handle_open_request(request: OpenRequest, app_state: Arc<AppState>, cx: &mut 
             }
             OpenRequestKind::DockMenuAction { index } => {
                 cx.perform_dock_menu_action(index);
-            }
-            OpenRequestKind::BuiltinJsonSchema { schema_path } => {
-                workspace::with_active_or_new_workspace(cx, |_workspace, window, cx| {
-                    cx.spawn_in(window, async move |workspace, cx| {
-                        let res = async move {
-                            let json = app_state.languages.language_for_name("JSONC").await.ok();
-                            let lsp_store = workspace.update(cx, |workspace, cx| {
-                                workspace
-                                    .project()
-                                    .update(cx, |project, _| project.lsp_store())
-                            })?;
-                            let uri = format!("zed://schemas/{}", schema_path);
-                            let json_schema_content =
-                                json_schema_store::handle_schema_request(lsp_store, uri, cx)
-                                    .await?;
-                            let json_schema_value: serde_json::Value =
-                                serde_json::from_str(&json_schema_content)
-                                    .context("Failed to parse JSON Schema")?;
-                            let json_schema_content =
-                                serde_json::to_string_pretty(&json_schema_value)
-                                    .context("Failed to serialize JSON Schema as JSON")?;
-                            let buffer_task = workspace.update(cx, |workspace, cx| {
-                                workspace.project().update(cx, |project, cx| {
-                                    project.create_buffer(json, false, cx)
-                                })
-                            })?;
-
-                            let buffer = buffer_task.await?;
-
-                            workspace.update_in(cx, |workspace, window, cx| {
-                                buffer.update(cx, |buffer, cx| {
-                                    buffer.edit([(0..0, json_schema_content)], None, cx);
-                                    buffer.edit(
-                                        [(0..0, format!("// {} JSON Schema\n", schema_path))],
-                                        None,
-                                        cx,
-                                    );
-                                });
-
-                                workspace.add_item_to_active_pane(
-                                    Box::new(cx.new(|cx| {
-                                        let mut editor =
-                                            editor::Editor::for_buffer(buffer, None, window, cx);
-                                        editor.set_read_only(true);
-                                        editor
-                                    })),
-                                    None,
-                                    true,
-                                    window,
-                                    cx,
-                                );
-                            })
-                        }
-                        .await;
-                        res.context("Failed to open builtin JSON Schema").log_err();
-                    })
-                    .detach();
-                });
             }
             OpenRequestKind::Setting { setting_path } => {
                 // zed://settings/languages/$(language)/tab_size  - DONT SUPPORT

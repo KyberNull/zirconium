@@ -13,7 +13,6 @@ use futures::{
     select,
 };
 use gpui::{App, AppContext as _, AsyncApp, BackgroundExecutor, SharedString, Task};
-use notification::DidChangeWorkspaceFolders;
 use parking_lot::{Mutex, RwLock};
 use postage::{barrier, prelude::Stream};
 use schemars::JsonSchema;
@@ -29,7 +28,6 @@ use std::{
     ffi::{OsStr, OsString},
     fmt,
     io::Write,
-    ops::DerefMut,
     path::PathBuf,
     pin::Pin,
     sync::{
@@ -140,12 +138,6 @@ pub struct LanguageServer {
     server: Arc<Mutex<Option<Child>>>,
     workspace_folders: Option<Arc<Mutex<BTreeSet<Uri>>>>,
     root_uri: Uri,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum LanguageServerSelector {
-    Id(LanguageServerId),
-    Name(LanguageServerName),
 }
 
 /// Identifies a running language server.
@@ -363,65 +355,6 @@ where
         self.id
     }
 }
-
-/// Combined capabilities of the server and the adapter.
-#[derive(Debug, Clone)]
-pub struct AdapterServerCapabilities {
-    // Reported capabilities by the server
-    pub server_capabilities: ServerCapabilities,
-    // List of code actions supported by the LspAdapter matching the server
-    pub code_action_kinds: Option<Vec<CodeActionKind>>,
-}
-
-// See the VSCode docs [1] and the LSP Spec [2]
-//
-// [1]: https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#standard-token-types-and-modifiers
-// [2]: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#semanticTokenTypes
-pub const SEMANTIC_TOKEN_TYPES: &[SemanticTokenType] = &[
-    SemanticTokenType::NAMESPACE,
-    SemanticTokenType::CLASS,
-    SemanticTokenType::ENUM,
-    SemanticTokenType::INTERFACE,
-    SemanticTokenType::STRUCT,
-    SemanticTokenType::TYPE_PARAMETER,
-    SemanticTokenType::TYPE,
-    SemanticTokenType::PARAMETER,
-    SemanticTokenType::VARIABLE,
-    SemanticTokenType::PROPERTY,
-    SemanticTokenType::ENUM_MEMBER,
-    SemanticTokenType::DECORATOR,
-    SemanticTokenType::FUNCTION,
-    SemanticTokenType::METHOD,
-    SemanticTokenType::MACRO,
-    SemanticTokenType::new("label"), // Not in the spec, but in the docs.
-    SemanticTokenType::COMMENT,
-    SemanticTokenType::STRING,
-    SemanticTokenType::KEYWORD,
-    SemanticTokenType::NUMBER,
-    SemanticTokenType::REGEXP,
-    SemanticTokenType::OPERATOR,
-    SemanticTokenType::MODIFIER, // Only in the spec, not in the docs.
-    // Language specific things below.
-    // C#
-    SemanticTokenType::EVENT,
-    // Rust
-    SemanticTokenType::new("lifetime"),
-];
-pub const SEMANTIC_TOKEN_MODIFIERS: &[SemanticTokenModifier] = &[
-    SemanticTokenModifier::DECLARATION,
-    SemanticTokenModifier::DEFINITION,
-    SemanticTokenModifier::READONLY,
-    SemanticTokenModifier::STATIC,
-    SemanticTokenModifier::DEPRECATED,
-    SemanticTokenModifier::ABSTRACT,
-    SemanticTokenModifier::ASYNC,
-    SemanticTokenModifier::MODIFICATION,
-    SemanticTokenModifier::DOCUMENTATION,
-    SemanticTokenModifier::DEFAULT_LIBRARY,
-    // Language specific things below.
-    // Rust
-    SemanticTokenModifier::new("constant"),
-];
 
 impl LanguageServer {
     /// Starts a language server process.
@@ -775,12 +708,7 @@ impl LanguageServer {
         Ok(())
     }
 
-    pub fn default_initialize_params(
-        &self,
-        pull_diagnostics: bool,
-        augments_syntax_tokens: bool,
-        cx: &App,
-    ) -> InitializeParams {
+    pub fn default_initialize_params(&self, cx: &App) -> InitializeParams {
         let workspace_folders = self.workspace_folders.as_ref().map_or_else(
             || vec![workspace_folder_for_uri(self.root_uri.clone())],
             |folders| {
@@ -819,232 +747,9 @@ impl LanguageServer {
                         dynamic_registration: Some(true),
                     }),
                     workspace_folders: Some(true),
-                    symbol: Some(WorkspaceSymbolClientCapabilities {
-                        resolve_support: None,
-                        dynamic_registration: Some(true),
-                        ..WorkspaceSymbolClientCapabilities::default()
-                    }),
-                    inlay_hint: Some(InlayHintWorkspaceClientCapabilities {
-                        refresh_support: Some(true),
-                    }),
-                    diagnostics: pull_diagnostics.then_some(
-                        DiagnosticWorkspaceClientCapabilities {
-                            refresh_support: Some(true),
-                        },
-                    ),
-                    code_lens: Some(CodeLensWorkspaceClientCapabilities {
-                        refresh_support: Some(true),
-                    }),
-                    workspace_edit: Some(WorkspaceEditClientCapabilities {
-                        resource_operations: Some(vec![
-                            ResourceOperationKind::Create,
-                            ResourceOperationKind::Rename,
-                            ResourceOperationKind::Delete,
-                        ]),
-                        document_changes: Some(true),
-                        snippet_edit_support: Some(true),
-                        ..WorkspaceEditClientCapabilities::default()
-                    }),
-                    file_operations: Some(WorkspaceFileOperationsClientCapabilities {
-                        dynamic_registration: Some(true),
-                        did_rename: Some(true),
-                        will_rename: Some(true),
-                        ..WorkspaceFileOperationsClientCapabilities::default()
-                    }),
-                    apply_edit: Some(true),
-                    execute_command: Some(ExecuteCommandClientCapabilities {
-                        dynamic_registration: Some(true),
-                    }),
-                    semantic_tokens: Some(SemanticTokensWorkspaceClientCapabilities {
-                        refresh_support: Some(true),
-                    }),
                     ..WorkspaceClientCapabilities::default()
                 }),
-                text_document: Some(TextDocumentClientCapabilities {
-                    definition: Some(GotoCapability {
-                        link_support: Some(true),
-                        dynamic_registration: Some(true),
-                    }),
-                    code_action: Some(CodeActionClientCapabilities {
-                        code_action_literal_support: Some(CodeActionLiteralSupport {
-                            code_action_kind: CodeActionKindLiteralSupport {
-                                value_set: vec![
-                                    CodeActionKind::REFACTOR.as_str().into(),
-                                    CodeActionKind::QUICKFIX.as_str().into(),
-                                    CodeActionKind::SOURCE.as_str().into(),
-                                ],
-                            },
-                        }),
-                        data_support: Some(true),
-                        resolve_support: Some(CodeActionCapabilityResolveSupport {
-                            properties: vec![
-                                "kind".to_string(),
-                                "diagnostics".to_string(),
-                                "isPreferred".to_string(),
-                                "disabled".to_string(),
-                                "edit".to_string(),
-                                "command".to_string(),
-                            ],
-                        }),
-                        dynamic_registration: Some(true),
-                        ..CodeActionClientCapabilities::default()
-                    }),
-                    completion: Some(CompletionClientCapabilities {
-                        completion_item: Some(CompletionItemCapability {
-                            snippet_support: Some(true),
-                            resolve_support: Some(CompletionItemCapabilityResolveSupport {
-                                properties: vec![
-                                    "additionalTextEdits".to_string(),
-                                    "command".to_string(),
-                                    "detail".to_string(),
-                                    "documentation".to_string(),
-                                    // NB: Do not have this resolved, otherwise Zed becomes slow to complete things
-                                    // "textEdit".to_string(),
-                                ],
-                            }),
-                            deprecated_support: Some(true),
-                            tag_support: Some(TagSupport {
-                                value_set: vec![CompletionItemTag::DEPRECATED],
-                            }),
-                            insert_replace_support: Some(true),
-                            label_details_support: Some(true),
-                            insert_text_mode_support: Some(InsertTextModeSupport {
-                                value_set: vec![
-                                    InsertTextMode::AS_IS,
-                                    InsertTextMode::ADJUST_INDENTATION,
-                                ],
-                            }),
-                            documentation_format: Some(vec![
-                                MarkupKind::Markdown,
-                                MarkupKind::PlainText,
-                            ]),
-                            ..CompletionItemCapability::default()
-                        }),
-                        insert_text_mode: Some(InsertTextMode::ADJUST_INDENTATION),
-                        completion_list: Some(CompletionListCapability {
-                            item_defaults: Some(vec![
-                                "commitCharacters".to_owned(),
-                                "editRange".to_owned(),
-                                "insertTextMode".to_owned(),
-                                "insertTextFormat".to_owned(),
-                                "data".to_owned(),
-                            ]),
-                        }),
-                        context_support: Some(true),
-                        dynamic_registration: Some(true),
-                        ..CompletionClientCapabilities::default()
-                    }),
-                    rename: Some(RenameClientCapabilities {
-                        prepare_support: Some(true),
-                        prepare_support_default_behavior: Some(
-                            PrepareSupportDefaultBehavior::IDENTIFIER,
-                        ),
-                        dynamic_registration: Some(true),
-                        ..RenameClientCapabilities::default()
-                    }),
-                    hover: Some(HoverClientCapabilities {
-                        content_format: Some(vec![MarkupKind::Markdown]),
-                        dynamic_registration: Some(true),
-                    }),
-                    inlay_hint: Some(InlayHintClientCapabilities {
-                        resolve_support: Some(InlayHintResolveClientCapabilities {
-                            properties: vec![
-                                "textEdits".to_string(),
-                                "tooltip".to_string(),
-                                "label.tooltip".to_string(),
-                                "label.location".to_string(),
-                                "label.command".to_string(),
-                            ],
-                        }),
-                        dynamic_registration: Some(true),
-                    }),
-                    semantic_tokens: Some(SemanticTokensClientCapabilities {
-                        dynamic_registration: Some(true),
-                        requests: SemanticTokensClientCapabilitiesRequests {
-                            range: None,
-                            full: Some(SemanticTokensFullOptions::Delta { delta: Some(true) }),
-                        },
-                        token_types: SEMANTIC_TOKEN_TYPES.to_vec(),
-                        token_modifiers: SEMANTIC_TOKEN_MODIFIERS.to_vec(),
-                        formats: vec![TokenFormat::RELATIVE],
-                        overlapping_token_support: Some(true),
-                        multiline_token_support: Some(true),
-                        server_cancel_support: Some(true),
-                        augments_syntax_tokens: Some(augments_syntax_tokens),
-                    }),
-                    publish_diagnostics: Some(PublishDiagnosticsClientCapabilities {
-                        related_information: Some(true),
-                        version_support: Some(true),
-                        data_support: Some(true),
-                        tag_support: Some(TagSupport {
-                            value_set: vec![DiagnosticTag::UNNECESSARY, DiagnosticTag::DEPRECATED],
-                        }),
-                        code_description_support: Some(true),
-                    }),
-                    formatting: Some(DynamicRegistrationClientCapabilities {
-                        dynamic_registration: Some(true),
-                    }),
-                    range_formatting: Some(DynamicRegistrationClientCapabilities {
-                        dynamic_registration: Some(true),
-                    }),
-                    on_type_formatting: Some(DynamicRegistrationClientCapabilities {
-                        dynamic_registration: Some(true),
-                    }),
-                    signature_help: Some(SignatureHelpClientCapabilities {
-                        signature_information: Some(SignatureInformationSettings {
-                            documentation_format: Some(vec![
-                                MarkupKind::Markdown,
-                                MarkupKind::PlainText,
-                            ]),
-                            parameter_information: Some(ParameterInformationSettings {
-                                label_offset_support: Some(true),
-                            }),
-                            active_parameter_support: Some(true),
-                        }),
-                        dynamic_registration: Some(true),
-                        ..SignatureHelpClientCapabilities::default()
-                    }),
-                    synchronization: Some(TextDocumentSyncClientCapabilities {
-                        did_save: Some(true),
-                        dynamic_registration: Some(true),
-                        ..TextDocumentSyncClientCapabilities::default()
-                    }),
-                    code_lens: Some(CodeLensClientCapabilities {
-                        dynamic_registration: Some(true),
-                    }),
-                    document_symbol: Some(DocumentSymbolClientCapabilities {
-                        hierarchical_document_symbol_support: Some(true),
-                        dynamic_registration: Some(true),
-                        ..DocumentSymbolClientCapabilities::default()
-                    }),
-                    diagnostic: pull_diagnostics.then_some(DiagnosticClientCapabilities {
-                        dynamic_registration: Some(true),
-                        related_document_support: Some(true),
-                    }),
-                    color_provider: Some(DocumentColorClientCapabilities {
-                        dynamic_registration: Some(true),
-                    }),
-                    document_link: Some(DocumentLinkClientCapabilities {
-                        dynamic_registration: Some(true),
-                        tooltip_support: Some(true),
-                    }),
-                    folding_range: Some(FoldingRangeClientCapabilities {
-                        dynamic_registration: Some(true),
-                        line_folding_only: Some(false),
-                        range_limit: None,
-                        folding_range: Some(FoldingRangeCapability {
-                            collapsed_text: Some(true),
-                        }),
-                        folding_range_kind: Some(FoldingRangeKindCapability {
-                            value_set: Some(vec![
-                                FoldingRangeKind::Comment,
-                                FoldingRangeKind::Region,
-                                FoldingRangeKind::Imports,
-                            ]),
-                        }),
-                    }),
-                    ..TextDocumentClientCapabilities::default()
-                }),
+                text_document: None,
                 experimental: Some(json!({
                     "serverStatusNotification": true,
                     "localDocs": true,
@@ -1192,6 +897,16 @@ impl LanguageServer {
         self.on_custom_request(T::METHOD, f)
     }
 
+    /// Removes a request handler registers via [`Self::on_request`].
+    pub fn remove_request_handler<T: request::Request>(&self) {
+        self.notification_handlers.lock().remove(T::METHOD);
+    }
+
+    /// Removes a notification handler registers via [`Self::on_notification`].
+    pub fn remove_notification_handler<T: notification::Notification>(&self) {
+        self.notification_handlers.lock().remove(T::METHOD);
+    }
+
     /// Registers a handler to inspect all language server process stdio.
     #[must_use]
     pub fn on_io<F>(&self, f: F) -> Subscription
@@ -1204,21 +919,6 @@ impl LanguageServer {
             id,
             io_handlers: Some(Arc::downgrade(&self.io_handlers)),
         }
-    }
-
-    /// Removes a request handler registers via [`Self::on_request`].
-    pub fn remove_request_handler<T: request::Request>(&self) {
-        self.notification_handlers.lock().remove(T::METHOD);
-    }
-
-    /// Removes a notification handler registers via [`Self::on_notification`].
-    pub fn remove_notification_handler<T: notification::Notification>(&self) {
-        self.notification_handlers.lock().remove(T::METHOD);
-    }
-
-    /// Checks if a notification handler has been registered via [`Self::on_notification`].
-    pub fn has_notification_handler<T: notification::Notification>(&self) -> bool {
-        self.notification_handlers.lock().contains_key(T::METHOD)
     }
 
     #[must_use]
@@ -1334,29 +1034,6 @@ impl LanguageServer {
         self.version.clone()
     }
 
-    /// Get the readable version of the running language server.
-    pub fn readable_version(&self) -> Option<SharedString> {
-        match self.name().as_ref() {
-            "gopls" => {
-                // Gopls returns a detailed JSON object as its version string; we must parse it to extract the semantic version.
-                // Example: `{"GoVersion":"go1.26.0","Path":"golang.org/x/tools/gopls","Main":{},"Deps":[],"Settings":[],"Version":"v0.21.1"}`
-                self.version
-                    .as_ref()
-                    .and_then(|obj| {
-                        #[derive(Deserialize)]
-                        struct GoplsVersion<'a> {
-                            #[serde(rename = "Version")]
-                            version: &'a str,
-                        }
-                        let parsed: GoplsVersion = serde_json::from_str(obj.as_str()).ok()?;
-                        Some(parsed.version.trim_start_matches("v").to_owned().into())
-                    })
-                    .or_else(|| self.version.clone())
-            }
-            _ => self.version.clone(),
-        }
-    }
-
     /// Get the process name of the running language server.
     pub fn process_name(&self) -> &str {
         &self.process_name
@@ -1365,20 +1042,6 @@ impl LanguageServer {
     /// Get the reported capabilities of the running language server.
     pub fn capabilities(&self) -> ServerCapabilities {
         self.capabilities.read().clone()
-    }
-
-    /// Get the reported capabilities of the running language server and
-    /// what we know on the client/adapter-side of its capabilities.
-    pub fn adapter_server_capabilities(&self) -> AdapterServerCapabilities {
-        AdapterServerCapabilities {
-            server_capabilities: self.capabilities(),
-            code_action_kinds: self.code_action_kinds(),
-        }
-    }
-
-    /// Update the capabilities of the running language server.
-    pub fn update_capabilities(&self, update: impl FnOnce(&mut ServerCapabilities)) {
-        update(self.capabilities.write().deref_mut());
     }
 
     /// Get the individual configuration settings for the running language server.
@@ -1390,11 +1053,6 @@ impl LanguageServer {
     /// Get the ID of the running language server.
     pub fn server_id(&self) -> LanguageServerId {
         self.server_id
-    }
-
-    /// Get the process ID of the running language server, if available.
-    pub fn process_id(&self) -> Option<u32> {
-        self.server.lock().as_ref().map(|child| child.id())
     }
 
     /// Get the binary information of the running language server.
@@ -1626,124 +1284,6 @@ impl LanguageServer {
 
         outbound_tx.send_blocking(serializer)?;
         Ok(())
-    }
-
-    /// Add new workspace folder to the list.
-    pub fn add_workspace_folder(&self, uri: Uri) {
-        if self
-            .capabilities()
-            .workspace
-            .and_then(|ws| {
-                ws.workspace_folders.and_then(|folders| {
-                    folders
-                        .change_notifications
-                        .map(|caps| matches!(caps, OneOf::Left(false)))
-                })
-            })
-            .unwrap_or(true)
-        {
-            return;
-        }
-
-        let Some(workspace_folders) = self.workspace_folders.as_ref() else {
-            return;
-        };
-        let is_new_folder = workspace_folders.lock().insert(uri.clone());
-        if is_new_folder {
-            let params = DidChangeWorkspaceFoldersParams {
-                event: WorkspaceFoldersChangeEvent {
-                    added: vec![workspace_folder_for_uri(uri)],
-                    removed: vec![],
-                },
-            };
-            self.notify::<DidChangeWorkspaceFolders>(params).ok();
-        }
-    }
-
-    /// Remove existing workspace folder from the list.
-    pub fn remove_workspace_folder(&self, uri: Uri) {
-        if self
-            .capabilities()
-            .workspace
-            .and_then(|ws| {
-                ws.workspace_folders.and_then(|folders| {
-                    folders
-                        .change_notifications
-                        .map(|caps| !matches!(caps, OneOf::Left(false)))
-                })
-            })
-            .unwrap_or(true)
-        {
-            return;
-        }
-        let Some(workspace_folders) = self.workspace_folders.as_ref() else {
-            return;
-        };
-        let was_removed = workspace_folders.lock().remove(&uri);
-        if was_removed {
-            let params = DidChangeWorkspaceFoldersParams {
-                event: WorkspaceFoldersChangeEvent {
-                    added: vec![],
-                    removed: vec![workspace_folder_for_uri(uri)],
-                },
-            };
-            self.notify::<DidChangeWorkspaceFolders>(params).ok();
-        }
-    }
-    pub fn set_workspace_folders(&self, folders: BTreeSet<Uri>) {
-        let Some(workspace_folders) = self.workspace_folders.as_ref() else {
-            return;
-        };
-        let mut workspace_folders = workspace_folders.lock();
-
-        let old_workspace_folders = std::mem::take(&mut *workspace_folders);
-        let added: Vec<_> = folders
-            .difference(&old_workspace_folders)
-            .cloned()
-            .map(workspace_folder_for_uri)
-            .collect();
-
-        let removed: Vec<_> = old_workspace_folders
-            .difference(&folders)
-            .cloned()
-            .map(workspace_folder_for_uri)
-            .collect();
-        *workspace_folders = folders;
-        let should_notify = !added.is_empty() || !removed.is_empty();
-        if should_notify {
-            drop(workspace_folders);
-            let params = DidChangeWorkspaceFoldersParams {
-                event: WorkspaceFoldersChangeEvent { added, removed },
-            };
-            self.notify::<DidChangeWorkspaceFolders>(params).ok();
-        }
-    }
-
-    pub fn workspace_folders(&self) -> BTreeSet<Uri> {
-        self.workspace_folders.as_ref().map_or_else(
-            || BTreeSet::from_iter([self.root_uri.clone()]),
-            |folders| folders.lock().clone(),
-        )
-    }
-
-    pub fn register_buffer(
-        &self,
-        uri: Uri,
-        language_id: String,
-        version: i32,
-        initial_text: String,
-    ) {
-        self.notify::<notification::DidOpenTextDocument>(DidOpenTextDocumentParams {
-            text_document: TextDocumentItem::new(uri, language_id, version, initial_text),
-        })
-        .ok();
-    }
-
-    pub fn unregister_buffer(&self, uri: Uri) {
-        self.notify::<notification::DidCloseTextDocument>(DidCloseTextDocumentParams {
-            text_document: TextDocumentIdentifier::new(uri),
-        })
-        .ok();
     }
 }
 
@@ -2134,7 +1674,7 @@ mod tests {
 
         let server = cx
             .update(|cx| {
-                let params = server.default_initialize_params(false, false, cx);
+                let params = server.default_initialize_params(cx);
                 let configuration = DidChangeConfigurationParams {
                     settings: Default::default(),
                 };
@@ -2222,7 +1762,7 @@ mod tests {
 
         let server = cx
             .update(|cx| {
-                let params = server.default_initialize_params(false, false, cx);
+                let params = server.default_initialize_params(cx);
                 let configuration = DidChangeConfigurationParams {
                     settings: Default::default(),
                 };
@@ -2403,51 +1943,5 @@ mod tests {
             serde_json::to_string(&no_tag).unwrap(),
             "{\"jsonrpc\":\"\",\"id\":0,\"error\":null}"
         );
-    }
-
-    #[gpui::test]
-    async fn test_default_initialize_params(cx: &mut TestAppContext) {
-        cx.update(|cx| {
-            release_channel::init(semver::Version::new(0, 0, 0), cx);
-        });
-        let (server, _fake) = FakeLanguageServer::new(
-            LanguageServerId(0),
-            LanguageServerBinary {
-                path: "path/to/language-server".into(),
-                arguments: vec![],
-                env: None,
-            },
-            "test-lsp".to_string(),
-            Default::default(),
-            &mut cx.to_async(),
-        );
-        let project_uri = Uri::from_file_path(std::env::temp_dir().join("my project"))
-            .expect("workspace folder URI should be valid");
-        server.set_workspace_folders(BTreeSet::from_iter([project_uri.clone()]));
-
-        let params = cx.update(|cx| server.default_initialize_params(false, false, cx));
-
-        #[allow(deprecated)]
-        let root_uri = params.root_uri.expect("root_uri should be set");
-        #[allow(deprecated)]
-        let root_path = params.root_path.expect("root_path should be set");
-
-        let expected_path = root_uri
-            .to_file_path()
-            .expect("root_uri should be a valid file path");
-        assert_eq!(
-            root_path,
-            expected_path.to_string_lossy(),
-            "root_path should be derived from root_uri"
-        );
-        let workspace_folders = params
-            .workspace_folders
-            .expect("workspace folders should be set");
-
-        let expected_workspace_folders = vec![WorkspaceFolder {
-            uri: project_uri,
-            name: "my project".to_string(),
-        }];
-        assert_eq!(workspace_folders, expected_workspace_folders);
     }
 }

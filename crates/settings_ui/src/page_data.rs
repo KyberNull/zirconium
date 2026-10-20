@@ -1,11 +1,10 @@
 use gpui::{Action as _, App};
-use itertools::Itertools as _;
 use settings::{
     AudioInputDeviceName, AudioOutputDeviceName, EditPredictionDataCollectionChoice,
-    LanguageSettingsContent, SemanticTokens, SettingsContent,
+    LanguageSettingsContent, SettingsContent,
 };
-use std::sync::{Arc, OnceLock};
-use strum::{EnumMessage, IntoDiscriminant as _, VariantArray};
+use std::sync::Arc;
+use strum::IntoDiscriminant as _;
 use theme::SystemAppearance;
 use ui::IntoElement;
 
@@ -2183,7 +2182,7 @@ fn editor_page() -> SettingsPage {
         ]
     }
 
-    fn gutter_section() -> [SettingsPageItem; 10] {
+    fn gutter_section() -> [SettingsPageItem; 9] {
         [
             SettingsPageItem::SectionHeader("Gutter"),
             SettingsPageItem::SettingItem(SettingItem {
@@ -2430,20 +2429,6 @@ fn editor_page() -> SettingsPage {
                         }],
                     })
                     .collect(),
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Inline Code Actions",
-                description: "Show code action button at start of buffer line.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("inline_code_actions"),
-                    pick: |settings_content| settings_content.editor.inline_code_actions.as_ref(),
-                    write: |settings_content, value, _| {
-                        settings_content.editor.inline_code_actions = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
             }),
         ]
     }
@@ -3285,7 +3270,7 @@ fn languages_and_tools_page(cx: &App) -> SettingsPage {
         ]
     }
 
-    fn diagnostics_section() -> [SettingsPageItem; 3] {
+    fn diagnostics_section() -> [SettingsPageItem; 2] {
         [
             SettingsPageItem::SectionHeader("Diagnostics"),
             SettingsPageItem::SettingItem(SettingItem {
@@ -3299,226 +3284,6 @@ fn languages_and_tools_page(cx: &App) -> SettingsPage {
                     },
                     write: |settings_content, value, _| {
                         settings_content.editor.diagnostics_max_severity = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Include Warnings",
-                description: "Whether to show warnings or not by default.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("diagnostics.include_warnings"),
-                    pick: |settings_content| {
-                        settings_content
-                            .diagnostics
-                            .as_ref()?
-                            .include_warnings
-                            .as_ref()
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .diagnostics
-                            .get_or_insert_default()
-                            .include_warnings = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-        ]
-    }
-
-    fn inline_diagnostics_section() -> [SettingsPageItem; 5] {
-        [
-            SettingsPageItem::SectionHeader("Inline Diagnostics"),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Enabled",
-                description: "Whether to show diagnostics inline or not.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("diagnostics.inline.enabled"),
-                    pick: |settings_content| {
-                        settings_content
-                            .diagnostics
-                            .as_ref()?
-                            .inline
-                            .as_ref()?
-                            .enabled
-                            .as_ref()
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .diagnostics
-                            .get_or_insert_default()
-                            .inline
-                            .get_or_insert_default()
-                            .enabled = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Update Debounce",
-                description: "The delay in milliseconds to show inline diagnostics after the last diagnostic update.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("diagnostics.inline.update_debounce_ms"),
-                    pick: |settings_content| {
-                        settings_content
-                            .diagnostics
-                            .as_ref()?
-                            .inline
-                            .as_ref()?
-                            .update_debounce_ms
-                            .as_ref()
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .diagnostics
-                            .get_or_insert_default()
-                            .inline
-                            .get_or_insert_default()
-                            .update_debounce_ms = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Padding",
-                description: "The amount of padding between the end of the source line and the start of the inline diagnostic.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("diagnostics.inline.padding"),
-                    pick: |settings_content| {
-                        settings_content
-                            .diagnostics
-                            .as_ref()?
-                            .inline
-                            .as_ref()?
-                            .padding
-                            .as_ref()
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .diagnostics
-                            .get_or_insert_default()
-                            .inline
-                            .get_or_insert_default()
-                            .padding = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Minimum Column",
-                description: "The minimum column at which to display inline diagnostics.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("diagnostics.inline.min_column"),
-                    pick: |settings_content| {
-                        settings_content
-                            .diagnostics
-                            .as_ref()?
-                            .inline
-                            .as_ref()?
-                            .min_column
-                            .as_ref()
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .diagnostics
-                            .get_or_insert_default()
-                            .inline
-                            .get_or_insert_default()
-                            .min_column = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-        ]
-    }
-
-    fn lsp_pull_diagnostics_section() -> [SettingsPageItem; 3] {
-        [
-            SettingsPageItem::SectionHeader("LSP Pull Diagnostics"),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Enabled",
-                description: "Whether to pull for language server-powered diagnostics or not.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("diagnostics.lsp_pull_diagnostics.enabled"),
-                    pick: |settings_content| {
-                        settings_content
-                            .diagnostics
-                            .as_ref()?
-                            .lsp_pull_diagnostics
-                            .as_ref()?
-                            .enabled
-                            .as_ref()
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .diagnostics
-                            .get_or_insert_default()
-                            .lsp_pull_diagnostics
-                            .get_or_insert_default()
-                            .enabled = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-            // todo(settings_ui): Needs unit
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Debounce",
-                description: "Minimum time to wait before pulling diagnostics from the language server(s).",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("diagnostics.lsp_pull_diagnostics.debounce_ms"),
-                    pick: |settings_content| {
-                        settings_content
-                            .diagnostics
-                            .as_ref()?
-                            .lsp_pull_diagnostics
-                            .as_ref()?
-                            .debounce_ms
-                            .as_ref()
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .diagnostics
-                            .get_or_insert_default()
-                            .lsp_pull_diagnostics
-                            .get_or_insert_default()
-                            .debounce_ms = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-        ]
-    }
-
-    fn lsp_highlights_section() -> [SettingsPageItem; 2] {
-        [
-            SettingsPageItem::SectionHeader("LSP Highlights"),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Debounce",
-                description: "The debounce delay before querying highlights from the language.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("lsp_highlight_debounce"),
-                    pick: |settings_content| {
-                        settings_content.editor.lsp_highlight_debounce.as_ref()
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content.editor.lsp_highlight_debounce = value;
                     },
                 }),
                 metadata: None,
@@ -3567,9 +3332,6 @@ fn languages_and_tools_page(cx: &App) -> SettingsPage {
                 non_editor_language_settings_data(),
                 file_types_section(),
                 diagnostics_section(),
-                inline_diagnostics_section(),
-                lsp_pull_diagnostics_section(),
-                lsp_highlights_section(),
                 languages_list_section(cx),
             )
         },
@@ -3935,7 +3697,7 @@ fn search_and_files_page() -> SettingsPage {
 }
 
 fn window_and_layout_page() -> SettingsPage {
-    fn status_bar_section() -> [SettingsPageItem; 10] {
+    fn status_bar_section() -> [SettingsPageItem; 9] {
         [
             SettingsPageItem::SectionHeader("Status Bar"),
             SettingsPageItem::SettingItem(SettingItem {
@@ -4058,20 +3820,6 @@ fn window_and_layout_page() -> SettingsPage {
                     pick: |settings_content| settings_content.terminal.as_ref()?.button.as_ref(),
                     write: |settings_content, value, _| {
                         settings_content.terminal.get_or_insert_default().button = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Diagnostics Button",
-                description: "Show the project diagnostics button in the status bar.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("diagnostics.button"),
-                    pick: |settings_content| settings_content.diagnostics.as_ref()?.button.as_ref(),
-                    write: |settings_content, value, _| {
-                        settings_content.diagnostics.get_or_insert_default().button = value;
                     },
                 }),
                 metadata: None,
@@ -4594,7 +4342,7 @@ fn window_and_layout_page() -> SettingsPage {
         ]
     }
 
-    fn tab_settings_section() -> [SettingsPageItem; 4] {
+    fn tab_settings_section() -> [SettingsPageItem; 3] {
         [
             SettingsPageItem::SectionHeader("Tab Settings"),
             SettingsPageItem::SettingItem(SettingItem {
@@ -4611,25 +4359,6 @@ fn window_and_layout_page() -> SettingsPage {
                             .tabs
                             .get_or_insert_default()
                             .activate_on_close = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Tab Show Diagnostics",
-                description: "Which files containing diagnostic errors/warnings to mark in the tabs.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("tabs.show_diagnostics"),
-                    pick: |settings_content| {
-                        settings_content.tabs.as_ref()?.show_diagnostics.as_ref()
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .tabs
-                            .get_or_insert_default()
-                            .show_diagnostics = value;
                     },
                 }),
                 metadata: None,
@@ -5120,7 +4849,7 @@ fn window_and_layout_page() -> SettingsPage {
 }
 
 fn panels_page() -> SettingsPage {
-    fn project_panel_section() -> [SettingsPageItem; 29] {
+    fn project_panel_section() -> [SettingsPageItem; 27] {
         [
             SettingsPageItem::SectionHeader("Project Panel"),
             SettingsPageItem::SettingItem(SettingItem {
@@ -5433,52 +5162,6 @@ fn panels_page() -> SettingsPage {
                             .scrollbar
                             .get_or_insert_default()
                             .horizontal_scroll = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Show Diagnostics",
-                description: "Which files containing diagnostic errors/warnings to mark in the project panel.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("project_panel.show_diagnostics"),
-                    pick: |settings_content| {
-                        settings_content
-                            .project_panel
-                            .as_ref()?
-                            .show_diagnostics
-                            .as_ref()
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .project_panel
-                            .get_or_insert_default()
-                            .show_diagnostics = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Diagnostic Badges",
-                description: "Show error and warning count badges next to file names in the project panel.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("project_panel.diagnostic_badges"),
-                    pick: |settings_content| {
-                        settings_content
-                            .project_panel
-                            .as_ref()?
-                            .diagnostic_badges
-                            .as_ref()
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .project_panel
-                            .get_or_insert_default()
-                            .diagnostic_badges = value;
                     },
                 }),
                 metadata: None,
@@ -8966,7 +8649,7 @@ fn language_settings_data() -> Box<[SettingsPageItem]> {
         ]
     }
 
-    fn formatting_section() -> [SettingsPageItem; 8] {
+    fn formatting_section() -> [SettingsPageItem; 6] {
         [
             SettingsPageItem::SectionHeader("Formatting"),
             SettingsPageItem::SettingItem(SettingItem {
@@ -9077,53 +8760,6 @@ fn language_settings_data() -> Box<[SettingsPageItem]> {
                                 value,
                                 |language, value| {
                                     language.formatter = value;
-                                },
-                            )
-                        },
-                    }
-                    .unimplemented(),
-                ),
-                metadata: None,
-                files: USER | PROJECT,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Use On Type Format",
-                description: "Whether to use additional LSP queries to format (and amend) the code after every \"trigger\" symbol input, defined by LSP server capabilities",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("languages.$(language).use_on_type_format"),
-                    pick: |settings_content| {
-                        language_settings_field(settings_content, |language| {
-                            language.use_on_type_format.as_ref()
-                        })
-                    },
-                    write: |settings_content, value, _| {
-                        language_settings_field_mut(settings_content, value, |language, value| {
-                            language.use_on_type_format = value;
-                        })
-                    },
-                }),
-                metadata: None,
-                files: USER | PROJECT,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Code Actions On Format",
-                description: "Additional code actions to run when formatting.",
-                field: Box::new(
-                    SettingField {
-                        organization_override: None,
-                        json_path: Some("languages.$(language).code_actions_on_format"),
-                        pick: |settings_content| {
-                            language_settings_field(settings_content, |language| {
-                                language.code_actions_on_format.as_ref()
-                            })
-                        },
-                        write: |settings_content, value, _| {
-                            language_settings_field_mut(
-                                settings_content,
-                                value,
-                                |language, value| {
-                                    language.code_actions_on_format = value;
                                 },
                             )
                         },
@@ -9440,224 +9076,7 @@ fn language_settings_data() -> Box<[SettingsPageItem]> {
         ]
     }
 
-    fn inlay_hints_section() -> [SettingsPageItem; 10] {
-        [
-            SettingsPageItem::SectionHeader("Inlay Hints"),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Enabled",
-                description: "Global switch to toggle hints on and off.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("languages.$(language).inlay_hints.enabled"),
-                    pick: |settings_content| {
-                        language_settings_field(settings_content, |language| {
-                            language.inlay_hints.as_ref()?.enabled.as_ref()
-                        })
-                    },
-                    write: |settings_content, value, _| {
-                        language_settings_field_mut(settings_content, value, |language, value| {
-                            language.inlay_hints.get_or_insert_default().enabled = value;
-                        })
-                    },
-                }),
-                metadata: None,
-                files: USER | PROJECT,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Show Value Hints",
-                description: "Global switch to toggle inline values on and off when debugging.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("languages.$(language).inlay_hints.show_value_hints"),
-                    pick: |settings_content| {
-                        language_settings_field(settings_content, |language| {
-                            language.inlay_hints.as_ref()?.show_value_hints.as_ref()
-                        })
-                    },
-                    write: |settings_content, value, _| {
-                        language_settings_field_mut(settings_content, value, |language, value| {
-                            language
-                                .inlay_hints
-                                .get_or_insert_default()
-                                .show_value_hints = value;
-                        })
-                    },
-                }),
-                metadata: None,
-                files: USER | PROJECT,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Show Type Hints",
-                description: "Whether type hints should be shown.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("languages.$(language).inlay_hints.show_type_hints"),
-                    pick: |settings_content| {
-                        language_settings_field(settings_content, |language| {
-                            language.inlay_hints.as_ref()?.show_type_hints.as_ref()
-                        })
-                    },
-                    write: |settings_content, value, _| {
-                        language_settings_field_mut(settings_content, value, |language, value| {
-                            language.inlay_hints.get_or_insert_default().show_type_hints = value;
-                        })
-                    },
-                }),
-                metadata: None,
-                files: USER | PROJECT,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Show Parameter Hints",
-                description: "Whether parameter hints should be shown.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("languages.$(language).inlay_hints.show_parameter_hints"),
-                    pick: |settings_content| {
-                        language_settings_field(settings_content, |language| {
-                            language.inlay_hints.as_ref()?.show_parameter_hints.as_ref()
-                        })
-                    },
-                    write: |settings_content, value, _| {
-                        language_settings_field_mut(settings_content, value, |language, value| {
-                            language
-                                .inlay_hints
-                                .get_or_insert_default()
-                                .show_parameter_hints = value;
-                        })
-                    },
-                }),
-                metadata: None,
-                files: USER | PROJECT,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Show Other Hints",
-                description: "Whether other hints should be shown.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("languages.$(language).inlay_hints.show_other_hints"),
-                    pick: |settings_content| {
-                        language_settings_field(settings_content, |language| {
-                            language.inlay_hints.as_ref()?.show_other_hints.as_ref()
-                        })
-                    },
-                    write: |settings_content, value, _| {
-                        language_settings_field_mut(settings_content, value, |language, value| {
-                            language
-                                .inlay_hints
-                                .get_or_insert_default()
-                                .show_other_hints = value;
-                        })
-                    },
-                }),
-                metadata: None,
-                files: USER | PROJECT,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Show Background",
-                description: "Show a background for inlay hints.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("languages.$(language).inlay_hints.show_background"),
-                    pick: |settings_content| {
-                        language_settings_field(settings_content, |language| {
-                            language.inlay_hints.as_ref()?.show_background.as_ref()
-                        })
-                    },
-                    write: |settings_content, value, _| {
-                        language_settings_field_mut(settings_content, value, |language, value| {
-                            language.inlay_hints.get_or_insert_default().show_background = value;
-                        })
-                    },
-                }),
-                metadata: None,
-                files: USER | PROJECT,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Edit Debounce Ms",
-                description: "Whether or not to debounce inlay hints updates after buffer edits (set to 0 to disable debouncing).",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("languages.$(language).inlay_hints.edit_debounce_ms"),
-                    pick: |settings_content| {
-                        language_settings_field(settings_content, |language| {
-                            language.inlay_hints.as_ref()?.edit_debounce_ms.as_ref()
-                        })
-                    },
-                    write: |settings_content, value, _| {
-                        language_settings_field_mut(settings_content, value, |language, value| {
-                            language
-                                .inlay_hints
-                                .get_or_insert_default()
-                                .edit_debounce_ms = value;
-                        })
-                    },
-                }),
-                metadata: None,
-                files: USER | PROJECT,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Scroll Debounce Ms",
-                description: "Whether or not to debounce inlay hints updates after buffer scrolls (set to 0 to disable debouncing).",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("languages.$(language).inlay_hints.scroll_debounce_ms"),
-                    pick: |settings_content| {
-                        language_settings_field(settings_content, |language| {
-                            language.inlay_hints.as_ref()?.scroll_debounce_ms.as_ref()
-                        })
-                    },
-                    write: |settings_content, value, _| {
-                        language_settings_field_mut(settings_content, value, |language, value| {
-                            language
-                                .inlay_hints
-                                .get_or_insert_default()
-                                .scroll_debounce_ms = value;
-                        })
-                    },
-                }),
-                metadata: None,
-                files: USER | PROJECT,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Toggle On Modifiers Press",
-                description: "Toggles inlay hints (hides or shows) when the user presses the modifiers specified.",
-                field: Box::new(
-                    SettingField {
-                        organization_override: None,
-                        json_path: Some(
-                            "languages.$(language).inlay_hints.toggle_on_modifiers_press",
-                        ),
-                        pick: |settings_content| {
-                            language_settings_field(settings_content, |language| {
-                                language
-                                    .inlay_hints
-                                    .as_ref()?
-                                    .toggle_on_modifiers_press
-                                    .as_ref()
-                            })
-                        },
-                        write: |settings_content, value, _| {
-                            language_settings_field_mut(
-                                settings_content,
-                                value,
-                                |language, value| {
-                                    language
-                                        .inlay_hints
-                                        .get_or_insert_default()
-                                        .toggle_on_modifiers_press = value;
-                                },
-                            )
-                        },
-                    }
-                    .unimplemented(),
-                ),
-                metadata: None,
-                files: USER | PROJECT,
-            }),
-        ]
-    }
-
-    fn tasks_section() -> [SettingsPageItem; 4] {
+    fn tasks_section() -> [SettingsPageItem; 3] {
         [
             SettingsPageItem::SectionHeader("Tasks"),
             SettingsPageItem::SettingItem(SettingItem {
@@ -9704,26 +9123,6 @@ fn language_settings_data() -> Box<[SettingsPageItem]> {
                     }
                     .unimplemented(),
                 ),
-                metadata: None,
-                files: USER | PROJECT,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Prefer LSP",
-                description: "Use LSP tasks over Zed language extension tasks.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("languages.$(language).tasks.prefer_lsp"),
-                    pick: |settings_content| {
-                        language_settings_field(settings_content, |language| {
-                            language.tasks.as_ref()?.prefer_lsp.as_ref()
-                        })
-                    },
-                    write: |settings_content, value, _| {
-                        language_settings_field_mut(settings_content, value, |language, value| {
-                            language.tasks.get_or_insert_default().prefer_lsp = value;
-                        })
-                    },
-                }),
                 metadata: None,
                 files: USER | PROJECT,
             }),
@@ -9923,36 +9322,6 @@ fn language_settings_data() -> Box<[SettingsPageItem]> {
 
     let is_global = active_language().is_none();
 
-    let code_lens_item = [SettingsPageItem::SettingItem(SettingItem {
-        title: "Code Lens",
-        description: "Whether and how to display code lenses from language servers.",
-        field: Box::new(SettingField {
-            organization_override: None,
-            json_path: Some("code_lens"),
-            pick: |settings_content| settings_content.editor.code_lens.as_ref(),
-            write: |settings_content, value, _| {
-                settings_content.editor.code_lens = value;
-            },
-        }),
-        metadata: None,
-        files: USER,
-    })];
-
-    let lsp_document_colors_item = [SettingsPageItem::SettingItem(SettingItem {
-        title: "LSP Document Colors",
-        description: "How to render LSP color previews in the editor.",
-        field: Box::new(SettingField {
-            organization_override: None,
-            json_path: Some("lsp_document_colors"),
-            pick: |settings_content| settings_content.editor.lsp_document_colors.as_ref(),
-            write: |settings_content, value, _| {
-                settings_content.editor.lsp_document_colors = value;
-            },
-        }),
-        metadata: None,
-        files: USER,
-    })];
-
     if is_global {
         concat_sections!(
             indentation_section(),
@@ -9962,9 +9331,6 @@ fn language_settings_data() -> Box<[SettingsPageItem]> {
             autoclose_section(),
             whitespace_section(),
             completions_section(),
-            inlay_hints_section(),
-            code_lens_item,
-            lsp_document_colors_item,
             tasks_section(),
             miscellaneous_section(),
             global_only_miscellaneous_sub_section(),
@@ -9978,8 +9344,6 @@ fn language_settings_data() -> Box<[SettingsPageItem]> {
             autoclose_section(),
             whitespace_section(),
             completions_section(),
-            inlay_hints_section(),
-            code_lens_item,
             tasks_section(),
             miscellaneous_section(),
         )
@@ -9989,92 +9353,9 @@ fn language_settings_data() -> Box<[SettingsPageItem]> {
 /// LanguageSettings items that should be included in the "Languages & Tools" page
 /// not the "Editor" page
 fn non_editor_language_settings_data() -> Box<[SettingsPageItem]> {
-    fn lsp_section() -> [SettingsPageItem; 10] {
+    fn navigation_section() -> [SettingsPageItem; 2] {
         [
-            SettingsPageItem::SectionHeader("LSP"),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Enable Language Server",
-                description: "Whether to use language servers to provide code intelligence.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("languages.$(language).enable_language_server"),
-                    pick: |settings_content| {
-                        language_settings_field(settings_content, |language| {
-                            language.enable_language_server.as_ref()
-                        })
-                    },
-                    write: |settings_content, value, _| {
-                        language_settings_field_mut(settings_content, value, |language, value| {
-                            language.enable_language_server = value;
-                        })
-                    },
-                }),
-                metadata: None,
-                files: USER | PROJECT,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Language Servers",
-                description: "The list of language servers to use (or disable) for this language.",
-                field: Box::new(
-                    SettingField {
-                        organization_override: None,
-                        json_path: Some("languages.$(language).language_servers"),
-                        pick: |settings_content| {
-                            language_settings_field(settings_content, |language| {
-                                language.language_servers.as_ref()
-                            })
-                        },
-                        write: |settings_content, value, _| {
-                            language_settings_field_mut(
-                                settings_content,
-                                value,
-                                |language, value| {
-                                    language.language_servers = value;
-                                },
-                            )
-                        },
-                    }
-                    .unimplemented(),
-                ),
-                metadata: None,
-                files: USER | PROJECT,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Linked Edits",
-                description: "Whether to perform linked edits of associated ranges, if the LS supports it. For example, when editing opening <html> tag, the contents of the closing </html> tag will be edited as well.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("languages.$(language).linked_edits"),
-                    pick: |settings_content| {
-                        language_settings_field(settings_content, |language| {
-                            language.linked_edits.as_ref()
-                        })
-                    },
-                    write: |settings_content, value, _| {
-                        language_settings_field_mut(settings_content, value, |language, value| {
-                            language.linked_edits = value;
-                        })
-                    },
-                }),
-                metadata: None,
-                files: USER | PROJECT,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Go To Definition Fallback",
-                description: "Whether to follow-up empty Go to definition responses from the language server.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("go_to_definition_fallback"),
-                    pick: |settings_content| {
-                        settings_content.editor.go_to_definition_fallback.as_ref()
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content.editor.go_to_definition_fallback = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
+            SettingsPageItem::SectionHeader("Navigation"),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Go To Definition Scroll Strategy",
                 description: "How to scroll the target into view when navigating to a definition or reference.",
@@ -10093,165 +9374,6 @@ fn non_editor_language_settings_data() -> Box<[SettingsPageItem]> {
                 }),
                 metadata: None,
                 files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "LSP Results Location",
-                description: "Where to show LSP results that can contain multiple locations (Go to Definition, Go to Implementation, Find All References).",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("lsp_results_location"),
-                    pick: |settings_content| settings_content.editor.lsp_results_location.as_ref(),
-                    write: |settings_content, value, _| {
-                        settings_content.editor.lsp_results_location = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Semantic Tokens",
-                description: {
-                    static DESCRIPTION: OnceLock<&'static str> = OnceLock::new();
-                    DESCRIPTION.get_or_init(|| {
-                        SemanticTokens::VARIANTS
-                            .iter()
-                            .filter_map(|v| {
-                                v.get_documentation().map(|doc| format!("{v:?}: {doc}"))
-                            })
-                            .join("\n")
-                            .leak()
-                    })
-                },
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("languages.$(language).semantic_tokens"),
-                    pick: |settings_content| {
-                        settings_content
-                            .project
-                            .all_languages
-                            .defaults
-                            .semantic_tokens
-                            .as_ref()
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .project
-                            .all_languages
-                            .defaults
-                            .semantic_tokens = value;
-                    },
-                }),
-                metadata: None,
-                files: USER | PROJECT,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "LSP Folding Ranges",
-                description: "When enabled, use folding ranges from the language server instead of indent-based folding.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("languages.$(language).document_folding_ranges"),
-                    pick: |settings_content| {
-                        language_settings_field(settings_content, |language| {
-                            language.document_folding_ranges.as_ref()
-                        })
-                    },
-                    write: |settings_content, value, _| {
-                        language_settings_field_mut(settings_content, value, |language, value| {
-                            language.document_folding_ranges = value;
-                        })
-                    },
-                }),
-                metadata: None,
-                files: USER | PROJECT,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "LSP Document Symbols",
-                description: "When enabled, use the language server's document symbols for outlines and breadcrumbs instead of tree-sitter.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("languages.$(language).document_symbols"),
-                    pick: |settings_content| {
-                        language_settings_field(settings_content, |language| {
-                            language.document_symbols.as_ref()
-                        })
-                    },
-                    write: |settings_content, value, _| {
-                        language_settings_field_mut(settings_content, value, |language, value| {
-                            language.document_symbols = value;
-                        })
-                    },
-                }),
-                metadata: None,
-                files: USER | PROJECT,
-            }),
-        ]
-    }
-
-    fn lsp_completions_section() -> [SettingsPageItem; 4] {
-        [
-            SettingsPageItem::SectionHeader("LSP Completions"),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Enabled",
-                description: "Whether to fetch LSP completions or not.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("languages.$(language).completions.lsp"),
-                    pick: |settings_content| {
-                        language_settings_field(settings_content, |language| {
-                            language.completions.as_ref()?.lsp.as_ref()
-                        })
-                    },
-                    write: |settings_content, value, _| {
-                        language_settings_field_mut(settings_content, value, |language, value| {
-                            language.completions.get_or_insert_default().lsp = value;
-                        })
-                    },
-                }),
-                metadata: None,
-                files: USER | PROJECT,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Fetch Timeout (milliseconds)",
-                description: "When fetching LSP completions, determines how long to wait for a response of a particular server (set to 0 to wait indefinitely).",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("languages.$(language).completions.lsp_fetch_timeout_ms"),
-                    pick: |settings_content| {
-                        language_settings_field(settings_content, |language| {
-                            language.completions.as_ref()?.lsp_fetch_timeout_ms.as_ref()
-                        })
-                    },
-                    write: |settings_content, value, _| {
-                        language_settings_field_mut(settings_content, value, |language, value| {
-                            language
-                                .completions
-                                .get_or_insert_default()
-                                .lsp_fetch_timeout_ms = value;
-                        })
-                    },
-                }),
-                metadata: None,
-                files: USER | PROJECT,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Insert Mode",
-                description: "Controls how LSP completions are inserted.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("languages.$(language).completions.lsp_insert_mode"),
-                    pick: |settings_content| {
-                        language_settings_field(settings_content, |language| {
-                            language.completions.as_ref()?.lsp_insert_mode.as_ref()
-                        })
-                    },
-                    write: |settings_content, value, _| {
-                        language_settings_field_mut(settings_content, value, |language, value| {
-                            language.completions.get_or_insert_default().lsp_insert_mode = value;
-                        })
-                    },
-                }),
-                metadata: None,
-                files: USER | PROJECT,
             }),
         ]
     }
@@ -10356,11 +9478,7 @@ fn non_editor_language_settings_data() -> Box<[SettingsPageItem]> {
         ]
     }
 
-    concat_sections!(
-        lsp_section(),
-        lsp_completions_section(),
-        prettier_section(),
-    )
+    concat_sections!(navigation_section(), prettier_section(),)
 }
 
 fn edit_prediction_language_settings_section() -> [SettingsPageItem; 5] {

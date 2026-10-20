@@ -5559,21 +5559,6 @@ impl ThreadView {
                         }),
                 )
                 .item(
-                    ContextMenuEntry::new("Symbols")
-                        .icon(IconName::Code)
-                        .icon_color(Color::Muted)
-                        .icon_size(IconSize::XSmall)
-                        .handler({
-                            let message_editor = message_editor.clone();
-                            move |window, cx| {
-                                message_editor.focus_handle(cx).focus(window, cx);
-                                message_editor.update(cx, |editor, cx| {
-                                    editor.insert_context_type("symbol", window, cx);
-                                });
-                            }
-                        }),
-                )
-                .item(
                     ContextMenuEntry::new("Threads")
                         .icon(IconName::Thread)
                         .icon_color(Color::Muted)

@@ -5,40 +5,25 @@
 //! between real text around that anchor.
 //!
 //! Inlay examples in Zed:
-//! * inlay hints, received from LSP
 //! * inline predictions, showing the Zeta/Copilot/etc. predictions
-//! * document color values, if configured to be displayed as inlays
 //! * ... anything else, potentially.
 //!
-//! Editor uses [`crate::DisplayMap`] and [`crate::display_map::InlayMap`] to manage what's rendered inside the editor, using
-//! [`InlaySplice`] to update this state.
-
-/// Logic, related to managing LSP inlay hint inlays.
-pub mod inlay_hints;
+//! Editor uses [`crate::DisplayMap`] and [`crate::display_map::InlayMap`] to manage what's rendered inside the editor.
 
 use std::sync::OnceLock;
 
-use gpui::{Context, HighlightStyle, Hsla, Rgba, Task};
+use gpui::{Context, Hsla, Rgba};
 use multi_buffer::Anchor;
 use project::{InlayHint, InlayId};
 use text::Rope;
 
-use crate::{Editor, HighlightKey, hover_links::InlayHighlight};
+use crate::Editor;
 
-/// A splice to send into the `inlay_map` for updating the visible inlays on the screen.
-/// "Visible" inlays may not be displayed in the buffer right away, but those are ready to be displayed on further buffer scroll, pane item activations, etc. right away without additional LSP queries or settings changes.
-/// The data in the cache is never used directly for displaying inlays on the screen, to avoid races with updates from LSP queries and sync overhead.
-/// Splice is picked to help avoid extra hint flickering and "jumps" on the screen.
-#[derive(Debug, Default)]
-pub struct InlaySplice {
-    pub to_remove: Vec<InlayId>,
-    pub to_insert: Vec<Inlay>,
-}
-
-impl InlaySplice {
-    pub fn is_empty(&self) -> bool {
-        self.to_remove.is_empty() && self.to_insert.is_empty()
-    }
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InlayHighlight {
+    pub inlay: InlayId,
+    pub inlay_position: Anchor,
+    pub range: std::ops::Range<usize>,
 }
 
 #[derive(Debug, Clone)]
@@ -123,22 +108,6 @@ impl Inlay {
     }
 }
 
-pub struct InlineValueCache {
-    pub enabled: bool,
-    pub inlays: Vec<InlayId>,
-    pub refresh_task: Task<Option<()>>,
-}
-
-impl InlineValueCache {
-    pub fn new(enabled: bool) -> Self {
-        Self {
-            enabled,
-            inlays: Vec::new(),
-            refresh_task: Task::ready(None),
-        }
-    }
-}
-
 impl Editor {
     /// Modify which hints are displayed in the editor.
     pub fn splice_inlays(
@@ -147,31 +116,10 @@ impl Editor {
         to_insert: Vec<Inlay>,
         cx: &mut Context<Self>,
     ) {
-        if let Some(inlay_hints) = &mut self.inlay_hints {
-            for id_to_remove in to_remove {
-                inlay_hints.added_hints.remove(id_to_remove);
-            }
-        }
         self.display_map.update(cx, |display_map, cx| {
             display_map.splice_inlays(to_remove, to_insert, cx)
         });
         cx.notify();
-    }
-
-    pub(crate) fn highlight_inlays(
-        &mut self,
-        key: HighlightKey,
-        highlights: Vec<InlayHighlight>,
-        style: HighlightStyle,
-        cx: &mut Context<Self>,
-    ) {
-        self.display_map
-            .update(cx, |map, _| map.highlight_inlays(key, highlights, style));
-        cx.notify();
-    }
-
-    pub fn inline_values_enabled(&self) -> bool {
-        self.inline_value_cache.enabled
     }
 
     #[cfg(any(test, feature = "test-support"))]

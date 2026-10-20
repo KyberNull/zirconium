@@ -6,7 +6,6 @@ use anyhow::Result;
 use collections::HashMap;
 use fs::Fs;
 use gpui::{App, Entity, Task};
-use lsp::LanguageServerName;
 use task::{TaskTemplates, TaskVariables};
 
 /// Language Contexts are used by Zed tasks to extract information about the source file where the tasks are supposed to be scheduled from.
@@ -30,11 +29,6 @@ pub trait ContextProvider: Send + Sync {
     /// Provides all tasks, associated with the current language.
     fn associated_tasks(&self, _: Option<Entity<Buffer>>, _: &App) -> Task<Option<TaskTemplates>> {
         Task::ready(None)
-    }
-
-    /// A language server name, that can return tasks using LSP (ext) for this language.
-    fn lsp_task_source(&self) -> Option<LanguageServerName> {
-        None
     }
 
     /// A resolver for runnable queries that group captures with `@run_item`.

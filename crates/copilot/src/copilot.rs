@@ -670,7 +670,7 @@ impl Copilot {
 
             let server = cx
                 .update(|cx| {
-                    let mut params = server.default_initialize_params(false, false, cx);
+                    let mut params = server.default_initialize_params(cx);
                     params.initialization_options = Some(editor_info_json);
                     params
                         .capabilities

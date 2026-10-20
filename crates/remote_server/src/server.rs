@@ -673,8 +673,6 @@ pub fn execute_run(
         extension::init(cx);
         let extension_host_proxy = ExtensionHostProxy::global(cx);
 
-        json_schema_store::init(cx);
-
         let project = cx.new(|cx| {
             let fs = Arc::new(RealFs::new(None, cx.background_executor().clone()));
             let node_settings_rx = initialize_settings(session.clone(), fs.clone(), cx);
@@ -700,9 +698,7 @@ pub fn execute_run(
             let node_runtime =
                 NodeRuntime::new(http_client.clone(), shell_env_loaded_rx, node_settings_rx);
 
-            let mut languages = LanguageRegistry::new(cx.background_executor().clone());
-            languages.set_language_server_download_dir(paths::languages_dir().clone());
-            let languages = Arc::new(languages);
+            let languages = Arc::new(LanguageRegistry::new(cx.background_executor().clone()));
 
             HeadlessProject::new(
                 HeadlessAppState {

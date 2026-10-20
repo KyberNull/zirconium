@@ -33,18 +33,8 @@
       "shift-alt-up": "editor::MoveLineUp",
       "shift-alt-down": "editor::MoveLineDown",
       "cmd-alt-l": "editor::Format",
-      "ctrl-alt-o": "editor::OrganizeImports",
-      "shift-f6": "editor::Rename",
       "cmd-[": "pane::GoBack",
       "cmd-]": "pane::GoForward",
-      "alt-f7": "editor::FindAllReferences",
-      "cmd-alt-f7": "editor::FindAllReferences",
-      "cmd-b": "editor::GoToDefinition", // Conflicts with workspace::ToggleLeftDock
-      "cmd-alt-b": "editor::GoToImplementation",
-      "cmd-shift-b": "editor::GoToTypeDefinition",
-      "cmd-alt-shift-b": "editor::GoToTypeDefinitionSplit",
-      "f2": "editor::GoToDiagnostic",
-      "shift-f2": "editor::GoToPreviousDiagnostic",
       "ctrl-alt-shift-down": "editor::GoToHunk",
       "ctrl-alt-shift-up": "editor::GoToPreviousHunk",
       "cmd-home": "editor::MoveToBeginning",
@@ -72,7 +62,6 @@
       "alt-enter": "editor::ToggleCodeActions",
       "ctrl-space": "editor::ShowCompletions",
       "cmd-j": "editor::Hover",
-      "cmd-p": "editor::ShowSignatureHelp",
       "cmd-\\": "assistant::InlineAssist",
     },
   },
@@ -120,13 +109,9 @@
       "cmd-k": "git_panel::ToggleFocus", // bug: This should also focus commit editor
       "cmd-shift-o": "file_finder::Toggle",
       "cmd-shift-n": "file_finder::Toggle",
-      "cmd-n": "project_symbols::Toggle",
       "cmd-shift-a": "command_palette::Toggle",
       "shift shift": "command_palette::Toggle",
-      "cmd-alt-o": "project_symbols::Toggle", // JetBrains: Go to Symbol
-      "cmd-o": "project_symbols::Toggle", // JetBrains: Go to Class
       "cmd-1": "project_panel::ToggleFocus",
-      "cmd-6": "diagnostics::Deploy",
       "cmd-7": "outline_panel::ToggleFocus",
     },
   },
@@ -138,7 +123,7 @@
       "cmd-3": null, // Find Panel (bottom dock)
       "cmd-4": null, // Run Panel (bottom dock)
       "cmd-5": null,
-      "cmd-6": "diagnostics::Deploy",
+      "cmd-6": null,
       "cmd-7": "outline_panel::ToggleFocus",
       "cmd-8": null, // Services (bottom dock)
       "cmd-9": null, // Git History (bottom dock)

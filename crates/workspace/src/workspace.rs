@@ -436,15 +436,6 @@ pub struct CloseItemInAllPanes {
 #[action(namespace = workspace)]
 pub struct SendKeystrokes(pub String);
 
-actions!(
-    project_symbols,
-    [
-        /// Toggles the project symbols search.
-        #[action(name = "Toggle")]
-        ToggleProjectSymbols
-    ]
-);
-
 /// Toggles the file finder interface.
 #[derive(Default, PartialEq, Eq, Clone, Deserialize, JsonSchema, Action)]
 #[action(namespace = file_finder, name = "Toggle")]
@@ -1596,20 +1587,6 @@ impl Workspace {
 
                 project::Event::HideToast { notification_id } => {
                     this.dismiss_notification(&NotificationId::named(notification_id.clone()), cx)
-                }
-
-                project::Event::LanguageServerPrompt(request) => {
-                    struct LanguageServerPrompt;
-
-                    this.show_notification(
-                        NotificationId::composite::<LanguageServerPrompt>(request.id),
-                        cx,
-                        |cx| {
-                            cx.new(|cx| {
-                                notifications::LanguageServerPrompt::new(request.clone(), cx)
-                            })
-                        },
-                    );
                 }
 
                 project::Event::AgentLocationChanged => {

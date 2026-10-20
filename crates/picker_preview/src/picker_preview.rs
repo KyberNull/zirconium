@@ -6,9 +6,9 @@ use gpui::{
     AnyElement, App, AppContext as _, Context, Entity, IntoElement, Pixels, StyledText, Task,
     Window, px,
 };
-use language::{Bias, Buffer, HighlightedText, HighlightedTextBuilder, ToPoint};
+use language::{Buffer, HighlightedText, HighlightedTextBuilder, ToPoint};
 use picker::{MatchLocation, PreviewBackend, PreviewLayout, PreviewSource, PreviewUpdate};
-use project::{Project, Symbol};
+use project::Project;
 use rope::Point;
 use settings::Settings;
 use ui::{ActiveTheme, Color, div, prelude::*, v_flex};
@@ -78,15 +78,12 @@ impl EditorPreview {
             editor.set_input_enabled(false);
             editor.scroll_manager.set_forbid_vertical_scroll(true);
             editor.disable_scrollbars_and_minimap(window, cx);
-            editor.disable_inline_diagnostics();
-            editor.disable_diagnostics(cx);
             editor.disable_expand_excerpt_buttons(cx);
             editor.disable_mouse_wheel_zoom();
             editor.set_show_gutter(editor_settings.gutter.line_numbers, cx); // needed for line numbers
             editor.set_show_line_numbers(editor_settings.gutter.line_numbers, cx);
             editor.set_show_breakpoints(false, cx);
             editor.set_show_bookmarks(false, cx);
-            editor.set_show_code_actions(false, cx);
             editor.set_show_runnables(false, cx);
             editor.set_show_git_diff_gutter(false, cx);
             editor.set_show_wrap_guides(false, cx);
@@ -127,9 +124,6 @@ impl EditorPreview {
                 self.update_from_buffer(buffer, highlight, window, cx);
                 cx.notify();
             }
-            PreviewSource::Symbol(symbol) => {
-                self.update_from_symbol(symbol, window, cx);
-            }
             PreviewSource::Message(message) => {
                 self.message = Some(message);
                 cx.notify();
@@ -163,31 +157,6 @@ impl EditorPreview {
             };
             this.update_in(cx, |this, window, cx| {
                 this.update_from_buffer(buffer, highlight, window, cx);
-                cx.notify();
-            })
-            .ok();
-        });
-    }
-
-    fn update_from_symbol(&mut self, symbol: Symbol, window: &mut Window, cx: &mut Context<Self>) {
-        let open_task = self.project.update(cx, |project, cx| {
-            project.open_buffer_for_symbol(&symbol, cx)
-        });
-
-        self.pending_update = cx.spawn_in(window, async move |this, cx| {
-            let Some(buffer) = open_task.await.log_err() else {
-                return;
-            };
-            this.update_in(cx, |this, window, cx| {
-                let snapshot = buffer.read(cx).text_snapshot();
-                let start = snapshot.clip_point_utf16(symbol.range.start, Bias::Left);
-                let end = snapshot.clip_point_utf16(symbol.range.end, Bias::Left);
-                let highlight = MatchLocation {
-                    anchor_range: snapshot.anchor_before(start)..snapshot.anchor_after(end),
-                    range: snapshot.point_utf16_to_offset(start)
-                        ..snapshot.point_utf16_to_offset(end),
-                };
-                this.update_from_buffer(buffer, Some(highlight), window, cx);
                 cx.notify();
             })
             .ok();

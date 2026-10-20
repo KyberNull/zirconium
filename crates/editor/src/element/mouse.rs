@@ -257,15 +257,8 @@ impl EditorElement {
                 hover_at(editor, Some(anchor), Some(event.position), window, cx);
                 Self::update_visible_cursor(editor, point, position_map, window, cx);
             } else {
-                editor.update_inlay_link_and_hover_points(
-                    &position_map.snapshot,
-                    point_for_position,
-                    Some(event.position),
-                    modifiers.secondary(),
-                    modifiers.shift,
-                    window,
-                    cx,
-                );
+                editor.hide_hovered_link(cx);
+                hover_at(editor, None, Some(event.position), window, cx);
             }
         } else {
             editor.hide_hovered_link(cx);
@@ -952,7 +945,7 @@ impl EditorElement {
             )
         {
             let point = position_map.point_for_position(mouse_position);
-            editor.handle_click_hovered_link(point, event.modifiers(), window, cx);
+            editor.handle_click_hovered_link(point, window, cx);
             editor.selection_drag_state = SelectionDragState::None;
 
             cx.stop_propagation();
@@ -975,7 +968,7 @@ impl EditorElement {
 
         if force_click_possible && text_hitbox.is_hovered(window) {
             let point = position_map.point_for_position(event.position);
-            editor.handle_click_hovered_link(point, event.modifiers, window, cx);
+            editor.handle_click_hovered_link(point, window, cx);
             editor.selection_drag_state = SelectionDragState::None;
             cx.stop_propagation();
         }

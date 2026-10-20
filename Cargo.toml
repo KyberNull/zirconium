@@ -43,7 +43,6 @@ members = [
     "crates/db",
     "crates/deepseek",
     "crates/dev_container",
-    "crates/diagnostics",
     "crates/docs_preprocessor",
     "crates/edit_prediction",
     "crates/edit_prediction_cli",
@@ -102,7 +101,6 @@ members = [
     "crates/inspector_ui",
     "crates/install_cli",
     "crates/journal",
-    "crates/json_schema_store",
     "crates/keymap_editor",
     "crates/language",
     "crates/language_core",
@@ -111,7 +109,6 @@ members = [
     "crates/language_model_core",
     "crates/language_models",
     "crates/language_models_cloud",
-    "crates/language_onboarding",
     "crates/language_selector",
     "crates/language_tools",
     "crates/languages",
@@ -120,7 +117,6 @@ members = [
     "crates/llama_cpp",
     "crates/lmstudio",
     "crates/lsp",
-    "crates/lsp_locations",
     "crates/markdown",
     "crates/markdown_preview",
     "crates/media",
@@ -153,7 +149,6 @@ members = [
     "crates/project",
     "crates/project_benchmarks",
     "crates/project_panel",
-    "crates/project_symbols",
     "crates/prompt_store",
     "crates/proto",
     "crates/proxy_handshake",
@@ -306,7 +301,6 @@ db = { path = "crates/db" }
 deepseek = { path = "crates/deepseek" }
 derive_refineable = { path = "crates/refineable/derive_refineable" }
 dev_container = { path = "crates/dev_container" }
-diagnostics = { path = "crates/diagnostics" }
 edit_prediction = { path = "crates/edit_prediction" }
 edit_prediction_context = { path = "crates/edit_prediction_context" }
 edit_prediction_metrics = { path = "crates/edit_prediction_metrics" }
@@ -357,7 +351,6 @@ input_latency_ui = { path = "crates/input_latency_ui" }
 inspector_ui = { path = "crates/inspector_ui" }
 install_cli = { path = "crates/install_cli" }
 journal = { path = "crates/journal" }
-json_schema_store = { path = "crates/json_schema_store" }
 keymap_editor = { path = "crates/keymap_editor" }
 language = { path = "crates/language" }
 language_core = { path = "crates/language_core" }
@@ -366,7 +359,6 @@ language_model = { path = "crates/language_model" }
 language_model_core = { path = "crates/language_model_core" }
 language_models = { path = "crates/language_models" }
 language_models_cloud = { path = "crates/language_models_cloud" }
-language_onboarding = { path = "crates/language_onboarding" }
 language_selector = { path = "crates/language_selector" }
 language_tools = { path = "crates/language_tools" }
 languages = { path = "crates/languages" }
@@ -375,7 +367,6 @@ line_ending_selector = { path = "crates/line_ending_selector" }
 llama_cpp = { path = "crates/llama_cpp" }
 lmstudio = { path = "crates/lmstudio" }
 lsp = { path = "crates/lsp" }
-lsp_locations = { path = "crates/lsp_locations" }
 markdown = { path = "crates/markdown" }
 markdown_preview = { path = "crates/markdown_preview" }
 media = { path = "crates/media" }
@@ -408,7 +399,6 @@ platform_title_bar = { path = "crates/platform_title_bar" }
 prettier = { path = "crates/prettier" }
 project = { path = "crates/project" }
 project_panel = { path = "crates/project_panel" }
-project_symbols = { path = "crates/project_symbols" }
 prompt_store = { path = "crates/prompt_store" }
 proto = { path = "crates/proto" }
 proxy_handshake = { path = "crates/proxy_handshake" }
@@ -1007,7 +997,6 @@ file_icons = { codegen-units = 1 }
 image_viewer = { codegen-units = 1 }
 install_cli = { codegen-units = 1 }
 journal = { codegen-units = 1 }
-json_schema_store = { codegen-units = 1 }
 llama_cpp = { codegen-units = 1 }
 lmstudio = { codegen-units = 1 }
 menu = { codegen-units = 1 }
@@ -1016,7 +1005,6 @@ ollama = { codegen-units = 1 }
 outline = { codegen-units = 1 }
 paths = { codegen-units = 1 }
 prettier = { codegen-units = 1 }
-project_symbols = { codegen-units = 1 }
 refineable = { codegen-units = 1 }
 release_channel = { codegen-units = 1 }
 reqwest_client = { codegen-units = 1 }

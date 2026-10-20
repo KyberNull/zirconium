@@ -1,11 +1,6 @@
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::{path::PathBuf, sync::Arc};
 
-use anyhow::Context;
-use collections::{BTreeMap, HashMap};
-use gpui::Rgba;
+use collections::HashMap;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use settings_json::parse_json_with_comments;
@@ -16,19 +11,6 @@ use crate::{
     AllLanguageSettingsContent, DelayMs, ExtendingVec, ParseStatus, ProjectTerminalSettingsContent,
     RootUserSettings, SaturatingBool, SplicingVec, fallible_options,
 };
-
-#[with_fallible_options]
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, JsonSchema, MergeFrom)]
-pub struct LspSettingsMap(pub HashMap<Arc<str>, LspSettings>);
-
-impl IntoIterator for LspSettingsMap {
-    type Item = (Arc<str>, LspSettings);
-    type IntoIter = std::collections::hash_map::IntoIter<Arc<str>, LspSettings>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
-    }
-}
 
 impl RootUserSettings for ProjectSettingsContent {
     fn parse_json(json: &str) -> (Option<Self>, ParseStatus) {
@@ -47,17 +29,6 @@ pub struct ProjectSettingsContent {
 
     #[serde(flatten)]
     pub worktree: WorktreeSettingsContent,
-
-    /// Configuration for language servers.
-    ///
-    /// The following settings can be overridden for specific language servers:
-    /// - initialization_options
-    ///
-    /// To override settings for a language, add an entry for that language server's
-    /// name to the lsp value.
-    /// Default: null
-    #[serde(default)]
-    pub lsp: LspSettingsMap,
 
     pub terminal: Option<ProjectTerminalSettingsContent>,
 
@@ -175,205 +146,15 @@ pub struct WorktreeSettingsContent {
     pub read_only_files: Option<Vec<String>>,
 }
 
-#[with_fallible_options]
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, JsonSchema, MergeFrom, Hash)]
-#[serde(rename_all = "snake_case")]
-pub struct LspSettings {
-    pub binary: Option<BinarySettings>,
-    /// Options passed to the language server at startup.
-    ///
-    /// Ref: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initialize
-    ///
-    /// Consult the documentation for the specific language server to see which settings are supported.
-    pub initialization_options: Option<serde_json::Value>,
-    /// Language server settings.
-    ///
-    /// Ref: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_configuration
-    ///
-    /// Consult the documentation for the specific language server to see which settings are supported.
-    pub settings: Option<serde_json::Value>,
-    /// If the server supports sending tasks over LSP extensions,
-    /// this setting can be used to enable or disable them in Zed.
-    /// Default: true
-    #[serde(default = "default_true")]
-    pub enable_lsp_tasks: bool,
-    pub fetch: Option<FetchSettings>,
-}
-
-impl Default for LspSettings {
-    fn default() -> Self {
-        Self {
-            binary: None,
-            initialization_options: None,
-            settings: None,
-            enable_lsp_tasks: true,
-            fetch: None,
-        }
-    }
-}
-
-#[with_fallible_options]
-#[derive(
-    Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq, JsonSchema, MergeFrom, Hash,
-)]
-pub struct BinarySettings {
-    pub path: Option<String>,
-    pub arguments: Option<Vec<String>>,
-    pub env: Option<BTreeMap<String, String>>,
-    pub ignore_system_version: Option<bool>,
-}
-
-#[with_fallible_options]
-#[derive(
-    Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq, JsonSchema, MergeFrom, Hash,
-)]
-pub struct FetchSettings {
-    // Whether to consider pre-releases for fetching
-    pub pre_release: Option<bool>,
-}
-
-/// Common language server settings.
+/// Settings for the JSON-RPC clients that remain (Copilot and Prettier).
 #[with_fallible_options]
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, MergeFrom)]
 pub struct GlobalLspSettingsContent {
-    /// Whether to show the LSP servers button in the status bar.
-    ///
-    /// Default: `true`
-    pub button: Option<bool>,
     /// The maximum amount of time to wait for responses from language servers, in seconds.
     /// A value of `0` will result in no timeout being applied (causing all LSP responses to wait indefinitely until completed).
     ///
     /// Default: `120`
     pub request_timeout: Option<u64>,
-    /// The maximum line length a buffer may contain before language server features are disabled for the entire buffer.
-    ///
-    /// Default: `20000`
-    #[schemars(range(min = 1))]
-    pub max_buffer_line_length: Option<u32>,
-    /// Settings for language server notifications
-    pub notifications: Option<LspNotificationSettingsContent>,
-    /// Rules for rendering LSP semantic tokens.
-    pub semantic_token_rules: Option<SemanticTokenRules>,
-}
-
-#[with_fallible_options]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, MergeFrom)]
-pub struct LspNotificationSettingsContent {
-    /// Timeout in milliseconds for automatically dismissing language server notifications.
-    /// Set to 0 to disable auto-dismiss.
-    ///
-    /// Default: 5000
-    pub dismiss_timeout_ms: Option<u64>,
-}
-
-/// Custom rules for rendering LSP semantic tokens.
-#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, JsonSchema)]
-#[serde(transparent)]
-pub struct SemanticTokenRules {
-    pub rules: Vec<SemanticTokenRule>,
-}
-
-impl SemanticTokenRules {
-    pub const FILE_NAME: &'static str = "semantic_token_rules.json";
-
-    pub fn load(file_path: &Path) -> anyhow::Result<Self> {
-        let rules_content = std::fs::read(file_path).with_context(|| {
-            anyhow::anyhow!(
-                "Could not read semantic token rules from {}",
-                file_path.display()
-            )
-        })?;
-
-        serde_json_lenient::from_slice::<SemanticTokenRules>(&rules_content).with_context(|| {
-            anyhow::anyhow!(
-                "Failed to parse semantic token rules from {}",
-                file_path.display()
-            )
-        })
-    }
-}
-
-impl crate::merge_from::MergeFrom for SemanticTokenRules {
-    fn merge_from(&mut self, other: &Self) {
-        self.rules.splice(0..0, other.rules.iter().cloned());
-    }
-}
-
-#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct SemanticTokenRule {
-    pub token_type: Option<String>,
-    #[serde(default)]
-    pub token_modifiers: Vec<String>,
-    #[serde(default)]
-    pub style: Vec<String>,
-    pub foreground_color: Option<Rgba>,
-    pub background_color: Option<Rgba>,
-    pub underline: Option<SemanticTokenColorOverride>,
-    pub strikethrough: Option<SemanticTokenColorOverride>,
-    pub font_weight: Option<SemanticTokenFontWeight>,
-    pub font_style: Option<SemanticTokenFontStyle>,
-}
-
-impl SemanticTokenRule {
-    pub fn no_style_defined(&self) -> bool {
-        self.style.is_empty()
-            && self.foreground_color.is_none()
-            && self.background_color.is_none()
-            && self.underline.is_none()
-            && self.strikethrough.is_none()
-            && self.font_weight.is_none()
-            && self.font_style.is_none()
-    }
-}
-
-#[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq, JsonSchema, MergeFrom)]
-#[serde(untagged)]
-pub enum SemanticTokenColorOverride {
-    InheritForeground(bool),
-    Replace(Rgba),
-}
-
-#[derive(
-    Copy,
-    Clone,
-    Debug,
-    Default,
-    Serialize,
-    Deserialize,
-    PartialEq,
-    Eq,
-    JsonSchema,
-    MergeFrom,
-    strum::VariantArray,
-    strum::VariantNames,
-)]
-#[serde(rename_all = "snake_case")]
-pub enum SemanticTokenFontWeight {
-    #[default]
-    Normal,
-    Bold,
-}
-
-#[derive(
-    Copy,
-    Clone,
-    Debug,
-    Default,
-    Serialize,
-    Deserialize,
-    PartialEq,
-    Eq,
-    JsonSchema,
-    MergeFrom,
-    strum::VariantArray,
-    strum::VariantNames,
-)]
-#[serde(rename_all = "snake_case")]
-pub enum SemanticTokenFontStyle {
-    #[default]
-    Normal,
-    Italic,
 }
 
 #[with_fallible_options]
@@ -783,69 +564,6 @@ pub enum GitPathStyle {
     FileNameFirst,
     /// Show full path first
     FilePathFirst,
-}
-
-#[with_fallible_options]
-#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema, MergeFrom)]
-pub struct DiagnosticsSettingsContent {
-    /// Whether to show the project diagnostics button in the status bar.
-    pub button: Option<bool>,
-
-    /// Whether or not to include warning diagnostics.
-    ///
-    /// Default: true
-    pub include_warnings: Option<bool>,
-
-    /// Settings for using LSP pull diagnostics mechanism in Zed.
-    pub lsp_pull_diagnostics: Option<LspPullDiagnosticsSettingsContent>,
-
-    /// Settings for showing inline diagnostics.
-    pub inline: Option<InlineDiagnosticsSettingsContent>,
-}
-
-#[with_fallible_options]
-#[derive(
-    Clone, Copy, Debug, Default, Serialize, Deserialize, JsonSchema, MergeFrom, PartialEq, Eq,
-)]
-pub struct LspPullDiagnosticsSettingsContent {
-    /// Whether to pull for diagnostics or not.
-    ///
-    /// Default: true
-    pub enabled: Option<bool>,
-    /// Minimum time to wait before pulling diagnostics from the language server(s).
-    /// 0 turns the debounce off.
-    ///
-    /// Default: 50
-    pub debounce_ms: Option<DelayMs>,
-}
-
-#[with_fallible_options]
-#[derive(
-    Clone, Copy, Debug, PartialEq, Default, Serialize, Deserialize, JsonSchema, MergeFrom, Eq,
-)]
-pub struct InlineDiagnosticsSettingsContent {
-    /// Whether or not to show inline diagnostics
-    ///
-    /// Default: false
-    pub enabled: Option<bool>,
-    /// Whether to only show the inline diagnostics after a delay after the
-    /// last editor event.
-    ///
-    /// Default: 150
-    pub update_debounce_ms: Option<DelayMs>,
-    /// The amount of padding between the end of the source line and the start
-    /// of the inline diagnostic in units of columns.
-    ///
-    /// Default: 4
-    pub padding: Option<u32>,
-    /// The minimum column to display inline diagnostics. This setting can be
-    /// used to horizontally align inline diagnostics at some position. Lines
-    /// longer than this value will still push diagnostics further to the right.
-    ///
-    /// Default: 0
-    pub min_column: Option<u32>,
-
-    pub max_severity: Option<DiagnosticSeverityContent>,
 }
 
 #[with_fallible_options]

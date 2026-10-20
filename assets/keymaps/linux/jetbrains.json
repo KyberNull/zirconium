@@ -33,18 +33,8 @@
       "shift-alt-up": "editor::MoveLineUp",
       "shift-alt-down": "editor::MoveLineDown",
       "ctrl-alt-l": "editor::Format",
-      "ctrl-alt-o": "editor::OrganizeImports",
-      "shift-f6": "editor::Rename",
       "ctrl-alt-left": "pane::GoBack",
       "ctrl-alt-right": "pane::GoForward",
-      "alt-f7": "editor::FindAllReferences",
-      "ctrl-alt-f7": "editor::FindAllReferences",
-      "ctrl-b": "editor::GoToDefinition", // Conflicts with workspace::ToggleLeftDock
-      "ctrl-alt-b": "editor::GoToImplementation", // Conflicts with workspace::ToggleRightDock
-      "ctrl-shift-b": "editor::GoToTypeDefinition",
-      "ctrl-alt-shift-b": "editor::GoToTypeDefinitionSplit",
-      "f2": "editor::GoToDiagnostic",
-      "shift-f2": "editor::GoToPreviousDiagnostic",
       "ctrl-alt-shift-down": "editor::GoToHunk",
       "ctrl-alt-shift-up": "editor::GoToPreviousHunk",
       "ctrl-alt-z": "git::Restore",
@@ -73,7 +63,6 @@
       "alt-enter": "editor::ToggleCodeActions",
       "ctrl-space": "editor::ShowCompletions",
       "ctrl-q": "editor::Hover",
-      "ctrl-p": "editor::ShowSignatureHelp",
       "ctrl-\\": "assistant::InlineAssist",
     },
   },
@@ -117,13 +106,10 @@
       "ctrl-k": "git_panel::ToggleFocus", // bug: This should also focus commit editor
       "ctrl-shift-n": "file_finder::Toggle",
       "ctrl-alt-n": "file_finder::Toggle",
-      "ctrl-n": "project_symbols::Toggle",
       "ctrl-shift-a": "command_palette::Toggle",
       "shift shift": "command_palette::Toggle",
-      "ctrl-alt-shift-n": "project_symbols::Toggle",
       "alt-0": "git_panel::ToggleFocus",
       "alt-1": "project_panel::ToggleFocus",
-      "alt-6": "diagnostics::Deploy",
       "alt-7": "outline_panel::ToggleFocus",
     },
   },
@@ -135,7 +121,7 @@
       "alt-3": null, // Find Panel (bottom dock)
       "alt-4": null, // Run Panel (bottom dock)
       "alt-5": null,
-      "alt-6": "diagnostics::Deploy",
+      "alt-6": null,
       "alt-7": "outline_panel::ToggleFocus",
       "alt-8": null, // Services (bottom dock)
       "alt-9": null, // Git History (bottom dock)

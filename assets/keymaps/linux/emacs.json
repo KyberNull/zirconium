@@ -54,8 +54,6 @@
       "ctrl-t": "editor::Transpose", // transpose-chars
       "alt-;": ["editor::ToggleComments", { "advance_downwards": false }],
       "ctrl-x ctrl-;": "editor::ToggleComments",
-      "alt-.": "editor::GoToDefinition", // xref-find-definitions
-      "alt-?": "editor::FindAllReferences", // xref-find-references
       "alt-,": "pane::GoBack", // xref-pop-marker-stack
       "ctrl-x h": "editor::SelectAll", // mark-whole-buffer
       "ctrl-d": "editor::Delete", // delete-char
@@ -130,13 +128,6 @@
     "bindings": {
       "ctrl-p": "editor::ContextMenuPrevious",
       "ctrl-n": "editor::ContextMenuNext",
-    },
-  },
-  {
-    "context": "Editor && showing_signature_help && !showing_completions",
-    "bindings": {
-      "ctrl-p": "editor::SignatureHelpPrevious",
-      "ctrl-n": "editor::SignatureHelpNext",
     },
   },
   // Example setting for using emacs-style tab

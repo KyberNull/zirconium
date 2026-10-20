@@ -1,6 +1,6 @@
 ---
 title: Standard ML
-description: "Configure Standard ML language support in Zed, including language servers, formatting, and debugging."
+description: "Configure Standard ML language support in Zed, including formatting and syntax highlighting."
 ---
 
 # Standard ML
@@ -8,7 +8,6 @@ description: "Configure Standard ML language support in Zed, including language 
 Standard ML support is available through the community-maintained [Standard ML extension](https://github.com/omarjatoi/zed-sml).
 
 - Tree-sitter: [MatthewFluet/tree-sitter-sml](https://github.com/MatthewFluet/tree-sitter-sml)
-- Language Server: [Millet](https://github.com/azdavis/millet)
 
 ## Setup
 

@@ -1,38 +1,29 @@
-mod apply_code_action_tool;
 mod ask_user_tool;
 mod context_server_registry;
 mod copy_path_tool;
 mod create_directory_tool;
 mod create_thread_tool;
 mod delete_path_tool;
-mod diagnostics_tool;
 mod edit_file_tool;
 mod edit_session;
 #[cfg(all(test, feature = "unit-eval"))]
 mod evals;
 mod fetch_tool;
 mod find_path_tool;
-mod find_references_tool;
-mod get_code_actions_tool;
-mod go_to_definition_tool;
 mod grep_tool;
 mod list_agents_and_models_tool;
 mod list_directory_tool;
 mod move_path_tool;
 mod read_file_tool;
-mod rename_tool;
 mod skill_tool;
 mod spawn_agent_tool;
-mod symbol_locator;
 mod terminal_tool;
 mod tool_permissions;
 mod web_search_tool;
 mod write_file_tool;
 
 use crate::AgentTool;
-use feature_flags::{
-    CreateThreadToolFeatureFlag, FeatureFlagAppExt as _, LspToolFeatureFlag, RenameToolFeatureFlag,
-};
+use feature_flags::{CreateThreadToolFeatureFlag, FeatureFlagAppExt as _};
 use gpui::App;
 use language_model::{LanguageModelRequestTool, LanguageModelToolSchemaFormat};
 use serde::{
@@ -70,29 +61,22 @@ where
     }
 }
 
-pub use apply_code_action_tool::*;
 pub use ask_user_tool::*;
 pub use context_server_registry::*;
 pub use copy_path_tool::*;
 pub use create_directory_tool::*;
 pub use create_thread_tool::*;
 pub use delete_path_tool::*;
-pub use diagnostics_tool::*;
 pub use edit_file_tool::*;
 pub use fetch_tool::*;
 pub use find_path_tool::*;
-pub use find_references_tool::*;
-pub use get_code_actions_tool::*;
-pub use go_to_definition_tool::*;
 pub use grep_tool::*;
 pub use list_agents_and_models_tool::*;
 pub use list_directory_tool::*;
 pub use move_path_tool::*;
 pub use read_file_tool::*;
-pub use rename_tool::*;
 pub use skill_tool::*;
 pub use spawn_agent_tool::*;
-pub use symbol_locator::*;
 
 pub use terminal_tool::*;
 pub use tool_permissions::*;
@@ -195,25 +179,19 @@ macro_rules! tools {
 //    are dropped unless it is active. The agent-profile UI uses the same gate so
 //    it never offers a tool the agent can't actually use.
 tools! {
-    ApplyCodeActionTool,
     AskUserTool,
     CopyPathTool,
     CreateDirectoryTool,
     CreateThreadTool,
     DeletePathTool,
-    DiagnosticsTool,
     EditFileTool,
     FetchTool,
     FindPathTool,
-    FindReferencesTool,
-    GetCodeActionsTool,
-    GoToDefinitionTool,
     GrepTool,
     ListAgentsAndModelsTool,
     ListDirectoryTool,
     MovePathTool,
     ReadFileTool,
-    RenameTool,
     SkillTool,
     SpawnAgentTool,
     TerminalTool,
@@ -230,11 +208,6 @@ tools! {
 /// a tool the agent would silently drop (see #56778).
 pub fn tool_feature_flag_enabled(tool_name: &str, cx: &App) -> bool {
     match tool_name {
-        RenameTool::NAME => cx.has_flag::<RenameToolFeatureFlag>(),
-        FindReferencesTool::NAME
-        | GetCodeActionsTool::NAME
-        | ApplyCodeActionTool::NAME
-        | GoToDefinitionTool::NAME => cx.has_flag::<LspToolFeatureFlag>(),
         CreateThreadTool::NAME | ListAgentsAndModelsTool::NAME => {
             cx.has_flag::<CreateThreadToolFeatureFlag>()
         }

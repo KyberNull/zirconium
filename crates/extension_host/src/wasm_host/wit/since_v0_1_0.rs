@@ -4,13 +4,12 @@ use ::settings::{Settings, WorktreeId};
 use anyhow::{Context as _, Result, bail};
 use async_compression::futures::bufread::GzipDecoder;
 use async_tar::Archive;
-use extension::{ExtensionLanguageServerProxy, KeyValueStoreDelegate, WorktreeDelegate};
+use extension::{KeyValueStoreDelegate, WorktreeDelegate};
 use futures::{AsyncReadExt, lock::Mutex};
 use futures::{FutureExt as _, io::BufReader};
 use gpui::BackgroundExecutor;
 use language::LanguageName;
-use language::{BinaryStatus, language_settings::AllLanguageSettings};
-use project::project_settings::ProjectSettings;
+use language::language_settings::AllLanguageSettings;
 use semver::Version;
 use std::{
     path::{Path, PathBuf},
@@ -454,24 +453,11 @@ impl ExtensionImports for WasmState {
                             tab_size: settings.tab_size,
                         })?)
                     }
-                    "lsp" => {
-                        let settings = key
-                            .and_then(|key| {
-                                ProjectSettings::get(location, cx)
-                                    .lsp
-                                    .get(&::lsp::LanguageServerName(key.into()))
-                            })
-                            .cloned()
-                            .unwrap_or_default();
-                        Ok(serde_json::to_string(&settings::LspSettings {
-                            binary: settings.binary.map(|binary| settings::BinarySettings {
-                                path: binary.path,
-                                arguments: binary.arguments,
-                            }),
-                            settings: settings.settings,
-                            initialization_options: settings.initialization_options,
-                        })?)
-                    }
+                    "lsp" => Ok(serde_json::to_string(&settings::LspSettings {
+                        binary: None,
+                        settings: None,
+                        initialization_options: None,
+                    })?),
                     _ => {
                         bail!("Unknown settings category: {}", category);
                     }
@@ -485,20 +471,9 @@ impl ExtensionImports for WasmState {
 
     async fn set_language_server_installation_status(
         &mut self,
-        server_name: String,
-        status: LanguageServerInstallationStatus,
+        _server_name: String,
+        _status: LanguageServerInstallationStatus,
     ) -> wasmtime::Result<()> {
-        let status = match status {
-            LanguageServerInstallationStatus::CheckingForUpdate => BinaryStatus::CheckingForUpdate,
-            LanguageServerInstallationStatus::Downloading => BinaryStatus::Downloading,
-            LanguageServerInstallationStatus::None => BinaryStatus::None,
-            LanguageServerInstallationStatus::Failed(error) => BinaryStatus::Failed { error },
-        };
-
-        self.host
-            .proxy
-            .update_language_server_status(::lsp::LanguageServerName(server_name.into()), status);
-
         Ok(())
     }
 

@@ -14,7 +14,6 @@
 - [Editing Code](./editing-code.md)
   - [Code Completions](./completions.md)
   - [Snippets](./snippets.md)
-  - [Diagnostics & Quick Fixes](./diagnostics.md)
   - [Multibuffers](./multibuffers.md)
 - [Finding & Navigating](./finding-navigating.md)
   - [Command Palette](./command-palette.md)
@@ -106,7 +105,6 @@
 - [All Languages](./languages.md)
 - [Configuring Languages](./configuring-languages.md)
   - [Toolchains] Removed from the codebase.
-  - [Semantic Tokens](./semantic-tokens.md)
 - [Ansible](./languages/ansible.md)
 - [AsciiDoc](./languages/asciidoc.md)
 - [Astro](./languages/astro.md)

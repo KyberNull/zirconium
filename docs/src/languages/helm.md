@@ -1,6 +1,6 @@
 ---
 title: Helm
-description: "Configure Helm language support in Zed, including language servers, formatting, and debugging."
+description: "Configure Helm language support in Zed, including formatting and syntax highlighting."
 ---
 
 # Helm
@@ -8,7 +8,6 @@ description: "Configure Helm language support in Zed, including language servers
 Support for Helm in Zed is provided by the community-maintained [Helm extension](https://github.com/cabrinha/helm.zed).
 
 - Tree-sitter: [tree-sitter-go-template](https://github.com/ngalaiko/tree-sitter-go-template/tree/master)
-- Language Server: [mrjosh/helm-ls](https://github.com/mrjosh/helm-ls)
 
 ## Setup
 
