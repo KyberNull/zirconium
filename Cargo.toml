@@ -20,7 +20,6 @@ members = [
     "crates/auto_update_ui",
     "crates/aws_http_client",
     "crates/bedrock",
-    "crates/benchmarks",
     "crates/breadcrumbs",
     "crates/buffer_diff",
     "crates/cli",
@@ -33,7 +32,6 @@ members = [
     "crates/command_palette",
     "crates/command_palette_hooks",
     "crates/component",
-    "crates/component_preview",
     "crates/context_server",
     "crates/copilot",
     "crates/copilot_chat",
@@ -50,12 +48,8 @@ members = [
     "crates/edit_prediction_types",
     "crates/edit_prediction_ui",
     "crates/editor",
-    "crates/editor_benchmarks",
     "crates/encoding_selector",
     "crates/env_var",
-    "crates/etw_tracing",
-    "crates/eval_cli",
-    "crates/eval_utils",
     "crates/explorer_command_injector",
     "crates/extension",
     "crates/extension_api",
@@ -68,7 +62,6 @@ members = [
     "crates/file_finder",
     "crates/file_icons",
     "crates/fs",
-    "crates/fs_benchmarks",
     "crates/fuzzy",
     "crates/fuzzy_nucleo",
     "crates/git",
@@ -96,8 +89,6 @@ members = [
     "crates/http_proxy",
     "crates/icons",
     "crates/image_viewer",
-    "crates/input_latency_ui",
-    "crates/inspector_ui",
     "crates/install_cli",
     "crates/journal",
     "crates/keymap_editor",
@@ -108,7 +99,6 @@ members = [
     "crates/language_model_core",
     "crates/language_models",
     "crates/language_selector",
-    "crates/language_tools",
     "crates/languages",
     "crates/line_ending_selector",
 
@@ -121,7 +111,6 @@ members = [
     "crates/menu",
     "crates/mermaid_render",
     "crates/migrator",
-    "crates/miniprofiler_ui",
     "crates/mistral",
     "crates/multi_buffer",
     "crates/net",
@@ -145,7 +134,6 @@ members = [
     "crates/platform_title_bar",
     "crates/prettier",
     "crates/project",
-    "crates/project_benchmarks",
     "crates/project_panel",
     "crates/prompt_store",
     "crates/proto",
@@ -195,7 +183,6 @@ members = [
     "crates/text",
     "crates/theme",
     "crates/theme_extension",
-    "crates/theme_importer",
     "crates/theme_selector",
     "crates/theme_settings",
     "crates/time_format",
@@ -214,7 +201,6 @@ members = [
     "crates/windows_resources",
     "crates/workspace",
     "crates/worktree",
-    "crates/worktree_benchmarks",
     "crates/x_ai",
     "crates/zed",
     "crates/zed_actions",
@@ -286,7 +272,6 @@ command_palette = { path = "crates/command_palette" }
 command_palette_hooks = { path = "crates/command_palette_hooks" }
 compliance = { path = "tooling/compliance" }
 component = { path = "crates/component" }
-component_preview = { path = "crates/component_preview" }
 context_server = { path = "crates/context_server" }
 copilot = { path = "crates/copilot" }
 copilot_chat = { path = "crates/copilot_chat" }
@@ -305,8 +290,6 @@ edit_prediction_ui = { path = "crates/edit_prediction_ui" }
 editor = { path = "crates/editor" }
 encoding_selector = { path = "crates/encoding_selector" }
 env_var = { path = "crates/env_var" }
-etw_tracing = { path = "crates/etw_tracing" }
-eval_utils = { path = "crates/eval_utils" }
 extension = { path = "crates/extension" }
 extension_host = { path = "crates/extension_host" }
 extensions_ui = { path = "crates/extensions_ui" }
@@ -343,8 +326,6 @@ http_client_tls = { path = "crates/http_client_tls" }
 http_proxy = { path = "crates/http_proxy" }
 icons = { path = "crates/icons" }
 image_viewer = { path = "crates/image_viewer" }
-input_latency_ui = { path = "crates/input_latency_ui" }
-inspector_ui = { path = "crates/inspector_ui" }
 install_cli = { path = "crates/install_cli" }
 journal = { path = "crates/journal" }
 keymap_editor = { path = "crates/keymap_editor" }
@@ -355,7 +336,6 @@ language_model = { path = "crates/language_model" }
 language_model_core = { path = "crates/language_model_core" }
 language_models = { path = "crates/language_models" }
 language_selector = { path = "crates/language_selector" }
-language_tools = { path = "crates/language_tools" }
 languages = { path = "crates/languages" }
 line_ending_selector = { path = "crates/line_ending_selector" }
 
@@ -368,7 +348,6 @@ media = { path = "crates/media" }
 menu = { path = "crates/menu" }
 mermaid_render = { path = "crates/mermaid_render" }
 migrator = { path = "crates/migrator" }
-miniprofiler_ui = { path = "crates/miniprofiler_ui" }
 mistral = { path = "crates/mistral" }
 multi_buffer = { path = "crates/multi_buffer" }
 net = { path = "crates/net" }

@@ -10,7 +10,6 @@ path = "src/agent.rs"
 
 [features]
 test-support = ["db/test-support"]
-unit-eval = []
 e2e = []
 
 [lints]
@@ -93,7 +92,6 @@ ctor.workspace = true
 db = { workspace = true, "features" = ["test-support"] }
 editor = { workspace = true, "features" = ["test-support"] }
 env_logger.workspace = true
-eval_utils.workspace = true
 fs = { workspace = true, "features" = ["test-support"] }
 git = { workspace = true, "features" = ["test-support"] }
 gpui = { workspace = true, "features" = ["test-support"] }
