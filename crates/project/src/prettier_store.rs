@@ -185,7 +185,7 @@ impl PrettierStore {
             Some((worktree_id, buffer_path)) => {
                 let fs = Arc::clone(&self.fs);
                 let installed_prettiers = self.prettier_instances.keys().cloned().collect();
-                cx.spawn(async move |lsp_store, cx| {
+                cx.spawn(async move |prettier_store, cx| {
                     match cx
                         .background_spawn(async move {
                             Prettier::locate_prettier_installation(
@@ -199,32 +199,32 @@ impl PrettierStore {
                     {
                         Ok(ControlFlow::Break(())) => None,
                         Ok(ControlFlow::Continue(None)) => {
-                            let default_task = lsp_store
-                                .update(cx, |lsp_store, cx| {
-                                    lsp_store
+                            let default_task = prettier_store
+                                .update(cx, |prettier_store, cx| {
+                                    prettier_store
                                         .prettiers_per_worktree
                                         .entry(worktree_id)
                                         .or_default()
                                         .insert(None);
-                                    lsp_store.default_prettier.prettier_task(&node, cx)
+                                    prettier_store.default_prettier.prettier_task(&node, cx)
                                 })
                                 .ok()??;
                             let default_instance = default_task.await.ok()?;
                             Some((None, default_instance))
                         }
                         Ok(ControlFlow::Continue(Some(prettier_dir))) => {
-                            lsp_store
-                                .update(cx, |lsp_store, _| {
-                                    lsp_store
+                            prettier_store
+                                .update(cx, |prettier_store, _| {
+                                    prettier_store
                                         .prettiers_per_worktree
                                         .entry(worktree_id)
                                         .or_default()
                                         .insert(Some(prettier_dir.clone()))
                                 })
                                 .ok()?;
-                            if let Some(prettier_task) = lsp_store
-                                .update(cx, |lsp_store, cx| {
-                                    lsp_store
+                            if let Some(prettier_task) = prettier_store
+                                .update(cx, |prettier_store, cx| {
+                                    prettier_store
                                         .prettier_instances
                                         .get_mut(&prettier_dir)
                                         .and_then(|existing_instance| {
@@ -242,11 +242,11 @@ impl PrettierStore {
                             }
 
                             log::info!("Found prettier in {prettier_dir:?}, starting.");
-                            let new_prettier_task = lsp_store
-                                .update(cx, |lsp_store, cx| {
+                            let new_prettier_task = prettier_store
+                                .update(cx, |prettier_store, cx| {
                                     let new_prettier_task =
                                         Self::start_prettier(node, prettier_dir.clone(), cx);
-                                    lsp_store.prettier_instances.insert(
+                                    prettier_store.prettier_instances.insert(
                                         prettier_dir.clone(),
                                         PrettierInstance {
                                             attempt: 0,
@@ -290,7 +290,7 @@ impl PrettierStore {
                     .get(&worktree_id)
                     .cloned()
                     .unwrap_or_default();
-                cx.spawn(async move |lsp_store, cx| {
+                cx.spawn(async move |prettier_store, cx| {
                     match cx
                         .background_spawn(async move {
                             Prettier::locate_prettier_ignore(
@@ -306,7 +306,7 @@ impl PrettierStore {
                         Ok(ControlFlow::Continue(None)) => None,
                         Ok(ControlFlow::Continue(Some(ignore_dir))) => {
                             log::debug!("Found prettier ignore in {ignore_dir:?}");
-                            lsp_store
+                            prettier_store
                                 .update(cx, |store, _| {
                                     store
                                         .prettier_ignores_per_worktree
