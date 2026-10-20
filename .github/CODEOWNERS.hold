@@ -44,7 +44,6 @@
 /crates/edit_prediction_context/ @zed-industries/ai-team
 /crates/edit_prediction_types/ @zed-industries/ai-team
 /crates/edit_prediction_ui/ @zed-industries/ai-team
-/crates/eval_utils/ @zed-industries/ai-team
 /crates/google_ai/ @zed-industries/ai-team
 /crates/language_model/ @zed-industries/ai-team
 /crates/language_models/ @zed-industries/ai-team
@@ -113,8 +112,6 @@
 /crates/git_graph/ @zed-industries/developer-tools-team
 /crates/git_hosting_providers/ @zed-industries/developer-tools-team
 /crates/git_ui/ @zed-industries/developer-tools-team
-/crates/inspector_ui/ @zed-industries/developer-tools-team
-/crates/miniprofiler_ui/ @zed-industries/developer-tools-team
 /crates/repl/ @zed-industries/developer-tools-team
 /crates/task/ @zed-industries/developer-tools-team
 /crates/tasks_ui/ @zed-industries/developer-tools-team
@@ -136,7 +133,6 @@
 /crates/language_extension/ @zed-industries/ecosystem-team
 /crates/language_onboarding/ @zed-industries/ecosystem-team
 /crates/language_selector/ @zed-industries/ecosystem-team
-/crates/language_tools/ @zed-industries/ecosystem-team
 /crates/languages/ @zed-industries/ecosystem-team
 /crates/lsp/ @zed-industries/ecosystem-team
 /crates/node_runtime/ @zed-industries/ecosystem-team
@@ -165,7 +161,6 @@
 /crates/denoise/ @zed-industries/infrastructure-team
 /crates/feature_flags/ @zed-industries/infrastructure-team
 /crates/fs/ @zed-industries/infrastructure-team
-/crates/fs_benchmarks/ @zed-industries/infrastructure-team
 /crates/http_client/ @zed-industries/infrastructure-team
 /crates/http_client_tls/ @zed-industries/infrastructure-team
 /crates/net/ @zed-industries/infrastructure-team
@@ -257,14 +252,12 @@
 /crates/file_icons/ @zed-industries/project-team
 /crates/fuzzy/ @zed-industries/project-team
 /crates/project/ @zed-industries/project-team
-/crates/project_benchmarks/ @zed-industries/project-team
 /crates/project_panel/ @zed-industries/project-team
 /crates/project_symbols/ @zed-industries/project-team
 /crates/recent_projects/ @zed-industries/project-team
 /crates/search/ @zed-industries/project-team
 /crates/workspace/ @zed-industries/project-team
 /crates/worktree/ @zed-industries/project-team
-/crates/worktree_benchmarks/ @zed-industries/project-team
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ui-team
@@ -281,7 +274,6 @@
 /crates/activity_indicator/ @zed-industries/ui-team
 /crates/assets/ @zed-industries/ui-team
 /crates/component/ @zed-industries/ui-team
-/crates/component_preview/ @zed-industries/ui-team
 /crates/icons/ @zed-industries/ui-team
 /crates/image_viewer/ @zed-industries/ui-team
 /crates/markdown/ @zed-industries/ui-team
@@ -295,7 +287,6 @@
 /crates/tab_switcher/ @zed-industries/ui-team
 /crates/theme/ @zed-industries/ui-team
 /crates/theme_extension/ @zed-industries/ui-team
-/crates/theme_importer/ @zed-industries/ui-team
 /crates/theme_selector/ @zed-industries/ui-team
 /crates/title_bar/ @zed-industries/ui-team
 /crates/ui/ @zed-industries/ui-team
