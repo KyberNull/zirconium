@@ -4,7 +4,6 @@ pub mod pages;
 
 use agent_skills::SkillIndex;
 use anyhow::{Context as _, Result};
-use cloud_api_types::OrganizationConfiguration;
 use editor::{Editor, EditorEvent};
 use futures::{StreamExt, channel::mpsc};
 use fuzzy::StringMatchCandidate;
@@ -113,12 +112,6 @@ struct FocusFile(pub u32);
 struct SettingField<T: 'static> {
     pick: fn(&SettingsContent) -> Option<&T>,
     write: fn(&mut SettingsContent, Option<T>, &App),
-    /// Tells us whether the setting is overridden by the currently selected
-    /// organization's settings. Takes the organization configuration and the
-    /// resolved settings value, and returns `Some(...)` if the organization
-    /// overrides the setting, otherwise `None`.
-    organization_override: Option<fn(&OrganizationConfiguration) -> Option<&T>>,
-
     /// A json-path-like string that gives a unique-ish string that identifies
     /// where in the JSON the setting is defined.
     ///
@@ -167,7 +160,6 @@ impl<T: 'static> SettingField<T> {
         SettingField {
             pick: |_| Some(&UnimplementedSettingField),
             write: |_, _, _| unreachable!(),
-            organization_override: None,
             json_path: self.json_path,
         }
     }
@@ -187,8 +179,6 @@ trait AnySettingField {
     ) -> Option<Box<dyn Fn(&mut Window, &mut App)>>;
 
     fn json_path(&self) -> Option<&'static str>;
-
-    fn is_overridden_by_organization(&self, cx: &App) -> bool;
 }
 
 impl<T: PartialEq + Clone + Send + Sync + 'static> AnySettingField for SettingField<T> {
@@ -263,19 +253,6 @@ impl<T: PartialEq + Clone + Send + Sync + 'static> AnySettingField for SettingFi
 
     fn json_path(&self) -> Option<&'static str> {
         self.json_path
-    }
-
-    fn is_overridden_by_organization(&self, cx: &App) -> bool {
-        let Some(org_override) = self.organization_override else {
-            return false;
-        };
-
-        let user_store = AppState::global(cx).user_store.read(cx);
-        let Some(org_config) = user_store.current_organization_configuration() else {
-            return false;
-        };
-
-        (org_override)(&org_config).is_some()
     }
 }
 
@@ -584,7 +561,6 @@ fn init_renderers(cx: &mut App) {
         .add_basic_renderer::<settings::TerminalBlink>(render_dropdown)
         .add_basic_renderer::<settings::CursorShapeContent>(render_dropdown)
         .add_basic_renderer::<settings::EditPredictionPromptFormatContent>(render_dropdown)
-        .add_basic_renderer::<settings::EditPredictionDataCollectionChoice>(render_dropdown)
         .add_basic_renderer::<f32>(render_editable_number_field)
         .add_basic_renderer::<settings::AutoCompactThreshold>(render_text_field)
         .add_basic_renderer::<u32>(render_editable_number_field)
@@ -1461,35 +1437,6 @@ fn render_settings_item(
     let modified_in = file_set_in
         .filter(|f| f != &file)
         .and_then(|f| settings_window.display_name(&f));
-
-    let control = if setting_item.field.is_overridden_by_organization(cx) {
-        h_flex()
-            .gap_2()
-            .child(
-                div()
-                    .id(format!(
-                        "{}-organization-configuration-warning",
-                        setting_item.title
-                    ))
-                    .child(
-                        Icon::new(IconName::Warning)
-                            .size(IconSize::Small)
-                            .color(Color::Warning),
-                    )
-                    .tooltip(|_, cx| {
-                        Tooltip::with_meta(
-                            "Overridden by Organization",
-                            None,
-                            "Contact your organization admins to adjust this setting.",
-                            cx,
-                        )
-                    }),
-            )
-            .child(control)
-            .into_any_element()
-    } else {
-        control
-    };
 
     render_settings_item_layout(
         settings_window,
@@ -4806,33 +4753,13 @@ fn update_project_setting_file(
     Ok(())
 }
 
-/// Derives a human-readable label for assistive technology from a setting's
-/// JSON path, e.g. `"buffer_font_size"` becomes `"Buffer Font Size"`.
-struct CurrentSettingsValue<'a, T> {
-    value: &'a T,
-    disabled: bool,
-}
-
 fn get_current_value<'a, T>(
     settings_store: &'a SettingsStore,
     file: &SettingsUiFile,
     field: &'a SettingField<T>,
-    cx: &'a App,
-) -> Option<CurrentSettingsValue<'a, T>> {
-    let user_store = AppState::global(cx).user_store.read(cx);
-    let org_config = user_store.current_organization_configuration();
-
+) -> Option<&'a T> {
     let (_file, value) = settings_store.get_value_from_file(file.to_settings(), field.pick);
-    let value = value?;
-
-    let org_value = org_config
-        .zip(field.organization_override)
-        .and_then(|(org_config, org_override)| (org_override)(org_config));
-
-    Some(CurrentSettingsValue {
-        disabled: org_value.is_some(),
-        value: org_value.unwrap_or(&value),
-    })
+    value
 }
 
 fn render_text_field<T: From<String> + Into<String> + AsRef<str> + Clone>(
@@ -4909,10 +4836,9 @@ fn render_toggle_button<B: Into<bool> + From<bool> + Copy>(
     _window: &mut Window,
     cx: &mut App,
 ) -> AnyElement {
-    let value = get_current_value(&SettingsStore::global(cx), &file, &field, cx);
-    let (value, disabled) = value
-        .map(|current_value| (*current_value.value, current_value.disabled))
-        .unwrap_or((false.into(), false));
+    let value = get_current_value(&SettingsStore::global(cx), &file, &field)
+        .copied()
+        .unwrap_or(false.into());
 
     let toggle_state = if value.into() {
         ToggleState::Selected
@@ -4926,7 +4852,6 @@ fn render_toggle_button<B: Into<bool> + From<bool> + Copy>(
         .when(!description.is_empty(), |this| {
             this.aria_description(description)
         })
-        .disabled(disabled)
         .on_click({
             move |state, window, cx| {
                 telemetry::event!("Settings Change", setting = field.json_path, type = file.setting_type());
@@ -5001,10 +4926,9 @@ where
         .and_then(|metadata| metadata.should_do_titlecase)
         .unwrap_or(true);
 
-    let current_value = get_current_value(&SettingsStore::global(cx), &file, &field, cx);
-    let (current_value, disabled) = current_value
-        .map(|current_value| (*current_value.value, current_value.disabled))
-        .unwrap_or((variants()[0], false));
+    let current_value = get_current_value(&SettingsStore::global(cx), &file, &field)
+        .copied()
+        .unwrap_or(variants()[0]);
 
     EnumVariantDropdown::new("dropdown", current_value, variants(), labels(), {
         move |value, window, cx| {
@@ -5027,7 +4951,6 @@ where
     .when(!description.is_empty(), |this| {
         this.aria_description(description)
     })
-    .disabled(disabled)
     .tab_index(0)
     .title_case(should_do_titlecase)
     .into_any_element()

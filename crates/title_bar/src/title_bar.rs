@@ -1,11 +1,9 @@
 mod application_menu;
 mod onboarding_banner;
-mod plan_chip;
 mod title_bar_settings;
 mod update_version;
 
 use crate::application_menu::{ApplicationMenu, show_menus};
-use crate::plan_chip::PlanChip;
 use agent_settings::{AgentSettings, WindowLayout};
 use arrayvec::ArrayVec;
 use git_ui_core::worktree_picker::WorktreePicker;
@@ -21,7 +19,7 @@ use crate::application_menu::{
 };
 
 use auto_update::AutoUpdateStatus;
-use client::{Client, UserStore, zed_urls};
+use client::{Client, UserStore};
 use command_palette_hooks::CommandPaletteFilter;
 
 use gpui::{
@@ -51,7 +49,7 @@ use update_version::UpdateVersion;
 use util::ResultExt;
 use workspace::{
     AccessibleMode, MultiWorkspace, ToggleWorktreeSecurity, Workspace,
-    notifications::{NotifyResultExt, NotifyTaskExt as _},
+    notifications::NotifyResultExt,
 };
 
 use zed_actions::OpenRemote;
@@ -1141,7 +1139,7 @@ impl TitleBar {
                 window
                     .spawn(cx, async move |mut cx| {
                         client
-                            .sign_in_with_optional_connect(true, cx)
+                            .sign_in_and_connect(true, cx)
                             .await
                             .notify_workspace_async_err(workspace, &mut cx);
                     })
@@ -1152,28 +1150,11 @@ impl TitleBar {
     pub fn render_user_menu_button(&mut self, cx: &mut Context<Self>) -> impl Element {
         let show_update_button = self.update_version.read(cx).show_update_in_menu_bar();
 
-        let user_store = self.user_store.clone();
-        let workspace = self.workspace.clone();
-        let user = user_store.read(cx).current_user();
+        let user = self.user_store.read(cx).current_user();
 
         let user_avatar = user.as_ref().map(|u| u.avatar_uri.clone());
-        let username = user.as_ref().map(|u| u.username.clone());
 
         let is_signed_in = user.is_some();
-
-        let current_organization = user_store.read(cx).current_organization();
-        let business_organization = current_organization
-            .as_ref()
-            .filter(|organization| !organization.is_personal);
-        let organizations: Vec<_> = user_store
-            .read(cx)
-            .organizations()
-            .iter()
-            .map(|organization| {
-                let plan = user_store.read(cx).plan_for_organization(&organization.id);
-                (organization.clone(), plan)
-            })
-            .collect();
 
         let show_user_picture = TitleBarSettings::get_global(cx).show_user_picture;
 
@@ -1195,14 +1176,7 @@ impl TitleBar {
             ButtonLike::new("user-menu")
                 .aria_label("User menu")
                 .tab_index(0isize)
-                .child(
-                    h_flex()
-                        .when_some(business_organization, |this, organization| {
-                            this.gap_2()
-                                .child(Label::new(&organization.name).size(LabelSize::Small))
-                        })
-                        .children(avatar),
-                )
+                .child(h_flex().children(avatar))
         } else {
             ButtonLike::new("user-menu")
                 .aria_label("User menu")
@@ -1213,12 +1187,6 @@ impl TitleBar {
         PopoverMenu::new("user-menu")
             .trigger(trigger)
             .menu(move |window, cx| {
-                let username = username.clone();
-                let current_organization = current_organization.clone();
-                let organizations = organizations.clone();
-                let user_store = user_store.clone();
-                let workspace = workspace.clone();
-
                 let ai_enabled = !project::DisableAiSettings::get_global(cx).disable_ai;
                 let current_layout = AgentSettings::get_layout(cx);
                 let is_editor = matches!(current_layout, WindowLayout::Editor(_));
@@ -1226,25 +1194,7 @@ impl TitleBar {
                 let is_custom = matches!(current_layout, WindowLayout::Custom(_));
 
                 ContextMenu::build(window, cx, |menu, _, _cx| {
-                    menu.when(is_signed_in, |this| {
-                        let username = username.clone();
-                        this.custom_entry(
-                            move |_window, _cx| {
-                                let username = username.clone().unwrap_or_default();
-
-                                h_flex()
-                                    .w_full()
-                                    .justify_between()
-                                    .child(Label::new(username))
-                                    .into_any_element()
-                            },
-                            move |_, cx| {
-                                cx.open_url(&zed_urls::account_url(cx));
-                            },
-                        )
-                        .separator()
-                    })
-                    .when(show_update_button, |this| {
+                    menu.when(show_update_button, |this| {
                         this.custom_entry(
                             move |_window, _cx| {
                                 h_flex()
@@ -1264,60 +1214,6 @@ impl TitleBar {
                             },
                         )
                         .separator()
-                    })
-                    .map(|this| {
-                        let mut this = this.header("Organization");
-
-                        for (organization, plan) in &organizations {
-                            let organization = organization.clone();
-                            let plan = *plan;
-
-                            let is_current =
-                                current_organization
-                                    .as_ref()
-                                    .is_some_and(|current_organization| {
-                                        current_organization.id == organization.id
-                                    });
-
-                            this = this.custom_entry(
-                                {
-                                    let organization = organization.clone();
-                                    move |_window, _cx| {
-                                        h_flex()
-                                            .w_full()
-                                            .gap_4()
-                                            .justify_between()
-                                            .child(
-                                                h_flex()
-                                                    .gap_1()
-                                                    .child(Label::new(&organization.name))
-                                                    .when(is_current, |this| {
-                                                        this.child(
-                                                            Icon::new(IconName::Check)
-                                                                .color(Color::Accent),
-                                                        )
-                                                    }),
-                                            )
-                                            .children(plan.map(|plan| PlanChip::new(plan)))
-                                            .into_any_element()
-                                    }
-                                },
-                                {
-                                    let user_store = user_store.clone();
-                                    let organization = organization.clone();
-                                    let workspace = workspace.clone();
-                                    move |window, cx| {
-                                        let task = user_store.update(cx, |user_store, cx| {
-                                            user_store
-                                                .set_current_organization(organization.clone(), cx)
-                                        });
-                                        task.detach_and_notify_err(workspace.clone(), window, cx);
-                                    }
-                                },
-                            );
-                        }
-
-                        this.separator()
                     })
                     .action("Settings", zed_actions::OpenSettings.boxed_clone())
                     .action("Keymap", Box::new(zed_actions::OpenKeymap))

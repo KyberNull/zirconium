@@ -59,8 +59,6 @@ actions!(
         /// Opens the keymap editor.
         #[action(deprecated_aliases = ["zed_actions::OpenKeymapEditor"])]
         OpenKeymap,
-        /// Opens account settings.
-        OpenAccountSettings,
         /// Opens server settings.
         OpenServerSettings,
         /// Quits the application.
@@ -795,13 +793,6 @@ pub mod outline {
     pub static TOGGLE_OUTLINE: OnceLock<fn(AnyView, &mut Window, &mut App)> = OnceLock::new();
 }
 
-actions!(
-    zed_predict_onboarding,
-    [
-        /// Opens the Zed Predict onboarding modal.
-        OpenZedPredictOnboarding
-    ]
-);
 actions!(
     git_onboarding,
     [

@@ -9,12 +9,6 @@ Use this page when you know the company, subscription, provider, agent, or CLI y
 
 For detailed setup, follow the links in the `Setup` column. This page answers routing questions; it does not replace the setup pages.
 
-## Zed {#zed}
-
-| Path                 | Support level  | What you get                      | Account / billing       | Setup                                                |
-| -------------------- | -------------- | --------------------------------- | ----------------------- | ---------------------------------------------------- |
-| Zeta edit prediction | Built into Zed | Edit predictions while you type   | Included by plan limits | [Edit Prediction](./edit-prediction.md)              |
-
 ## OpenAI / ChatGPT / Codex {#openai-chatgpt-codex}
 
 | Path                 | Support level     | What you get                                          | Account / billing     | Setup                                                                     |

@@ -1212,7 +1212,7 @@ fn main() {
 
     app.run(move |cx| {
         let app_state = Arc::new(headless::init(cx));
-        EditPredictionStore::global(&app_state.client, &app_state.user_store, cx);
+        EditPredictionStore::global(cx);
 
         cx.spawn(async move |cx| {
             let result = async {
