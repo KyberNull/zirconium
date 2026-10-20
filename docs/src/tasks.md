@@ -320,30 +320,6 @@ Example task file with auto-generated labels:
 
 These tasks appear in the task picker as "npm: start" and "cargo build --release". You can override the generated label by providing an explicit `label` field.
 
-## Binding runnable tags to task templates
-
-Zed supports overriding the default action for inline runnable indicators via workspace-local and global `tasks.json` file with the following precedence hierarchy:
-
-1. Workspace `tasks.json`
-2. Global `tasks.json`
-3. Language-provided tag bindings (default).
-
-To tag a task, add the runnable tag name to the `tags` field on the task template:
-
-```json [tasks]
-{
-  "label": "echo current file's path",
-  "command": "echo $ZED_FILE",
-  "tags": ["rust-test"]
-}
-```
-
-In doing so, you can change which task is shown in the runnables indicator.
-
-## Keybindings to run tasks bound to runnables
-
-When you have a task definition that is bound to the runnable, you can quickly run it using Code Actions that you can trigger either via {#action editor::ToggleCodeActions} command or by the `cmd-.`/`ctrl-.` shortcut. Your task will be the first in the dropdown. The task will run immediately if there are no additional Code Actions for this line.
-
 ## Running Bash Scripts
 
 You can run bash scripts directly from Zed. When you open a `.sh` or `.bash` file, Zed automatically detects the script as runnable and makes it available in the task picker.

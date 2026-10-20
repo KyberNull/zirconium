@@ -88,7 +88,6 @@
       "ctrl-y": "vim::LineUp",
       // "g" commands
       "g shift-r": "vim::PushReplaceWithRegister",
-      "g r a": "editor::ToggleCodeActions",
       "g g": "vim::StartOfDocument",
       "g h": "editor::Hover",
       "g B": "editor::BlameHover",
@@ -103,7 +102,6 @@
       "g a": "editor::SelectAllMatches",
       "g s": "outline::Toggle",
       "g shift-o": "outline::Toggle",
-      "g .": "editor::ToggleCodeActions", // zed specific
       "g space": "editor::OpenExcerpts", // zed specific
       "g *": ["vim::MoveToNext", { "partial_word": true }],
       "g #": ["vim::MoveToPrevious", { "partial_word": true }],
@@ -339,7 +337,6 @@
       "ctrl-x ctrl-o": "editor::ShowCompletions",
       "ctrl-x ctrl-a": "assistant::InlineAssist", // zed specific
       "ctrl-x ctrl-c": "editor::ShowEditPrediction", // zed specific
-      "ctrl-x ctrl-l": "editor::ToggleCodeActions", // zed specific
       "ctrl-x ctrl-z": "editor::Cancel",
       "ctrl-x ctrl-e": "vim::LineDown",
       "ctrl-x ctrl-y": "vim::LineUp",
@@ -532,7 +529,6 @@
       "space f": "file_finder::Toggle",
       "space k": "editor::Hover",
       "space s": "outline::Toggle",
-      "space a": "editor::ToggleCodeActions",
       "space h": "editor::SelectAllMatches",
       "space c": "editor::ToggleComments",
       "space p": "editor::Paste",
@@ -556,14 +552,7 @@
     },
   },
   {
-    "context": "Editor && (vim_mode == helix_normal || vim_mode == helix_select) && showing_code_actions",
-    "bindings": {
-      "tab": "editor::ContextMenuNext",
-      "shift-tab": "editor::ContextMenuPrevious",
-    },
-  },
-  {
-    "context": "vim_mode == insert && !(showing_code_actions || showing_completions)",
+    "context": "vim_mode == insert && !showing_completions",
     "bindings": {
       "ctrl-p": "editor::ShowWordCompletions",
       "ctrl-n": "editor::ShowWordCompletions",

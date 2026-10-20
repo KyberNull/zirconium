@@ -171,7 +171,6 @@ Where you might notice differences:
 
 **How to adapt:**
 
-- Use {#kb:jetbrains editor::ToggleCodeActions} for available code actions—the list will vary by language server
 - Ensure your `tsconfig.json` is properly configured so the language server understands your project structure
 - Use Prettier for consistent formatting (it's enabled by default for JS/TS)
 - For code inspection similar to WebStorm's "Inspect Code," check the Diagnostics panel ({#kb:jetbrains diagnostics::Deploy})—ESLint and TypeScript together catch many of the same issues

@@ -1263,7 +1263,6 @@ mod tests {
             "#
             .unindent();
 
-            let text_len = text.len();
             let buffer = cx.new(|cx| language::Buffer::local(text, cx).with_language(language, cx));
             cx.executor().run_until_parked();
 
@@ -1300,45 +1299,6 @@ mod tests {
                     "it.skip skip test",
                     "it.only only test",
                     "it.todo todo test",
-                ]
-            );
-
-            let snapshot = buffer.update(cx, |buffer, _| buffer.snapshot());
-            let runnable_names = snapshot
-                .runnable_ranges(0..text_len)
-                .map(|runnable| {
-                    snapshot
-                        .text_for_range(runnable.run_range)
-                        .collect::<String>()
-                })
-                .collect::<Vec<_>>();
-            assert_eq!(
-                runnable_names,
-                [
-                    "runIf test",
-                    "skipIf test",
-                    "runIf test 2",
-                    "skipIf test 2",
-                    "runIf describe",
-                    "inner test",
-                    "skipIf describe",
-                    "inner test 2",
-                    "todoIf test",
-                    "if test",
-                    "todoIf test 2",
-                    "if test 2",
-                    "todoIf describe",
-                    "inner todoIf",
-                    "if describe",
-                    "inner if",
-                    "failing test",
-                    "failing it",
-                    "each test",
-                    "each describe",
-                    "inner each",
-                    "skip test",
-                    "only test",
-                    "todo test",
                 ]
             );
         }

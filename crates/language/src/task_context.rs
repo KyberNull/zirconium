@@ -1,6 +1,6 @@
 use std::{path::PathBuf, sync::Arc};
 
-use crate::{Buffer, LanguageToolchainStore, Location, RunnableResolver};
+use crate::{Buffer, LanguageToolchainStore, Location};
 
 use anyhow::Result;
 use collections::HashMap;
@@ -29,13 +29,6 @@ pub trait ContextProvider: Send + Sync {
     /// Provides all tasks, associated with the current language.
     fn associated_tasks(&self, _: Option<Entity<Buffer>>, _: &App) -> Task<Option<TaskTemplates>> {
         Task::ready(None)
-    }
-
-    /// A resolver for runnable queries that group captures with `@run_item`.
-    /// For each group, the resolver picks which `@run` range and extra captures
-    /// to surface. Without a resolver, grouped matches emit no runnables.
-    fn runnable_resolver(&self) -> Option<Arc<dyn RunnableResolver>> {
-        None
     }
 }
 

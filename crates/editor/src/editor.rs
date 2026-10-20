@@ -30,7 +30,6 @@ mod jsx_tag_auto_close;
 mod mouse_context_menu;
 pub mod movement;
 mod persistence;
-mod runnables;
 pub mod scroll;
 mod selections_collection;
 mod split;
@@ -49,7 +48,6 @@ mod editor_tests;
 pub mod test;
 
 mod clipboard;
-mod code_actions;
 mod completions;
 mod config;
 mod edit_prediction;
@@ -119,8 +117,7 @@ use blink_manager::BlinkManager;
 use client::{Collaborator, ParticipantIndex, parse_zed_link};
 use clock::ReplicaId;
 use code_context_menus::{
-    CodeActionContents, CodeActionsItem, CodeActionsMenu, CodeContextMenu, CompletionsMenu,
-    ContextMenuOrigin,
+    CodeContextMenu, CompletionsMenu, ContextMenuOrigin,
 };
 use collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use convert_case::{Case, Casing};
@@ -145,7 +142,7 @@ use gpui::{
     Modifiers, MouseButton, MouseDownEvent, MouseMoveEvent, PaintQuad, ParentElement, Pixels,
     PressureStage, Render, ScrollHandle, SharedString, SharedUri, Size, Stateful, Styled,
     Subscription, Task, TextRun, TextStyle, TextStyleRefinement, UTF16Selection, UnderlineStyle,
-    UniformListScrollHandle, WeakEntity, WeakFocusHandle, Window, div, point, prelude::*,
+    WeakEntity, WeakFocusHandle, Window, div, point, prelude::*,
     pulsating_between, px, relative, size,
 };
 use hover_links::{HoverLink, HoveredLinkState, find_file};
@@ -211,7 +208,7 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
-use task::TaskVariables;
+use task::{TaskContext, TaskVariables};
 use text::{BufferId, FromAnchor, OffsetUtf16, Rope, ToOffset as _, ToPoint as _};
 use theme::{
     AccentColors, ActiveTheme, GlobalTheme, PlayerColor, StatusColors, SyntaxTheme, Theme,
@@ -228,7 +225,7 @@ use workspace::{
     Pane, RestoreOnStartupBehavior, SERIALIZATION_THROTTLE_TIME, SplitDirection, TabBarSettings,
     Toast, ViewId, Workspace, WorkspaceId, WorkspaceSettings,
     item::{ItemBufferKind, ItemHandle, PreviewTabsSettings, SaveOptions},
-    notifications::{DetachAndPromptErr, NotificationId, NotifyResultExt, NotifyTaskExt},
+    notifications::{DetachAndPromptErr, NotificationId, NotifyTaskExt},
     searchable::SearchEvent,
 };
 pub use zed_actions::editor::RevealInFileManager;
@@ -238,7 +235,6 @@ use crate::{
     code_context_menus::CompletionsMenuSource,
     editor_settings::MultiCursorModifier,
     hover_links::{find_url, find_url_from_range},
-    runnables::{ResolvedTasks, RunnableData, RunnableTaskStatus, RunnableTasks},
     scroll::{ScrollOffset, ScrollPixelOffset},
     selections_collection::resolve_selections_wrapping_blocks,
 };
@@ -894,13 +890,10 @@ pub struct Editor {
     delegate_expand_excerpts: bool,
     delegate_open_excerpts: bool,
     enable_lsp_data: bool,
-    needs_initial_data_update: bool,
-    enable_runnables: bool,
     enable_mouse_wheel_zoom: bool,
     show_line_numbers: Option<bool>,
     use_relative_line_numbers: Option<bool>,
     show_git_diff_gutter: Option<bool>,
-    show_runnables: Option<bool>,
     show_bookmarks: Option<bool>,
     show_breakpoints: Option<bool>,
     show_diff_review_button: bool,
@@ -923,7 +916,6 @@ pub struct Editor {
     inline_blame_popover: Option<InlineBlamePopover>,
     inline_blame_popover_show_task: Option<Task<()>>,
     next_completion_id: CompletionId,
-    runnables_for_selection_toggle: Task<()>,
     quick_selection_highlight_task: Option<(Range<Anchor>, Task<()>)>,
     debounced_selection_highlight_task: Option<(Range<Anchor>, Task<()>)>,
     debounced_selection_highlight_complete: bool,
@@ -1010,7 +1002,6 @@ pub struct Editor {
     /// paint over the scrollbar.
     last_horizontal_scrollbar_visible: bool,
     expect_bounds_change: Option<Bounds<Pixels>>,
-    runnables: RunnableData,
     bookmark_store: Option<Entity<BookmarkStore>>,
     gutter_hover_button: (Option<GutterHoverButton>, Option<Task<()>>),
     pub(crate) gutter_diff_review_indicator: (Option<PhantomDiffReviewIndicator>, Option<Task<()>>),
@@ -1093,7 +1084,6 @@ pub struct EditorSnapshot {
     show_line_numbers: Option<bool>,
     number_deleted_lines: bool,
     show_git_diff_gutter: Option<bool>,
-    show_runnables: Option<bool>,
     show_breakpoints: Option<bool>,
     show_bookmarks: Option<bool>,
     git_blame_gutter_max_author_length: Option<usize>,
@@ -1685,8 +1675,6 @@ impl Editor {
             self.buffers_with_disabled_indent_guides.clone();
         clone.enable_mouse_wheel_zoom = self.enable_mouse_wheel_zoom;
         clone.enable_lsp_data = self.enable_lsp_data;
-        clone.needs_initial_data_update = self.enable_lsp_data;
-        clone.enable_runnables = self.enable_runnables;
         clone
     }
 
@@ -1905,22 +1893,6 @@ impl Editor {
                     _ => {}
                 },
             ));
-            if let Some(task_inventory) = project
-                .read(cx)
-                .task_store()
-                .read(cx)
-                .task_inventory()
-                .cloned()
-            {
-                project_subscriptions.push(cx.observe_in(
-                    &task_inventory,
-                    window,
-                    |editor, _, window, cx| {
-                        editor.refresh_runnables(None, window, cx);
-                    },
-                ));
-            };
-
             let git_store = project.read(cx).git_store().clone();
             let project = project.clone();
             project_subscriptions.push(cx.subscribe(
@@ -2028,11 +2000,8 @@ impl Editor {
             delegate_expand_excerpts: false,
             delegate_open_excerpts: false,
             enable_lsp_data: full_mode,
-            needs_initial_data_update: full_mode,
-            enable_runnables: full_mode,
             enable_mouse_wheel_zoom: full_mode,
             show_git_diff_gutter: None,
-            show_runnables: None,
             show_bookmarks: None,
             show_breakpoints: None,
             show_diff_review_button: false,
@@ -2056,7 +2025,6 @@ impl Editor {
             inline_blame_popover_show_task: None,
             next_completion_id: 0,
             next_inlay_id: 0,
-            runnables_for_selection_toggle: Task::ready(()),
             quick_selection_highlight_task: None,
             debounced_selection_highlight_task: None,
             debounced_selection_highlight_complete: false,
@@ -2150,7 +2118,6 @@ impl Editor {
                     ]
                 })
                 .unwrap_or_default(),
-            runnables: RunnableData::new(),
             post_scroll_update: Task::ready(()),
             in_project_search: false,
             previous_search_ranges: None,
@@ -2354,12 +2321,6 @@ impl Editor {
                 if menu.visible() {
                     key_context.add("menu");
                     key_context.add("showing_completions");
-                }
-            }
-            Some(CodeContextMenu::CodeActions(menu)) => {
-                if menu.visible() {
-                    key_context.add("menu");
-                    key_context.add("showing_code_actions")
                 }
             }
             None => {}
@@ -2671,7 +2632,6 @@ impl Editor {
             show_line_numbers: self.show_line_numbers,
             number_deleted_lines: self.number_deleted_lines,
             show_git_diff_gutter: self.show_git_diff_gutter,
-            show_runnables: self.show_runnables,
             show_bookmarks: self.show_bookmarks,
             show_breakpoints: self.show_breakpoints,
             git_blame_gutter_max_author_length,
@@ -3520,57 +3480,6 @@ impl Editor {
         );
     }
 
-    fn active_run_indicators(
-        &mut self,
-        range: Range<DisplayRow>,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> HashSet<DisplayRow> {
-        let snapshot = self.snapshot(window, cx);
-
-        let offset_range_start =
-            snapshot.display_point_to_point(DisplayPoint::new(range.start, 0), Bias::Left);
-
-        let offset_range_end =
-            snapshot.display_point_to_point(DisplayPoint::new(range.end, 0), Bias::Right);
-
-        self.runnables
-            .all_runnables()
-            .filter_map(|tasks| {
-                let multibuffer_point = tasks.offset.to_point(&snapshot.buffer_snapshot());
-                if multibuffer_point < offset_range_start || multibuffer_point > offset_range_end {
-                    return None;
-                }
-                let multibuffer_row = MultiBufferRow(multibuffer_point.row);
-                let buffer_folded = snapshot
-                    .buffer_snapshot()
-                    .buffer_line_for_row(multibuffer_row)
-                    .map(|(buffer_snapshot, _)| buffer_snapshot.remote_id())
-                    .map(|buffer_id| self.is_buffer_folded(buffer_id, cx))
-                    .unwrap_or(false);
-                if buffer_folded {
-                    return None;
-                }
-
-                if snapshot.is_line_folded(multibuffer_row) {
-                    // Skip folded indicators, unless it's the starting line of a fold.
-                    if multibuffer_row
-                        .0
-                        .checked_sub(1)
-                        .is_some_and(|previous_row| {
-                            snapshot.is_line_folded(MultiBufferRow(previous_row))
-                        })
-                    {
-                        return None;
-                    }
-                }
-
-                let display_row = multibuffer_point.to_display_point(&snapshot).row();
-                Some(display_row)
-            })
-            .collect()
-    }
-
     fn active_bookmarks(
         &self,
         range: Range<DisplayRow>,
@@ -3690,32 +3599,50 @@ impl Editor {
             })
     }
 
-    fn build_tasks_context(
-        project: &Entity<Project>,
-        buffer: &Entity<Buffer>,
-        buffer_row: u32,
-        tasks: &Arc<RunnableTasks>,
-        cx: &mut Context<Self>,
-    ) -> Task<Result<Option<task::TaskContext>>> {
-        let position = Point::new(buffer_row, tasks.column);
-        let range_start = buffer.read(cx).anchor_at(position, Bias::Right);
-        let location = Location {
-            buffer: buffer.clone(),
-            range: range_start..range_start,
+    pub fn context_menu(&self) -> &RefCell<Option<CodeContextMenu>> {
+        &self.context_menu
+    }
+
+    pub fn task_context(&self, window: &mut Window, cx: &mut App) -> Task<Option<TaskContext>> {
+        let Some(project) = self.project.clone() else {
+            return Task::ready(None);
         };
-        // Fill in the environmental variables from the tree-sitter captures
-        let mut captured_task_variables = TaskVariables::default();
-        for (capture_name, value) in tasks.extra_variables.clone() {
-            captured_task_variables.insert(
-                task::VariableName::Custom(capture_name.into()),
-                value.clone(),
-            );
-        }
-        project.update(cx, |project, cx| {
+        let (selection, buffer, editor_snapshot) = {
+            let selection = self.selections.newest_adjusted(&self.display_snapshot(cx));
+            let Some((buffer, _)) = self
+                .buffer()
+                .read(cx)
+                .point_to_buffer_offset(selection.start, cx)
+            else {
+                return Task::ready(None);
+            };
+            let snapshot = self.snapshot(window, cx);
+            (selection, buffer, snapshot)
+        };
+        let selection_range = selection.range();
+        let Some((_, range)) = editor_snapshot
+            .display_snapshot
+            .buffer_snapshot()
+            .anchor_range_to_buffer_anchor_range(
+                editor_snapshot
+                    .display_snapshot
+                    .buffer_snapshot()
+                    .anchor_after(selection_range.start)
+                    ..editor_snapshot
+                        .display_snapshot
+                        .buffer_snapshot()
+                        .anchor_before(selection_range.end),
+            )
+        else {
+            return Task::ready(None);
+        };
+        let location = Location { buffer, range };
+        let task = project.update(cx, |project, cx| {
             project.task_store().update(cx, |task_store, cx| {
-                task_store.task_context_for_location(captured_task_variables, location, cx)
+                task_store.task_context_for_location(TaskVariables::default(), location, cx)
             })
-        })
+        });
+        cx.background_spawn(async move { task.await.ok().flatten() })
     }
 
     pub fn context_menu_visible(&self) -> bool {
@@ -4962,7 +4889,6 @@ impl Editor {
     fn gutter_context_menu(
         &self,
         anchor: Anchor,
-        display_row: DisplayRow,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Entity<ContextMenu> {
@@ -4986,34 +4912,10 @@ impl Editor {
             "Add Bookmark"
         };
         let has_bookmark = bookmark.as_ref().is_some();
-        let clear_runnable_task_status = self
-            .runnable_task_key_for_display_row(display_row, window, cx)
-            .filter(|(buffer_id, buffer_row)| {
-                matches!(
-                    self.runnable_task_status(*buffer_id, *buffer_row),
-                    Some(RunnableTaskStatus::Passed | RunnableTaskStatus::Failed)
-                )
-            });
 
         ContextMenu::build(window, cx, |menu, _, _cx| {
             menu.on_blur_subscription(Subscription::new(|| {}))
                 .context(focus_handle)
-                .when_some(
-                    clear_runnable_task_status,
-                    |this, (buffer_id, buffer_row)| {
-                        this.entry("Clear Run Status", None, {
-                            let weak_editor = weak_editor.clone();
-                            move |_window, cx| {
-                                weak_editor
-                                    .update(cx, |this, cx| {
-                                        this.clear_runnable_task_status(buffer_id, buffer_row, cx);
-                                    })
-                                    .log_err();
-                            }
-                        })
-                        .separator()
-                    },
-                )
                 .entry(git_blame_msg, Some(Blame.boxed_clone()), {
                     let weak_editor = weak_editor.clone();
                     move |window, cx| {
@@ -5077,7 +4979,7 @@ impl Editor {
             return;
         }
 
-        let context_menu = self.gutter_context_menu(anchor, display_row, window, cx);
+        let context_menu = self.gutter_context_menu(anchor, window, cx);
 
         self.mouse_context_menu = MouseContextMenu::pinned_to_editor(
             self,
@@ -7979,7 +7881,6 @@ impl Editor {
                     self.update_uncommitted_diff_for_buffer(&project, [buffer.clone()], cx)
                         .detach();
                 }
-                self.refresh_runnables(None, window, cx);
                 self.bracket_fetched_tree_sitter_chunks
                     .retain(|range, _| range.start.buffer_id != buffer_id);
                 self.colorize_brackets(false, cx);
@@ -7991,10 +7892,6 @@ impl Editor {
                 });
             }
             multi_buffer::Event::BuffersRemoved { removed_buffer_ids } => {
-                for buffer_id in removed_buffer_ids {
-                    self.clear_runnables(Some(*buffer_id));
-                }
-
                 self.display_map.update(cx, |display_map, cx| {
                     display_map.unfold_buffers(removed_buffer_ids.iter().copied(), cx);
                 });
@@ -8013,16 +7910,13 @@ impl Editor {
                 });
             }
             multi_buffer::Event::Reparsed(buffer_id) => {
-                self.refresh_runnables(Some(*buffer_id), window, cx);
                 self.refresh_selected_text_highlights(&self.display_snapshot(cx), true, window, cx);
                 self.colorize_brackets(true, cx);
                 jsx_tag_auto_close::refresh_enabled_in_any_buffer(self, multibuffer, cx);
 
                 cx.emit(EditorEvent::Reparsed(*buffer_id));
             }
-            multi_buffer::Event::DiffHunksToggled => {
-                self.refresh_runnables(None, window, cx);
-            }
+            multi_buffer::Event::DiffHunksToggled => {}
             multi_buffer::Event::LanguageChanged(buffer_id, is_fresh_language) => {
                 if !is_fresh_language {}
                 jsx_tag_auto_close::refresh_enabled_in_any_buffer(self, multibuffer, cx);
@@ -8122,7 +8016,6 @@ impl Editor {
         let accents_changed = new_accents != self.accent_data;
         self.accent_data = new_accents;
 
-        self.refresh_runnables(None, window, cx);
         self.update_edit_prediction_settings(cx);
         self.refresh_edit_prediction(
             true,
@@ -9186,10 +9079,6 @@ impl Editor {
         self.enable_lsp_data = false;
     }
 
-    fn disable_runnables(&mut self) {
-        self.enable_runnables = false;
-    }
-
     pub fn disable_mouse_wheel_zoom(&mut self) {
         self.enable_mouse_wheel_zoom = false;
     }
@@ -9206,24 +9095,19 @@ impl Editor {
                     .timer(Duration::from_millis(50))
                     .await;
                 editor
-                    .update_in(cx, |editor, window, cx| {
-                        editor.do_update_data_on_scroll(window, cx);
+                    .update_in(cx, |editor, _, cx| {
+                        editor.do_update_data_on_scroll(cx);
                     })
                     .ok();
             });
         } else {
             self.post_scroll_update = Task::ready(());
-            self.do_update_data_on_scroll(window, cx);
+            self.do_update_data_on_scroll(cx);
         }
     }
 
-    fn do_update_data_on_scroll(&mut self, window: &mut Window, cx: &mut Context<'_, Self>) {
+    fn do_update_data_on_scroll(&mut self, cx: &mut Context<'_, Self>) {
         self.colorize_brackets(false, cx);
-
-        if !self.buffer().read(cx).is_singleton() || self.needs_initial_data_update {
-            self.needs_initial_data_update = false;
-            self.refresh_runnables(None, window, cx);
-        }
     }
 
     /// Returns the current cursor's vertical offset, in display rows, from the
@@ -9473,7 +9357,6 @@ impl EditorSnapshot {
                 0.0.into()
             };
 
-            let show_runnables = self.show_runnables.unwrap_or(gutter_settings.runnables);
             let show_breakpoints = self.show_breakpoints.unwrap_or(gutter_settings.breakpoints);
             let show_bookmarks = self.show_bookmarks.unwrap_or(gutter_settings.bookmarks);
 
@@ -9496,9 +9379,8 @@ impl EditorSnapshot {
             let left_padding = git_blame_entries_width.unwrap_or(Pixels::ZERO)
                 + if !is_singleton {
                     ch_width * 4.0
-                // runnables, breakpoints and bookmarks are shown in the same place
-                // if all three are there only the runnable is shown
-                } else if show_runnables || show_breakpoints || show_bookmarks {
+                // breakpoints and bookmarks are shown in the same place
+                } else if show_breakpoints || show_bookmarks {
                     ch_width * 3.0
                 } else if show_git_gutter && show_line_numbers {
                     ch_width * 2.0
@@ -10118,8 +10000,6 @@ impl RowRangeExt for Range<DisplayRow> {
         (self.start.0..self.end.0).map(DisplayRow)
     }
 }
-
-const UPDATE_DEBOUNCE: Duration = Duration::from_millis(50);
 
 type PromptEditorCallback = Box<dyn FnOnce(String, &mut Editor, &mut Context<Editor>) + 'static>;
 
