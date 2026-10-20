@@ -3,7 +3,6 @@ use std::sync::Arc;
 use crate::{AgentTool, ToolCallEventStream, ToolInput};
 use agent_client_protocol::schema::v1 as acp;
 use anyhow::Result;
-use cloud_llm_client::WebSearchResponse;
 use futures::FutureExt as _;
 use gpui::{App, Task};
 use language_model::{
@@ -13,7 +12,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use ui::prelude::*;
 use util::markdown::MarkdownInlineCode;
-use web_search::WebSearchRegistry;
+use web_search::{WebSearchRegistry, WebSearchResponse};
 
 /// Search the web for information using your query.
 /// Use this when you need real-time information, facts, or data that might not be in your training.

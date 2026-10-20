@@ -33,7 +33,6 @@
 /crates/ai_onboarding/ @zed-industries/ai-team
 /crates/anthropic/ @zed-industries/ai-team
 /crates/bedrock/ @zed-industries/ai-team
-/crates/cloud_llm_client/ @zed-industries/ai-team
 /crates/codestral/ @zed-industries/ai-team
 /crates/context_server/ @zed-industries/ai-team
 /crates/copilot/ @zed-industries/ai-team
@@ -184,7 +183,6 @@
 /crates/util_macros/ @zed-industries/infrastructure-team
 /crates/watch/ @zed-industries/infrastructure-team
 /crates/web_search/ @zed-industries/infrastructure-team
-/crates/web_search_providers/ @zed-industries/infrastructure-team
 /crates/zlog/ @zed-industries/infrastructure-team
 /crates/zlog_settings/ @zed-industries/infrastructure-team
 /crates/ztracing/ @zed-industries/infrastructure-team

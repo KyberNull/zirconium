@@ -5,7 +5,7 @@ use anyhow::{Context as _, Result, anyhow};
 use cloud_api_client::{
     AuthenticatedUser, GetAuthenticatedUserResponse, KnownOrUnknown, Plan, PlanInfo,
 };
-use cloud_llm_client::{CurrentUsage, UsageData, UsageLimit};
+use cloud_api_types::{CurrentUsage, UsageData, UsageLimit};
 use futures::{StreamExt, stream::BoxStream};
 use gpui::{AppContext as _, TestAppContext};
 use http_client::{AsyncBody, Method, Request, http};

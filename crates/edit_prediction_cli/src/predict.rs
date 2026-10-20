@@ -12,7 +12,7 @@ use crate::{
     retrieve_context::{ContextRetrievalType, run_context_retrieval},
 };
 use anyhow::Context as _;
-use cloud_llm_client::predict_edits_v3::{RawCompletionRequest, RawCompletionResponse};
+use edit_prediction::predict_edits::{RawCompletionRequest, RawCompletionResponse};
 use edit_prediction::{DebugEvent, EditPredictionStore, Zeta2RawConfig};
 use futures::{AsyncReadExt as _, FutureExt as _, StreamExt as _, future::Shared};
 use gpui::{AppContext as _, AsyncApp, Task};
@@ -292,7 +292,7 @@ pub async fn run_prediction(
                     &state.project,
                     &state.buffer,
                     state.cursor_position,
-                    cloud_llm_client::PredictEditsRequestTrigger::Cli,
+                    edit_prediction::predict_edits::PredictEditsRequestTrigger::Cli,
                     cx,
                 )
             })

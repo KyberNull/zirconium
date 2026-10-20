@@ -249,7 +249,6 @@ dependencies = [
  "client",
  "clock",
  "cloud_api_types",
- "cloud_llm_client",
  "collections",
  "context_server",
  "ctor",
@@ -2841,7 +2840,6 @@ dependencies = [
  "clock",
  "cloud_api_client",
  "cloud_api_types",
- "cloud_llm_client",
  "collections",
  "credentials_provider",
  "derive_more",
@@ -2920,23 +2918,10 @@ dependencies = [
  "anyhow",
  "chrono",
  "ciborium",
- "cloud_llm_client",
  "pretty_assertions",
  "serde",
  "serde_json",
  "strum 0.27.2",
- "zeta_prompt",
-]
-
-[[package]]
-name = "cloud_llm_client"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "serde",
- "serde_json",
- "strum 0.27.2",
- "uuid",
  "zeta_prompt",
 ]
 
@@ -4708,7 +4693,6 @@ dependencies = [
  "clock",
  "cloud_api_client",
  "cloud_api_types",
- "cloud_llm_client",
  "collections",
  "copilot",
  "copilot_ui",
@@ -4774,7 +4758,6 @@ dependencies = [
  "chrono",
  "clap",
  "client",
- "cloud_llm_client",
  "collections",
  "db",
  "dirs",
@@ -4876,7 +4859,7 @@ dependencies = [
  "anyhow",
  "buffer_diff",
  "client",
- "cloud_llm_client",
+ "cloud_api_types",
  "codestral",
  "command_palette_hooks",
  "copilot",
@@ -8833,7 +8816,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-lock",
- "cloud_llm_client",
  "futures 0.3.32",
  "gpui_shared_string",
  "http_client",
@@ -8865,7 +8847,6 @@ dependencies = [
  "clock",
  "cloud_api_client",
  "cloud_api_types",
- "cloud_llm_client",
  "collections",
  "component",
  "convert_case 0.11.0",
@@ -8885,7 +8866,6 @@ dependencies = [
  "http_client",
  "language",
  "language_model",
- "language_models_cloud",
  "llama_cpp",
  "lmstudio",
  "log",
@@ -8910,27 +8890,6 @@ dependencies = [
  "ui_input",
  "util",
  "x_ai",
-]
-
-[[package]]
-name = "language_models_cloud"
-version = "0.1.0"
-dependencies = [
- "anthropic",
- "anyhow",
- "cloud_llm_client",
- "futures 0.3.32",
- "google_ai",
- "gpui",
- "http_client",
- "language_model",
- "log",
- "open_ai",
- "schemars 1.0.4",
- "semver",
- "serde",
- "serde_json",
- "thiserror 2.0.17",
 ]
 
 [[package]]
@@ -19161,26 +19120,9 @@ name = "web_search"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "cloud_llm_client",
  "collections",
  "gpui",
-]
-
-[[package]]
-name = "web_search_providers"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "client",
- "cloud_api_client",
- "cloud_api_types",
- "cloud_llm_client",
- "futures 0.3.32",
- "gpui",
- "http_client",
- "language_model",
- "serde_json",
- "web_search",
+ "serde",
 ]
 
 [[package]]
@@ -21312,7 +21254,6 @@ dependencies = [
  "vim_mode_setting",
  "watch",
  "web_search",
- "web_search_providers",
  "which_key",
  "windows 0.61.3",
  "windows_resources",

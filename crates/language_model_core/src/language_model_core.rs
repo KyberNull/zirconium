@@ -6,7 +6,6 @@ pub mod tool_schema;
 pub mod util;
 
 use anyhow::{Context as _, Result, anyhow};
-use cloud_llm_client::CompletionRequestStatus;
 use http_client::{StatusCode, http};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -74,32 +73,6 @@ pub enum CompactionUpdate {
     /// context. This is a documented outcome, not a protocol error: the
     /// conversation simply continues on the uncompacted transcript.
     Failed,
-}
-
-impl LanguageModelCompletionEvent {
-    pub fn from_completion_request_status(
-        status: CompletionRequestStatus,
-        upstream_provider: LanguageModelProviderName,
-    ) -> Result<Option<Self>, LanguageModelCompletionError> {
-        match status {
-            CompletionRequestStatus::Queued { position } => {
-                Ok(Some(LanguageModelCompletionEvent::Queued { position }))
-            }
-            CompletionRequestStatus::Started => Ok(Some(LanguageModelCompletionEvent::Started)),
-            CompletionRequestStatus::Unknown | CompletionRequestStatus::StreamEnded => Ok(None),
-            CompletionRequestStatus::Failed {
-                code,
-                message,
-                request_id: _,
-                retry_after,
-            } => Err(LanguageModelCompletionError::from_cloud_failure(
-                upstream_provider,
-                code,
-                message,
-                retry_after.map(Duration::from_secs_f64),
-            )),
-        }
-    }
 }
 
 #[derive(Error, Debug)]

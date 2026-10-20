@@ -28,7 +28,6 @@ members = [
     "crates/clock",
     "crates/cloud_api_client",
     "crates/cloud_api_types",
-    "crates/cloud_llm_client",
     "crates/codestral",
     "crates/collections",
     "crates/command_palette",
@@ -108,7 +107,6 @@ members = [
     "crates/language_model",
     "crates/language_model_core",
     "crates/language_models",
-    "crates/language_models_cloud",
     "crates/language_selector",
     "crates/language_tools",
     "crates/languages",
@@ -212,7 +210,6 @@ members = [
     "crates/vim_mode_setting",
     "crates/watch",
     "crates/web_search",
-    "crates/web_search_providers",
     "crates/which_key",
     "crates/windows_resources",
     "crates/workspace",
@@ -283,7 +280,6 @@ client = { path = "crates/client" }
 clock = { path = "crates/clock" }
 cloud_api_client = { path = "crates/cloud_api_client" }
 cloud_api_types = { path = "crates/cloud_api_types" }
-cloud_llm_client = { path = "crates/cloud_llm_client" }
 codestral = { path = "crates/codestral" }
 collections = { path = "crates/collections", version = "0.1.0" }
 command_palette = { path = "crates/command_palette" }
@@ -358,7 +354,6 @@ language_extension = { path = "crates/language_extension" }
 language_model = { path = "crates/language_model" }
 language_model_core = { path = "crates/language_model_core" }
 language_models = { path = "crates/language_models" }
-language_models_cloud = { path = "crates/language_models_cloud" }
 language_selector = { path = "crates/language_selector" }
 language_tools = { path = "crates/language_tools" }
 languages = { path = "crates/languages" }
@@ -461,7 +456,6 @@ vim = { path = "crates/vim" }
 vim_mode_setting = { path = "crates/vim_mode_setting" }
 watch = { path = "crates/watch" }
 web_search = { path = "crates/web_search" }
-web_search_providers = { path = "crates/web_search_providers" }
 which_key = { path = "crates/which_key" }
 workspace = { path = "crates/workspace" }
 worktree = { path = "crates/worktree" }
