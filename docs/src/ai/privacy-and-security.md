@@ -10,10 +10,8 @@ including [Zed Agent](./zed-agent.md), [Edit Prediction](./edit-prediction.md),
 [Inline Assistant](./inline-assistant.md), and
 [Git commit generation](../git.md#ai-support-in-git).
 
-Zed does not retain your prompts or code context by default. For
-[Zed-hosted models](../account/zed-hosted-models.md), Zed has no-training
-commitments from model providers, and provider agreements require zero data
-retention for inference requests except for
+Zed does not retain your prompts or code context by default. Model providers
+handle requests under their own terms, and some providers retain data for
 [provider-designated models with safety retention](#provider-safety-retention),
 such as Anthropic's Covered Models.
 Zed only retains AI data when you explicitly share feedback or opt in to
@@ -23,7 +21,6 @@ training data collection.
 
 | Path                                                         | Who handles model requests                        | What to know                                                                                                                                                                                                                   | Details                                                                                           |
 | ------------------------------------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| [Zed-hosted models](../account/zed-hosted-models.md)         | Zed routes requests to hosted model providers     | Provider agreements prohibit training on your prompts or code context and require zero data retention for inference requests, except for provider-designated models with safety retention, such as Anthropic's Covered Models. | [Zed-hosted model commitments](#data-retention-and-training)                                      |
 | [Provider API keys](./use-api-access.md)                     | The configured provider                           | The provider handles requests under its own terms. Provider keys saved through Zed are stored in the system keychain, not in `settings.json`.                                                                                  | [Use API Access](./use-api-access.md)                                                             |
 | [Existing subscriptions](./use-an-existing-subscription.md)  | The subscription provider                         | The provider handles requests under the subscription terms.                                                                                                                                                                    | [Use an Existing Subscription](./use-an-existing-subscription.md)                                 |
 | [Gateways](./use-a-gateway.md)                               | The configured gateway and upstream providers     | The gateway and upstream providers handle requests under their own terms.                                                                                                                                                      | [Use a Gateway](./use-a-gateway.md)                                                               |
@@ -33,21 +30,6 @@ training data collection.
 | [Edit Prediction](./edit-prediction.md)                      | The selected edit prediction provider             | Each keystroke can send local editing context to the selected provider. Zeta requests are processed transiently unless training data collection is enabled; third-party providers follow their own terms.                      | [Edit Prediction](./edit-prediction.md), [Feedback and Training Data](./ai-improvement.md)        |
 | [Agent tools](./tools.md), [MCP](./mcp.md), and integrations | Zed, configured MCP servers, and external systems | Tools can read, edit, search, run commands, fetch URLs, or call external systems depending on profile, MCP server, and tool permission settings.                                                                               | [Agent Profiles](./agent-profiles.md), [Tool Permissions](./tool-permissions.md), [MCP](./mcp.md) |
 | Project trust and instructions                               | Zed and the trusted worktree                      | Project-local instructions and skills are loaded from trusted worktrees. External Agents and Terminal Threads may read their own instruction files.                                                                            | [Worktree Trust](../worktree-trust.md), [Skills](./skills.md), [Instructions](./instructions.md)  |
-
-## Zed-Hosted Model Commitments {#data-retention-and-training}
-
-For Zed-hosted models, Zed has commitments from model providers that prohibit
-training on your prompts or code context and require zero data retention for
-inference requests, except for
-[provider-designated models with safety retention](#provider-safety-retention),
-such as Anthropic's Covered Models. The public provider documents linked below describe provider programs or default
-API terms; Zed-hosted model requests are governed by Zed's provider agreements.
-
-| Provider  | No training reference                                   | Zero-data-retention reference                                                                                                                                                                      |
-| --------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Anthropic | [Yes](https://www.anthropic.com/legal/commercial-terms) | [Yes](https://privacy.anthropic.com/en/articles/8956058-i-have-a-zero-data-retention-agreement-with-anthropic-what-products-does-it-apply-to), except [covered models](#provider-safety-retention) |
-| Google    | [Yes](https://cloud.google.com/terms/service-terms)     | [Yes](https://cloud.google.com/terms/service-terms), see Service Terms sections 18 and 20(h)                                                                                                       |
-| OpenAI    | [Yes](https://openai.com/enterprise-privacy/)           | [Yes](https://platform.openai.com/docs/guides/your-data)                                                                                                                                           |
 
 ### Provider Safety Retention for Designated Models {#provider-safety-retention}
 
@@ -65,7 +47,6 @@ For these models:
 - Zed does not retain your prompts or outputs. Retention happens at the
   provider, under the provider's documented access controls and deletion
   timelines.
-- All other Zed-hosted models keep zero-data-retention handling.
 
 If you don't want provider-side retention, use a model that the provider has
 not designated for safety retention. Switching to
@@ -94,7 +75,7 @@ can be stored in each opt-in case.
 - [Privacy for Business](../business/privacy.md): How Zed Business enforces
   privacy settings across an organization.
 - [Admin Controls](../business/admin-controls.md): How owners and admins control
-  Zed-hosted models, Edit Prediction, and feedback sharing.
+  Edit Prediction, and feedback sharing.
 - [AI Quick Start](./quick-start.md#turn-ai-off): How to turn AI off.
 - [Privacy Policy](https://zed.dev/privacy-policy): Zed's privacy policy.
 - [Subprocessors](https://zed.dev/subprocessors): Zed's subprocessors.

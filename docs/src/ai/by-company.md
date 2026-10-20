@@ -13,7 +13,6 @@ For detailed setup, follow the links in the `Setup` column. This page answers ro
 
 | Path                 | Support level  | What you get                      | Account / billing       | Setup                                                |
 | -------------------- | -------------- | --------------------------------- | ----------------------- | ---------------------------------------------------- |
-| Zed-hosted models    | Built into Zed | Hosted models for Zed AI features | Billed through Zed      | [Zed-Hosted Models](../account/zed-hosted-models.md) |
 | Zeta edit prediction | Built into Zed | Edit predictions while you type   | Included by plan limits | [Edit Prediction](./edit-prediction.md)              |
 
 ## OpenAI / ChatGPT / Codex {#openai-chatgpt-codex}

@@ -66,7 +66,6 @@
 
 - [Authenticate](./authentication.md)
 - [Plans & Pricing](./account/plans-and-pricing.md)
-- [Zed-Hosted Models](./account/zed-hosted-models.md)
 - [Billing](./account/billing.md)
 
 # Zed Business

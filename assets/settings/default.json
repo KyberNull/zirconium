@@ -1011,9 +1011,9 @@
     // The default model to use when creating new threads.
     "default_model": {
       // The provider to use.
-      "provider": "zed.dev",
+      "provider": "anthropic",
       // The model to use.
-      "model": "claude-sonnet-4",
+      "model": "claude-sonnet-4-5",
       // Whether thinking is enabled.
       "enable_thinking": false,
     },
@@ -1034,7 +1034,7 @@
       //
       // To set parameters for a specific provider and model:
       // {
-      //   "provider": "zed.dev",
+      //   "provider": "anthropic",
       //   "model": "claude-sonnet-4",
       //   "temperature": 1.0
       // }
@@ -2227,7 +2227,6 @@
     "x_ai": {
       "api_url": "https://api.x.ai/v1",
     },
-    "zed.dev": {},
   },
   "session": {
     // Whether or not to restore unsaved buffers on restart.

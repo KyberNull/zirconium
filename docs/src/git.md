@@ -297,7 +297,7 @@ To view a stash's contents, select it in the stash picker and press {#kb stash_p
 Zed currently supports LLM-powered commit message generation.
 You can ask AI to generate a commit message by focusing on the message editor within the Git Panel and either clicking on the pencil icon in the bottom left, or reaching for the {#action git::GenerateCommitMessage}, or through the {#kb git::GenerateCommitMessage} keybinding.
 
-> Note that you need to have an LLM provider configured either via your own API keys or through Zed's hosted AI models.
+> Note that you need to have an LLM provider configured via your own API keys.
 > Visit [AI Quick Start](./ai/quick-start.md) to learn how to configure AI.
 
 You can specify your preferred model for this task by adding a `commit_message_model` field to your agent settings.
