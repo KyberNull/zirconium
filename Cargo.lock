@@ -5082,22 +5082,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "encoding_selector"
-version = "0.1.0"
-dependencies = [
- "editor",
- "encoding_rs",
- "fuzzy",
- "gpui",
- "language",
- "picker",
- "project",
- "ui",
- "util",
- "workspace",
-]
-
-[[package]]
 name = "endi"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -21145,7 +21129,6 @@ dependencies = [
  "edit_prediction",
  "edit_prediction_ui",
  "editor",
- "encoding_selector",
  "env_logger 0.11.8",
  "etw_tracing",
  "extension",
