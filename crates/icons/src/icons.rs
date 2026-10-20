@@ -216,7 +216,6 @@ pub enum IconName {
     Reader,
     RefreshTitle,
     Regex,
-    ReplNeutral,
     Replace,
     ReplaceAll,
     ReplaceNext,

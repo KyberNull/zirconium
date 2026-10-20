@@ -5952,8 +5952,6 @@ mod tests {
                 cx,
             );
 
-            repl::init(app_state.fs.clone(), cx);
-            repl::notebook::init(cx);
             tasks_ui::init(cx);
             initialize_workspace(app_state.clone(), cx);
             search::init(cx);

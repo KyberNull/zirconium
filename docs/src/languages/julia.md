@@ -10,7 +10,6 @@ Report issues to: [https://github.com/JuliaEditorSupport/zed-julia/issues](https
 
 <!--
 TBD: Document Julia Installation
-TBD: Julia REPL Setup instructions
 -->
 
 - Tree-sitter: [tree-sitter/tree-sitter-julia](https://github.com/tree-sitter/tree-sitter-julia)

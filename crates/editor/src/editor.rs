@@ -2331,10 +2331,6 @@ impl Editor {
             EditorMode::Full { .. } => "full",
         };
 
-        if EditorSettings::jupyter_enabled(cx) {
-            key_context.add("jupyter");
-        }
-
         key_context.set("mode", mode);
 
         if let Some(snippet_stack) = self.snippet_stack.last() {

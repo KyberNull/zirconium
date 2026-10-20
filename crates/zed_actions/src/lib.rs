@@ -907,48 +907,6 @@ pub mod agents_sidebar {
     );
 }
 
-pub mod notebook {
-    use gpui::actions;
-
-    actions!(
-        notebook,
-        [
-            /// Opens a Jupyter notebook file.
-            OpenNotebook,
-            /// Runs all cells in the notebook.
-            RunAll,
-            /// Runs the current cell and stays on it.
-            Run,
-            /// Runs the current cell and advances to the next cell.
-            RunAndAdvance,
-            /// Clears all cell outputs.
-            ClearOutputs,
-            /// Moves the current cell up.
-            MoveCellUp,
-            /// Moves the current cell down.
-            MoveCellDown,
-            /// Adds a new markdown cell.
-            AddMarkdownBlock,
-            /// Adds a new code cell.
-            AddCodeBlock,
-            /// Deletes the current cell.
-            DeleteCell,
-            /// Restarts the kernel.
-            RestartKernel,
-            /// Interrupts the current execution.
-            InterruptKernel,
-            /// Move down in cells.
-            NotebookMoveDown,
-            /// Move up in cells.
-            NotebookMoveUp,
-            /// Enters the current cell's editor (edit mode).
-            EnterEditMode,
-            /// Exits the cell editor and returns to cell command mode.
-            EnterCommandMode,
-        ]
-    );
-}
-
 pub mod git_panel {
     use gpui::actions;
 
