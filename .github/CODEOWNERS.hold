@@ -88,7 +88,6 @@
 /crates/gpui_tokio/ @zed-industries/core-team
 /crates/html_to_markdown/ @zed-industries/core-team
 /crates/journal/ @zed-industries/core-team
-/crates/line_ending_selector/ @zed-industries/core-team
 /crates/multi_buffer/ @zed-industries/core-team
 /crates/outline/ @zed-industries/core-team
 /crates/outline_panel/ @zed-industries/core-team

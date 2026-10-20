@@ -110,7 +110,6 @@ members = [
     "crates/language_selector",
     "crates/language_tools",
     "crates/languages",
-    "crates/line_ending_selector",
 
     "crates/llama_cpp",
     "crates/lmstudio",
@@ -357,7 +356,6 @@ language_models = { path = "crates/language_models" }
 language_selector = { path = "crates/language_selector" }
 language_tools = { path = "crates/language_tools" }
 languages = { path = "crates/languages" }
-line_ending_selector = { path = "crates/line_ending_selector" }
 
 llama_cpp = { path = "crates/llama_cpp" }
 lmstudio = { path = "crates/lmstudio" }
