@@ -135,6 +135,14 @@ Other entities can then register a callback to handle these events by doing `cx.
 
 - Use `./script/clippy` instead of `cargo clippy`
 
+## Running tests
+
+- Use `cargo nextest run` instead of `cargo test`. It is much faster on this workspace.
+  - Whole workspace: `cargo nextest run --workspace`
+  - One crate: `cargo nextest run -p <crate>`
+  - One test: `cargo nextest run -p <crate> -E 'test(<name>)'`
+- Nextest does not run doctests. Run them with `cargo test --doc -p <crate>` when you change documented code.
+
 # Pull request hygiene
 
 When an agent opens or updates a pull request, it must:

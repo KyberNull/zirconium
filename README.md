@@ -10,7 +10,11 @@ Zirconium is a note-taking app inspired by [Obsidian](https://obsidian.md), buil
 
 Zirconium is a work in progress.
 
-Development instructions will be added as the project takes shape.
+- Build and check: `cargo check --workspace --all-targets`
+- Lint: `./script/clippy`
+- Test: `cargo nextest run --workspace` (or `-p <crate>` for one crate). Nextest skips doctests, so run `cargo test --doc -p <crate>` for those.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
 ### Acknowledgements
 
