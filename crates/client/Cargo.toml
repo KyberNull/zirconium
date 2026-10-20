@@ -19,14 +19,9 @@ test-support = ["clock/test-support", "collections/test-support", "gpui/test-sup
 anyhow.workspace = true
 async-channel.workspace = true
 async-tungstenite = { workspace = true, features = ["tokio", "tokio-rustls-manual-roots"] }
-chrono = { workspace = true, features = ["serde"] }
 clock.workspace = true
-cloud_api_client.workspace = true
-cloud_api_types.workspace = true
 collections.workspace = true
 credentials_provider.workspace = true
-derive_more.workspace = true
-feature_flags.workspace = true
 fs.workspace = true
 futures.workspace = true
 gpui.workspace = true

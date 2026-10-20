@@ -14,8 +14,6 @@ Zed does not retain your prompts or code context by default. Model providers
 handle requests under their own terms, and some providers retain data for
 [provider-designated models with safety retention](#provider-safety-retention),
 such as Anthropic's Covered Models.
-Zed only retains AI data when you explicitly share feedback or opt in to
-training data collection.
 
 ## AI Request Paths {#ai-request-paths}
 
@@ -27,7 +25,7 @@ training data collection.
 | [Local models](./use-a-local-model.md)                       | The local server or self-hosted endpoint          | The local server handles requests according to how you configured that server.                                                                                                                                                 | [Use a Local Model](./use-a-local-model.md)                                                       |
 | [External Agents](./external-agents.md)                      | The External Agent and its configured providers   | The External Agent handles model requests under its own terms. Tool and MCP behavior depends on agent and ACP configuration.                                                                                                   | [External Agents](./external-agents.md)                                                           |
 | [Terminal Threads](./terminal-threads.md)                    | The CLI or TUI running in the terminal            | The CLI or TUI owns its auth, model routing, tools, instructions, MCP configuration, and data handling.                                                                                                                        | [Terminal Threads](./terminal-threads.md)                                                         |
-| [Edit Prediction](./edit-prediction.md)                      | The selected edit prediction provider             | Each keystroke can send local editing context to the selected provider. Zeta requests are processed transiently unless training data collection is enabled; third-party providers follow their own terms.                      | [Edit Prediction](./edit-prediction.md), [Feedback and Training Data](./ai-improvement.md)        |
+| [Edit Prediction](./edit-prediction.md)                      | The selected edit prediction provider             | Each keystroke can send local editing context to the selected provider. Third-party and local providers follow their own terms.                      | [Edit Prediction](./edit-prediction.md)                                                           |
 | [Agent tools](./tools.md), [MCP](./mcp.md), and integrations | Zed, configured MCP servers, and external systems | Tools can read, edit, search, run commands, fetch URLs, or call external systems depending on profile, MCP server, and tool permission settings.                                                                               | [Agent Profiles](./agent-profiles.md), [Tool Permissions](./tool-permissions.md), [MCP](./mcp.md) |
 | Project trust and instructions                               | Zed and the trusted worktree                      | Project-local instructions and skills are loaded from trusted worktrees. External Agents and Terminal Threads may read their own instruction files.                                                                            | [Worktree Trust](../worktree-trust.md), [Skills](./skills.md), [Instructions](./instructions.md)  |
 
@@ -55,27 +53,10 @@ not designated for safety retention. Switching to
 for covered models, because providers apply it on every platform where those
 models are offered.
 
-## AI Data Retained by Zed {#ai-data-retained-by-zed}
-
-Zed may retain AI data only when you explicitly share it or opt in:
-
-- [Response ratings and feedback](./ai-improvement.md#ai-feedback-with-ratings)
-  can send a conversation thread to Zed for review and improvement.
-- [Edit Prediction training data](./ai-improvement.md#edit-predictions) is
-  collected only when you opt in, the project is open source, and the file is not
-  excluded.
-
-See [Feedback and Training Data](./ai-improvement.md) for the full list of what
-can be stored in each opt-in case.
-
 ## Controls and Related Privacy Docs {#controls-and-related-privacy-docs}
 
 - [Telemetry](../telemetry.md): What telemetry Zed collects and how to control
   it.
-- [Privacy for Business](../business/privacy.md): How Zed Business enforces
-  privacy settings across an organization.
-- [Admin Controls](../business/admin-controls.md): How owners and admins control
-  Edit Prediction, and feedback sharing.
 - [AI Quick Start](./quick-start.md#turn-ai-off): How to turn AI off.
 - [Privacy Policy](https://zed.dev/privacy-policy): Zed's privacy policy.
 - [Subprocessors](https://zed.dev/subprocessors): Zed's subprocessors.

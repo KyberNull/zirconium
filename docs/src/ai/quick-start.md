@@ -73,8 +73,7 @@ For general settings mechanics, see [Configuring Zed](../configuring-zed.md).
 
 | If you want to...                    | Use                                                                                                                                            |
 | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Understand privacy and data controls | [AI Privacy](./privacy-and-security.md) and [Feedback and Training Data](./ai-improvement.md)                                                  |
-| Understand plans, usage, and billing | [Plans & Pricing](../account/plans-and-pricing.md) and [Billing](../account/billing.md) |
+| Understand privacy and data controls | [AI Privacy](./privacy-and-security.md)                                                                                                        |
 
 ## Turn AI Off {#turn-ai-off}
 

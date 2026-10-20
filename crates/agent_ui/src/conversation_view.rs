@@ -114,12 +114,6 @@ mod thread_view;
 pub use message_queue::*;
 pub use thread_view::*;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-enum ThreadFeedback {
-    Positive,
-    Negative,
-}
-
 #[derive(Debug)]
 pub(crate) enum ThreadError {
     PaymentRequired,

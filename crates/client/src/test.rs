@@ -1,14 +1,9 @@
-use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use anyhow::{Context as _, Result, anyhow};
-use cloud_api_client::{
-    AuthenticatedUser, GetAuthenticatedUserResponse, KnownOrUnknown, Plan, PlanInfo,
-};
-use cloud_api_types::{CurrentUsage, UsageData, UsageLimit};
 use futures::{StreamExt, stream::BoxStream};
 use gpui::{AppContext as _, TestAppContext};
-use http_client::{AsyncBody, Method, Request, http};
+use http_client::{AsyncBody, Request, http};
 use parking_lot::Mutex;
 use rpc::{ConnectionId, Peer, Receipt, TypedEnvelope, proto};
 
@@ -39,44 +34,6 @@ impl FakeServer {
             state: Default::default(),
         };
 
-        client.http_client().as_fake().replace_handler({
-            let state = server.state.clone();
-            move |old_handler, req| {
-                let state = state.clone();
-                let old_handler = old_handler.clone();
-                async move {
-                    match (req.method(), req.uri().path()) {
-                        (&Method::GET, "/client/users/me") => {
-                            let credentials = parse_authorization_header(&req);
-                            if credentials
-                                != Some(Credentials {
-                                    user_id: client_user_id,
-                                    access_token: state.lock().access_token.to_string(),
-                                })
-                            {
-                                return Ok(http_client::Response::builder()
-                                    .status(401)
-                                    .body("Unauthorized".into())
-                                    .unwrap());
-                            }
-
-                            Ok(http_client::Response::builder()
-                                .status(200)
-                                .body(
-                                    serde_json::to_string(&make_get_authenticated_user_response(
-                                        client_user_id as i32,
-                                        format!("user-{client_user_id}"),
-                                    ))
-                                    .unwrap()
-                                    .into(),
-                                )
-                                .unwrap())
-                        }
-                        _ => old_handler(req).await,
-                    }
-                }
-            }
-        });
         client
             .override_authenticate({
                 let state = Arc::downgrade(&server.state);
@@ -232,42 +189,4 @@ pub fn parse_authorization_header(req: &Request<AsyncBody>) -> Option<Credential
         user_id,
         access_token: access_token.to_string(),
     })
-}
-
-pub fn make_get_authenticated_user_response(
-    user_id: i32,
-    username: String,
-) -> GetAuthenticatedUserResponse {
-    GetAuthenticatedUserResponse {
-        user: AuthenticatedUser {
-            id_v2: format!("user_{user_id}"),
-            legacy_user_id: user_id,
-            metrics_id: format!("metrics-id-{user_id}"),
-            username: username.clone(),
-            avatar_url: "".to_string(),
-            github_login: username,
-            name: None,
-            is_staff: false,
-            accepted_tos_at: None,
-            has_connected_to_collab_once: false,
-        },
-        feature_flags: vec![],
-        organizations: vec![],
-        default_organization_id: None,
-        plans_by_organization: BTreeMap::new(),
-        configuration_by_organization: BTreeMap::new(),
-        plan: PlanInfo {
-            plan: KnownOrUnknown::Known(Plan::ZedPro),
-            subscription_period: None,
-            usage: CurrentUsage {
-                edit_predictions: UsageData {
-                    used: 250,
-                    limit: UsageLimit::Unlimited,
-                },
-            },
-            trial_started_at: None,
-            is_account_too_young: false,
-            has_overdue_invoices: false,
-        },
-    }
 }

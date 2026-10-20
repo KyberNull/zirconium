@@ -7,10 +7,10 @@ use std::time::Duration;
 use std::{any::TypeId, ops::Range, sync::Arc};
 
 use anyhow::Context as _;
-use cloud_api_types::{ExtensionMetadata, ExtensionProvides};
 use collections::{BTreeMap, BTreeSet};
 use command_palette_hooks::CommandPaletteFilter;
 use editor::{Editor, EditorElement, EditorStyle};
+use extension::{ExtensionMetadata, ExtensionProvides};
 use extension_host::{ExtensionManifest, ExtensionStore};
 use fuzzy::{StringMatch, StringMatchCandidate, match_strings};
 use git::{GitHostingProviderRegistry, parse_git_remote_url};

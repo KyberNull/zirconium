@@ -9,7 +9,6 @@ use anyhow::{Context as _, Result, bail};
 use async_compression::futures::bufread::GzipDecoder;
 use async_tar::Archive;
 use client::{Client, telemetry::Telemetry};
-use cloud_api_types::{ExtensionMetadata, ExtensionProvides, GetExtensionsResponse};
 use collections::{BTreeMap, BTreeSet, FxHashSet, HashSet, btree_map};
 pub use extension::ExtensionManifest;
 use extension::extension_builder::{CompileExtensionOptions, ExtensionBuilder};
@@ -17,6 +16,7 @@ use extension::{
     ExtensionContextServerProxy, ExtensionEvents, ExtensionGrammarProxy, ExtensionHostProxy,
     ExtensionLanguageProxy, ExtensionSnippetProxy, ExtensionThemeProxy,
 };
+use extension::{ExtensionMetadata, ExtensionProvides, GetExtensionsResponse};
 use fs::{Fs, RemoveOptions, RenameOptions};
 use futures::future::join_all;
 use futures::{

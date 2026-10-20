@@ -91,7 +91,6 @@ pub(crate) async fn send_custom_server_request(
                     .into_iter()
                     .map(std::borrow::Cow::Owned)
                     .collect(),
-                environment: None,
             };
 
             let request_body = serde_json::to_string(&request)?;

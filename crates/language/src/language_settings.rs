@@ -13,10 +13,10 @@ use gpui::{App, SharedString};
 use settings::DelayMs;
 
 pub use settings::{
-    AutoIndentMode, CompletionSettingsContent, EditPredictionDataCollectionChoice,
-    EditPredictionPromptFormatContent, EditPredictionProvider, EditPredictionsMode, FormatOnSave,
-    Formatter, FormatterList, LanguageSettingsContent, LineEndingSetting, RewrapBehavior,
-    ShowWhitespaceSetting, SoftWrap, WordsCompletionMode,
+    AutoIndentMode, CompletionSettingsContent, EditPredictionPromptFormatContent,
+    EditPredictionProvider, EditPredictionsMode, FormatOnSave, Formatter, FormatterList,
+    LanguageSettingsContent, LineEndingSetting, RewrapBehavior, ShowWhitespaceSetting, SoftWrap,
+    WordsCompletionMode,
 };
 use settings::{RegisterSetting, Settings, SettingsLocation, SettingsStore, merge_from::MergeFrom};
 use shellexpand;
@@ -313,15 +313,8 @@ pub struct EditPredictionSettings {
     pub ollama: Option<OpenAiCompatibleEditPredictionSettings>,
     /// Settings specific to using custom OpenAI-compatible servers for edit prediction.
     pub open_ai_compatible_api: Option<OpenAiCompatibleEditPredictionSettings>,
-    /// Settings specific to Zed's Edit Predictions provider.
-    pub zed: ZedEditPredictionSettings,
     /// Settings specific to the Mercury Edit Predictions provider.
     pub mercury: MercuryEditPredictionSettings,
-    /// Controls whether training data collection is enabled.
-    ///
-    /// `Default` means the value stored in the legacy KV store is used as a fallback,
-    /// preserving existing users' choices without a migration.
-    pub allow_data_collection: EditPredictionDataCollectionChoice,
 }
 
 impl EditPredictionSettings {
@@ -350,7 +343,6 @@ impl EditPredictionSettings {
                 .open_ai_compatible_api
                 .as_ref()
                 .map_or_else(DelayMs::default, |settings| settings.prediction_debounce),
-            settings::EditPredictionProvider::Zed => self.zed.prediction_debounce,
             settings::EditPredictionProvider::Mercury => self.mercury.prediction_debounce,
             settings::EditPredictionProvider::None => DelayMs::default(),
         };
@@ -400,12 +392,6 @@ pub struct CodestralSettings {
     pub max_tokens: Option<u32>,
     /// Custom API URL to use for Codestral.
     pub api_url: Option<String>,
-    /// Automatic prediction debounce delay.
-    pub prediction_debounce: DelayMs,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct ZedEditPredictionSettings {
     /// Automatic prediction debounce delay.
     pub prediction_debounce: DelayMs,
 }
@@ -750,7 +736,6 @@ impl settings::Settings for AllLanguageSettings {
                 prompt_format: openai_compatible_settings.prompt_format.unwrap().into(),
                 prediction_debounce: openai_compatible_settings.prediction_debounce.unwrap(),
             });
-        let zed_settings = edit_predictions.zed.unwrap();
         let mercury_settings = edit_predictions.mercury.unwrap();
 
         let mut file_types: FxHashMap<Arc<str>, (GlobSet, Vec<String>)> = FxHashMap::default();
@@ -793,13 +778,9 @@ impl settings::Settings for AllLanguageSettings {
                 codestral: codestral_settings,
                 ollama: ollama_settings,
                 open_ai_compatible_api: openai_compatible_settings,
-                zed: ZedEditPredictionSettings {
-                    prediction_debounce: zed_settings.prediction_debounce.unwrap(),
-                },
                 mercury: MercuryEditPredictionSettings {
                     prediction_debounce: mercury_settings.prediction_debounce.unwrap(),
                 },
-                allow_data_collection: edit_predictions.allow_data_collection.unwrap_or_default(),
             },
             defaults: default_language_settings,
             languages,

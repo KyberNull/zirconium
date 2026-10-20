@@ -60,15 +60,9 @@ For the full list of event types, see the `Event` enum in [telemetry_events.rs](
 
 ### Server-Side Metrics
 
-Zed does not store your prompts or code unless you explicitly share feedback or opt into Edit Prediction training data collection.
+Zed does not store your prompts or code.
 
-For details on AI request paths and opt-in data sharing, see [AI Privacy](./ai/privacy-and-security.md) and [Feedback and Training Data](./ai/ai-improvement.md).
-
-## Zed Business
-
-Administrators on Zed Business can enforce a no-sharing policy org-wide; members can't opt into [Edit Prediction training data sharing](./ai/ai-improvement.md#edit-predictions) or [AI feedback ratings](./ai/ai-improvement.md#ai-feedback-with-ratings). See [Data Sharing](./business/admin-controls.md#data-sharing) in Admin Controls.
-
-<!-- TODO: link to telemetry org-wide disable control once it ships (currently planned for a future release) -->
+For details on AI request paths, see [AI Privacy](./ai/privacy-and-security.md).
 
 ## Concerns and Questions
 

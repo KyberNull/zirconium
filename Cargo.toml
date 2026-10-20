@@ -10,7 +10,6 @@ members = [
     "crates/agent_settings",
     "crates/agent_skills",
     "crates/agent_ui",
-    "crates/ai_onboarding",
     "crates/anthropic",
     "crates/askpass",
     "crates/assets",
@@ -26,8 +25,6 @@ members = [
     "crates/cli",
     "crates/client",
     "crates/clock",
-    "crates/cloud_api_client",
-    "crates/cloud_api_types",
     "crates/codestral",
     "crates/collections",
     "crates/command_palette",
@@ -264,7 +261,6 @@ agent_servers = { path = "crates/agent_servers" }
 agent_settings = { path = "crates/agent_settings" }
 agent_skills = { path = "crates/agent_skills" }
 agent_ui = { path = "crates/agent_ui" }
-ai_onboarding = { path = "crates/ai_onboarding" }
 anthropic = { path = "crates/anthropic" }
 askpass = { path = "crates/askpass" }
 assets = { path = "crates/assets" }
@@ -278,8 +274,6 @@ buffer_diff = { path = "crates/buffer_diff" }
 cli = { path = "crates/cli" }
 client = { path = "crates/client" }
 clock = { path = "crates/clock" }
-cloud_api_client = { path = "crates/cloud_api_client" }
-cloud_api_types = { path = "crates/cloud_api_types" }
 codestral = { path = "crates/codestral" }
 collections = { path = "crates/collections", version = "0.1.0" }
 command_palette = { path = "crates/command_palette" }
@@ -529,7 +523,6 @@ cargo_toml = "0.21"
 cbindgen = { version = "0.28.0", default-features = false }
 chardetng = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
-ciborium = "0.2"
 circular-buffer = "1.0"
 clap = { version = "4.4", features = ["derive", "wrap_help"] }
 clap_complete = { version = "4.4" }

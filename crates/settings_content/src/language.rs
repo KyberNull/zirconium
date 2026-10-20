@@ -82,7 +82,6 @@ pub enum EditPredictionProvider {
     None,
     #[default]
     Copilot,
-    Zed,
     Codestral,
     Ollama,
     OpenAiCompatibleApi,
@@ -90,21 +89,8 @@ pub enum EditPredictionProvider {
 }
 
 impl EditPredictionProvider {
-    pub fn is_zed(&self) -> bool {
-        match self {
-            EditPredictionProvider::Zed => true,
-            EditPredictionProvider::None
-            | EditPredictionProvider::Copilot
-            | EditPredictionProvider::Codestral
-            | EditPredictionProvider::Ollama
-            | EditPredictionProvider::OpenAiCompatibleApi
-            | EditPredictionProvider::Mercury => false,
-        }
-    }
-
     pub fn display_name(&self) -> Option<&'static str> {
         match self {
-            EditPredictionProvider::Zed => Some("Zed AI"),
             EditPredictionProvider::Copilot => Some("GitHub Copilot"),
             EditPredictionProvider::Codestral => Some("Codestral"),
             EditPredictionProvider::Mercury => Some("Mercury"),
@@ -136,18 +122,8 @@ pub struct EditPredictionSettingsContent {
     pub ollama: Option<OllamaEditPredictionSettingsContent>,
     /// Settings specific to using custom OpenAI-compatible servers for edit prediction.
     pub open_ai_compatible_api: Option<CustomEditPredictionProviderSettingsContent>,
-    /// Settings specific to Zed's Edit Predictions provider.
-    pub zed: Option<ZedEditPredictionSettingsContent>,
     /// Settings specific to the Mercury Edit Predictions provider.
     pub mercury: Option<MercuryEditPredictionSettingsContent>,
-    /// Controls whether Zed may collect training data when using Zed's Edit Predictions.
-    /// Data is only ever captured for files in projects that are detected as open source.
-    ///
-    /// - `"default"`: use the preference previously set via the status-bar toggle,
-    ///   or false if no preference has been stored.
-    /// - `"yes"`: allow data collection for files in open-source projects.
-    /// - `"no"`: never allow data collection.
-    pub allow_data_collection: Option<EditPredictionDataCollectionChoice>,
 }
 
 #[with_fallible_options]
@@ -255,17 +231,6 @@ pub struct CodestralSettingsContent {
     pub prediction_debounce: Option<DelayMs>,
 }
 
-/// Settings specific to Zed's Edit Predictions provider.
-#[with_fallible_options]
-#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema, MergeFrom, PartialEq)]
-pub struct ZedEditPredictionSettingsContent {
-    /// The debounce delay in milliseconds before automatically requesting a prediction
-    /// after typing stops. Set to 0 to request predictions immediately.
-    ///
-    /// Default: 0
-    pub prediction_debounce: Option<DelayMs>,
-}
-
 /// Settings specific to the Mercury Edit Predictions provider.
 #[with_fallible_options]
 #[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema, MergeFrom, PartialEq)]
@@ -326,33 +291,6 @@ pub struct OllamaEditPredictionSettingsContent {
     ///
     /// Default: 0
     pub prediction_debounce: Option<DelayMs>,
-}
-
-/// Controls whether Zed collects training data when using Zed's Edit Predictions.
-#[derive(
-    Copy,
-    Clone,
-    Debug,
-    Default,
-    Eq,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    JsonSchema,
-    MergeFrom,
-    strum::VariantArray,
-    strum::VariantNames,
-)]
-#[serde(rename_all = "snake_case")]
-pub enum EditPredictionDataCollectionChoice {
-    /// Use the preference previously set via the status-bar toggle, or false
-    /// if no preference has been stored.
-    #[default]
-    Default,
-    /// Allow Zed to collect training data from open-source projects.
-    Yes,
-    /// Never allow training data collection.
-    No,
 }
 
 /// The mode in which edit predictions should be displayed.

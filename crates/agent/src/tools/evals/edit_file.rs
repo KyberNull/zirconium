@@ -5,7 +5,7 @@ use crate::{
 };
 use Role::*;
 use anyhow::{Context as _, Result};
-use client::{Client, RefreshLlmTokenListener, UserStore};
+use client::Client;
 use fs::FakeFs;
 use futures::{FutureExt, StreamExt, future::LocalBoxFuture};
 use gpui::{AppContext as _, AsyncApp, Entity, TestAppContext, UpdateGlobal as _};
@@ -257,9 +257,7 @@ impl EditToolTest {
             let http_client = Arc::new(ReqwestClient::user_agent("agent tests").unwrap());
             cx.set_http_client(http_client);
             let client = Client::production(cx);
-            let user_store = cx.new(|cx| UserStore::new(client.clone(), cx));
             language_model::init(cx);
-            RefreshLlmTokenListener::register(client.clone(), user_store.clone(), cx);
             language_models::init(client, cx);
         });
 

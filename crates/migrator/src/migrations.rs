@@ -370,3 +370,9 @@ pub(crate) mod m_2026_08_17 {
 
     pub(crate) use settings::make_git_gutter_width_an_enum;
 }
+
+pub(crate) mod m_2026_10_20 {
+    mod settings;
+
+    pub(crate) use settings::remove_zed_edit_prediction_provider;
+}

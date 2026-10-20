@@ -1,7 +1,7 @@
 use crate::{
     FormatPromptArgs, PredictArgs, PredictionProvider, TeacherBackend,
     anthropic_client::AnthropicClient,
-    example::{Example, ExamplePrediction, ExamplePrompt},
+    example::{Example, ExamplePrediction},
     format_prompt::{TeacherJumpsPrompt, TeacherPrompt, run_format_prompt},
     headless::EpAppState,
     load_project::run_load_project,
@@ -13,9 +13,9 @@ use crate::{
 };
 use anyhow::Context as _;
 use edit_prediction::predict_edits::{RawCompletionRequest, RawCompletionResponse};
-use edit_prediction::{DebugEvent, EditPredictionStore, Zeta2RawConfig};
-use futures::{AsyncReadExt as _, FutureExt as _, StreamExt as _, future::Shared};
-use gpui::{AppContext as _, AsyncApp, Task};
+use edit_prediction::{DebugEvent, EditPredictionStore};
+use futures::{AsyncReadExt as _, StreamExt as _};
+use gpui::{AppContext as _, AsyncApp};
 use http_client::{AsyncBody, HttpClient, Method};
 use reqwest_client::ReqwestClient;
 use std::{
@@ -116,6 +116,13 @@ pub async fn run_prediction(
         return predict_baseten(example, format, &step_progress).await;
     }
 
+    let model = match provider {
+        PredictionProvider::Mercury => edit_prediction::EditPredictionModel::Mercury,
+        _ => anyhow::bail!(
+            "Provider {provider} is not supported for local prediction. Use mercury, baseten, or a teacher provider."
+        ),
+    };
+
     run_load_project(example, app_state.clone(), example_progress, cx.clone()).await?;
     run_context_retrieval(
         example,
@@ -129,59 +136,12 @@ pub async fn run_prediction(
 
     let step_progress = example_progress.start(Step::Predict);
 
-    if matches!(
-        provider,
-        PredictionProvider::Zeta1 | PredictionProvider::Zeta2(_)
-    ) {
-        step_progress.set_substatus("authenticating");
-        static AUTHENTICATED: OnceLock<Shared<Task<()>>> = OnceLock::new();
-        AUTHENTICATED
-            .get_or_init(|| {
-                let client = app_state.client.clone();
-                cx.spawn(async move |cx| {
-                    if let Err(e) = client.sign_in_with_optional_connect(true, cx).await {
-                        eprintln!("Authentication failed: {}", e);
-                    }
-                })
-                .shared()
-            })
-            .clone()
-            .await;
-    }
-
     let ep_store = cx
         .update(|cx| EditPredictionStore::try_global(cx))
         .context("EditPredictionStore not initialized")?;
 
     ep_store.update(&mut cx, |store, _cx| {
-        let model = match provider {
-            PredictionProvider::Zeta1 => edit_prediction::EditPredictionModel::Zeta,
-            PredictionProvider::Zeta2(_) => edit_prediction::EditPredictionModel::Zeta,
-            PredictionProvider::Mercury => edit_prediction::EditPredictionModel::Mercury,
-            PredictionProvider::Teacher(..)
-            | PredictionProvider::TeacherJumps(..)
-            | PredictionProvider::TeacherNonBatching(..)
-            | PredictionProvider::TeacherJumpsNonBatching(..)
-            | PredictionProvider::Repair
-            | PredictionProvider::Baseten(_) => {
-                unreachable!()
-            }
-        };
         store.set_edit_prediction_model(model);
-
-        // If user specified a non-default Zeta2 version, configure raw endpoint.
-        // ZED_ZETA_MODEL env var is optional.
-        if let PredictionProvider::Zeta2(format) = provider {
-            if format != ZetaFormat::default() {
-                let model_id = std::env::var("ZED_ZETA_MODEL").ok();
-                let environment = std::env::var("ZED_ZETA_ENVIRONMENT").ok();
-                store.set_zeta2_raw_config(Zeta2RawConfig {
-                    model_id,
-                    environment,
-                    format,
-                });
-            }
-        }
     });
     step_progress.set_substatus("configuring model");
     let state = example.state.as_ref().context("state must be set")?;
@@ -212,15 +172,6 @@ pub async fn run_prediction(
 
                         if let Some(prompt) = request.prompt {
                             fs::write(run_dir.join("prediction_prompt.md"), &prompt)?;
-                            if matches!(provider, PredictionProvider::Zeta2(_)) {
-                                updated_example.prompt.get_or_insert(ExamplePrompt {
-                                    input: prompt,
-                                    expected_output: None,
-                                    rejected_output: None,
-                                    provider,
-                                    prefill: None,
-                                });
-                            }
                         }
                     }
                     DebugEvent::EditPredictionFinished(request) => {
@@ -646,7 +597,6 @@ pub async fn predict_baseten(
         max_tokens: Some(2048),
         temperature: Some(0.),
         stop: vec![],
-        environment: None,
     };
 
     let body_bytes =

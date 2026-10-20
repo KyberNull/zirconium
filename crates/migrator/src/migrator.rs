@@ -258,6 +258,7 @@ pub fn migrate_settings(text: &str) -> Result<Option<String>> {
             &SETTINGS_QUERY_2026_05_04,
         ),
         MigrationType::Json(migrations::m_2026_08_17::make_git_gutter_width_an_enum),
+        MigrationType::Json(migrations::m_2026_10_20::remove_zed_edit_prediction_provider),
     ];
     run_migrations(text, migrations)
 }
@@ -701,7 +702,7 @@ mod tests {
                 &r#"
                 {
                     "edit_predictions": {
-                        "provider": "zed"
+                        "provider": "none"
                     }
                 }
                 "#
@@ -5416,6 +5417,58 @@ mod tests {
             {
                 "title_bar": {
                     "show_branch_name": true
+                }
+            }
+            "#
+            .unindent(),
+            None,
+        );
+    }
+
+    #[test]
+    fn test_remove_zed_edit_prediction_provider() {
+        assert_migrate_with_migrations(
+            &[MigrationType::Json(
+                migrations::m_2026_10_20::remove_zed_edit_prediction_provider,
+            )],
+            &r#"
+            {
+                "edit_predictions": {
+                    "provider": "zed",
+                    "zed": {
+                        "prediction_debounce": 10
+                    },
+                    "allow_data_collection": "yes"
+                },
+                "features": {
+                    "edit_prediction_provider": "zed"
+                }
+            }
+            "#
+            .unindent(),
+            Some(
+                &r#"
+                {
+                    "edit_predictions": {
+                        "provider": "none"
+                    },
+                    "features": {
+                        "edit_prediction_provider": "none"
+                    }
+                }
+                "#
+                .unindent(),
+            ),
+        );
+
+        assert_migrate_with_migrations(
+            &[MigrationType::Json(
+                migrations::m_2026_10_20::remove_zed_edit_prediction_provider,
+            )],
+            &r#"
+            {
+                "edit_predictions": {
+                    "provider": "copilot"
                 }
             }
             "#

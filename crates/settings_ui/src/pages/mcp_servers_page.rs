@@ -77,7 +77,6 @@ fn render_context_server_timeout(
         title: "MCP Server Timeout",
         description: "Default timeout in seconds for MCP server tool calls.",
         field: Box::new(SettingField {
-            organization_override: None,
             json_path: Some("context_server_timeout"),
             pick: |settings_content| settings_content.project.context_server_timeout.as_ref(),
             write: |settings_content, value, _| {
