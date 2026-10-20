@@ -1,9 +1,7 @@
 use futures::FutureExt as _;
-use gpui::{App, SharedString, UpdateGlobal};
+use gpui::{App, UpdateGlobal};
 use node_runtime::NodeRuntime;
 use project::Fs;
-use python::PyprojectTomlManifestProvider;
-use rust::CargoManifestProvider;
 use settings::SettingsStore;
 use smol::stream::StreamExt;
 use std::sync::Arc;
@@ -13,21 +11,10 @@ pub use language::*;
 
 use crate::json::JsonTaskProvider;
 
-mod bash;
-#[cfg(test)]
-mod c;
-#[cfg(test)]
-mod cpp;
-#[cfg(test)]
-mod css;
-mod go;
 mod json;
 mod package_json;
-mod python;
-mod rust;
-mod typescript;
 
-pub(crate) use package_json::{PackageJson, PackageJsonData};
+pub(crate) use package_json::PackageJsonData;
 
 /// A shared grammar for plain text, exposed for reuse by downstream crates.
 #[cfg(feature = "tree-sitter-gitcommit")]
@@ -50,52 +37,15 @@ pub static LANGUAGE_GIT_COMMIT: std::sync::LazyLock<Arc<Language>> =
         ))
     });
 
-pub fn init(languages: Arc<LanguageRegistry>, fs: Arc<dyn Fs>, _node: NodeRuntime, cx: &mut App) {
+pub fn init(languages: Arc<LanguageRegistry>, _fs: Arc<dyn Fs>, _node: NodeRuntime, cx: &mut App) {
     #[cfg(feature = "load-grammars")]
     languages.register_native_grammars(grammars::native_grammars());
 
-    let go_context_provider = Arc::new(go::GoContextProvider);
     let json_context_provider = Arc::new(JsonTaskProvider);
-    let python_context_provider = Arc::new(python::PythonContextProvider);
-    let python_toolchain_provider = Arc::new(python::PythonToolchainProvider::new(fs.clone()));
-    let rust_context_provider = Arc::new(rust::RustContextProvider);
-    let typescript_context = Arc::new(typescript::TypeScriptContextProvider::new(fs.clone()));
 
     let built_in_languages = [
         LanguageInfo {
-            name: "bash",
-            context: Some(Arc::new(bash::bash_task_context())),
-            ..Default::default()
-        },
-        LanguageInfo {
-            name: "c",
-            ..Default::default()
-        },
-        LanguageInfo {
-            name: "cpp",
-            ..Default::default()
-        },
-        LanguageInfo {
-            name: "css",
-            ..Default::default()
-        },
-        LanguageInfo {
             name: "diff",
-            ..Default::default()
-        },
-        LanguageInfo {
-            name: "go",
-            context: Some(go_context_provider.clone()),
-            ..Default::default()
-        },
-        LanguageInfo {
-            name: "gomod",
-            context: Some(go_context_provider.clone()),
-            ..Default::default()
-        },
-        LanguageInfo {
-            name: "gowork",
-            context: Some(go_context_provider),
             ..Default::default()
         },
         LanguageInfo {
@@ -114,37 +64,6 @@ pub fn init(languages: Arc<LanguageRegistry>, fs: Arc<dyn Fs>, _node: NodeRuntim
         },
         LanguageInfo {
             name: "markdown-inline",
-            ..Default::default()
-        },
-        LanguageInfo {
-            name: "python",
-            context: Some(python_context_provider),
-            toolchain: Some(python_toolchain_provider),
-            manifest_name: Some(SharedString::new_static("pyproject.toml").into()),
-        },
-        LanguageInfo {
-            name: "rust",
-            context: Some(rust_context_provider),
-            manifest_name: Some(SharedString::new_static("Cargo.toml").into()),
-            ..Default::default()
-        },
-        LanguageInfo {
-            name: "tsx",
-            context: Some(typescript_context.clone()),
-            ..Default::default()
-        },
-        LanguageInfo {
-            name: "typescript",
-            context: Some(typescript_context.clone()),
-            ..Default::default()
-        },
-        LanguageInfo {
-            name: "javascript",
-            context: Some(typescript_context),
-            ..Default::default()
-        },
-        LanguageInfo {
-            name: "jsdoc",
             ..Default::default()
         },
         LanguageInfo {
@@ -201,13 +120,6 @@ pub fn init(languages: Arc<LanguageRegistry>, fs: Arc<dyn Fs>, _node: NodeRuntim
         anyhow::Ok(())
     })
     .detach();
-    let manifest_providers: [Arc<dyn ManifestProvider>; 2] = [
-        Arc::from(CargoManifestProvider),
-        Arc::from(PyprojectTomlManifestProvider),
-    ];
-    for provider in manifest_providers {
-        project::ManifestProvidersStore::global(cx).register(provider);
-    }
 }
 
 #[derive(Default)]
