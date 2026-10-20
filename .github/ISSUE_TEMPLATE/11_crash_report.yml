@@ -1,16 +1,16 @@
 name: Report a crash
-description: Zed is crashing or freezing or hanging.
+description: Zirconium is crashing or freezing or hanging.
 type: Crash
 labels: "state:needs triage"
 body:
   - type: textarea
     attributes:
       label: Reproduction steps
-      description: A step-by-step description of how to reproduce the crash from a **clean Zed install**. The more context you provide, the easier it is to find and fix the problem fast.
+      description: A step-by-step description of how to reproduce the crash from a **clean Zirconium install**. The more context you provide, the easier it is to find and fix the problem fast.
       placeholder: |
-        1. Start Zed
+        1. Start Zirconium
         2. Perform an action
-        3. Zed crashes
+        3. Zirconium crashes
     validations:
       required: true
   - type: textarea
