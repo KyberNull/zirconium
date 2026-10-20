@@ -734,7 +734,6 @@
       "ctrl-shift-g": "git_panel::ToggleFocus",
       "cmd-?": "agent::ToggleFocus",
       "cmd-alt-s": "workspace::SaveAll",
-      "cmd-k n": "encoding_selector::Toggle",
       "cmd-k m": "language_selector::Toggle",
       "escape": "workspace::Unfollow",
       "cmd-k cmd-left": "workspace::ActivatePaneLeft",

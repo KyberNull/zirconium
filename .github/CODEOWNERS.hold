@@ -81,7 +81,6 @@
 /crates/breadcrumbs/ @zed-industries/core-team
 /crates/buffer_diff/ @zed-industries/core-team
 /crates/editor/ @zed-industries/core-team
-/crates/encoding_selector/ @zed-industries/core-team
 /crates/go_to_line/ @zed-industries/core-team
 /crates/gpui/ @zed-industries/core-team
 /crates/gpui_macros/ @zed-industries/core-team
