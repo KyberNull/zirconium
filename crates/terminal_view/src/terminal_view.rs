@@ -12,7 +12,7 @@ use gpui::{
     Action, AnyElement, App, ClipboardEntry, DismissEvent, Entity, EventEmitter, ExternalPaths,
     FocusHandle, Focusable, Font, KeyContext, KeyDownEvent, Keystroke, MouseButton, MouseDownEvent,
     Pixels, Point as GpuiPoint, Render, ScrollWheelEvent, Styled, Subscription, Task, TaskExt,
-    WeakEntity, actions, anchored, deferred, div,
+    WeakEntity, anchored, deferred, div,
 };
 use menu;
 use persistence::TerminalDb;
@@ -31,11 +31,10 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use task::TaskId;
 use terminal::{
     Clear, Copy, Event, HoveredWord, MaybeNavigationTarget, Modes, Paste, PasteText, Point, Range,
     ScrollLineDown, ScrollLineUp, ScrollPageDown, ScrollPageUp, ScrollToBottom, ScrollToTop,
-    Search, ShowCharacterPalette, TaskState, TaskStatus, Terminal, TerminalBounds, ToggleViMode,
+    Search, ShowCharacterPalette, TaskStatus, Terminal, TerminalBounds, ToggleViMode,
     terminal_settings::{CursorShape, TerminalSettings},
 };
 use terminal_element::TerminalElement;
@@ -90,14 +89,6 @@ pub struct SendText(String);
 #[derive(Clone, Debug, Default, Deserialize, JsonSchema, PartialEq, Action)]
 #[action(namespace = terminal)]
 pub struct SendKeystroke(String);
-
-actions!(
-    terminal,
-    [
-        /// Reruns the last executed task in the terminal.
-        RerunTask,
-    ]
-);
 
 /// Renames the terminal tab.
 #[derive(Clone, Debug, Default, Deserialize, JsonSchema, PartialEq, Action)]
@@ -651,16 +642,6 @@ impl TerminalView {
         cx.notify();
     }
 
-    fn rerun_task(&mut self, _: &RerunTask, window: &mut Window, cx: &mut Context<Self>) {
-        let task = self
-            .terminal
-            .read(cx)
-            .task()
-            .map(|task| terminal_rerun_override(&task.spawned_task.id))
-            .unwrap_or_default();
-        window.dispatch_action(Box::new(task), cx);
-    }
-
     fn clear(&mut self, _: &Clear, _: &mut Window, cx: &mut Context<Self>) {
         self.scroll_top = px(0.);
         self.terminal.update(cx, |term, _| term.clear());
@@ -1079,34 +1060,6 @@ impl TerminalView {
             subscribe_for_terminal_events(&terminal, self.workspace.clone(), window, cx);
         self.terminal = terminal;
     }
-
-    fn rerun_button(task: &TaskState) -> Option<IconButton> {
-        if !task.spawned_task.show_rerun {
-            return None;
-        }
-
-        let task_id = task.spawned_task.id.clone();
-        Some(
-            IconButton::new("rerun-icon", IconName::Rerun)
-                .icon_size(IconSize::Small)
-                .size(ButtonSize::Compact)
-                .icon_color(Color::Default)
-                .shape(ui::IconButtonShape::Square)
-                .tooltip(move |_window, cx| Tooltip::for_action("Rerun task", &RerunTask, cx))
-                .on_click(move |_, window, cx| {
-                    window.dispatch_action(Box::new(terminal_rerun_override(&task_id)), cx);
-                }),
-        )
-    }
-}
-
-fn terminal_rerun_override(task: &TaskId) -> zed_actions::Rerun {
-    zed_actions::Rerun {
-        task_id: Some(task.0.clone()),
-        allow_concurrent_runs: Some(true),
-        use_new_terminal: Some(false),
-        reevaluate_context: false,
-    }
 }
 
 fn subscribe_for_terminal_events(
@@ -1363,7 +1316,6 @@ impl Render for TerminalView {
             .on_action(cx.listener(TerminalView::toggle_vi_mode))
             .on_action(cx.listener(TerminalView::show_character_palette))
             .on_action(cx.listener(TerminalView::select_all))
-            .on_action(cx.listener(TerminalView::rerun_task))
             .on_action(cx.listener(TerminalView::rename_terminal))
             .on_key_down(cx.listener(Self::key_down))
             .on_mouse_down(
@@ -1465,29 +1417,19 @@ impl Item for TerminalView {
             .cloned()
             .unwrap_or_else(|| terminal.title(true));
 
-        let (icon, icon_color, rerun_button) = match terminal.task() {
+        let (icon, icon_color) = match terminal.task() {
             Some(terminal_task) => match &terminal_task.status {
-                TaskStatus::Running => (
-                    IconName::PlayFilled,
-                    Color::Disabled,
-                    TerminalView::rerun_button(terminal_task),
-                ),
-                TaskStatus::Unknown => (
-                    IconName::Warning,
-                    Color::Warning,
-                    TerminalView::rerun_button(terminal_task),
-                ),
+                TaskStatus::Running => (IconName::PlayFilled, Color::Disabled),
+                TaskStatus::Unknown => (IconName::Warning, Color::Warning),
                 TaskStatus::Completed { success } => {
-                    let rerun_button = TerminalView::rerun_button(terminal_task);
-
                     if *success {
-                        (IconName::Check, Color::Success, rerun_button)
+                        (IconName::Check, Color::Success)
                     } else {
-                        (IconName::XCircle, Color::Error, rerun_button)
+                        (IconName::XCircle, Color::Error)
                     }
                 }
             },
-            None => (IconName::Terminal, Color::Muted, None),
+            None => (IconName::Terminal, Color::Muted),
         };
 
         let self_handle = self.self_handle.clone();
@@ -1505,21 +1447,7 @@ impl Item for TerminalView {
             .child(
                 h_flex()
                     .group("term-tab-icon")
-                    .child(
-                        div()
-                            .when(rerun_button.is_some(), |this| {
-                                this.hover(|style| style.invisible().w_0())
-                            })
-                            .child(Icon::new(icon).color(icon_color)),
-                    )
-                    .when_some(rerun_button, |this, rerun_button| {
-                        this.child(
-                            div()
-                                .absolute()
-                                .visible_on_hover("term-tab-icon")
-                                .child(rerun_button),
-                        )
-                    }),
+                    .child(Icon::new(icon).color(icon_color)),
             )
             .child(
                 div()

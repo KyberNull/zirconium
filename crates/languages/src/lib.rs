@@ -11,8 +11,6 @@ use util::ResultExt;
 
 pub use language::*;
 
-use crate::json::JsonTaskProvider;
-
 mod bash;
 #[cfg(test)]
 mod c;
@@ -21,13 +19,10 @@ mod cpp;
 #[cfg(test)]
 mod css;
 mod go;
-mod json;
-mod package_json;
 mod python;
 mod rust;
+#[cfg(test)]
 mod typescript;
-
-pub(crate) use package_json::{PackageJson, PackageJsonData};
 
 /// A shared grammar for plain text, exposed for reuse by downstream crates.
 #[cfg(feature = "tree-sitter-gitcommit")]
@@ -55,16 +50,11 @@ pub fn init(languages: Arc<LanguageRegistry>, fs: Arc<dyn Fs>, _node: NodeRuntim
     languages.register_native_grammars(grammars::native_grammars());
 
     let go_context_provider = Arc::new(go::GoContextProvider);
-    let json_context_provider = Arc::new(JsonTaskProvider);
-    let python_context_provider = Arc::new(python::PythonContextProvider);
     let python_toolchain_provider = Arc::new(python::PythonToolchainProvider::new(fs.clone()));
-    let rust_context_provider = Arc::new(rust::RustContextProvider);
-    let typescript_context = Arc::new(typescript::TypeScriptContextProvider::new(fs.clone()));
 
     let built_in_languages = [
         LanguageInfo {
             name: "bash",
-            context: Some(Arc::new(bash::bash_task_context())),
             ..Default::default()
         },
         LanguageInfo {
@@ -100,12 +90,10 @@ pub fn init(languages: Arc<LanguageRegistry>, fs: Arc<dyn Fs>, _node: NodeRuntim
         },
         LanguageInfo {
             name: "json",
-            context: Some(json_context_provider.clone()),
             ..Default::default()
         },
         LanguageInfo {
             name: "jsonc",
-            context: Some(json_context_provider),
             ..Default::default()
         },
         LanguageInfo {
@@ -118,29 +106,25 @@ pub fn init(languages: Arc<LanguageRegistry>, fs: Arc<dyn Fs>, _node: NodeRuntim
         },
         LanguageInfo {
             name: "python",
-            context: Some(python_context_provider),
             toolchain: Some(python_toolchain_provider),
             manifest_name: Some(SharedString::new_static("pyproject.toml").into()),
+            ..Default::default()
         },
         LanguageInfo {
             name: "rust",
-            context: Some(rust_context_provider),
             manifest_name: Some(SharedString::new_static("Cargo.toml").into()),
             ..Default::default()
         },
         LanguageInfo {
             name: "tsx",
-            context: Some(typescript_context.clone()),
             ..Default::default()
         },
         LanguageInfo {
             name: "typescript",
-            context: Some(typescript_context.clone()),
             ..Default::default()
         },
         LanguageInfo {
             name: "javascript",
-            context: Some(typescript_context),
             ..Default::default()
         },
         LanguageInfo {

@@ -52,11 +52,8 @@ use migrator::migrate_keymap;
 use onboarding::multibuffer_hint::MultibufferHint;
 pub use open_listener::*;
 use outline_panel::OutlinePanel;
-use paths::{local_settings_file_relative_path, local_tasks_file_relative_path};
-use project::{
-    DirectoryLister, DisableAiSettings, ProjectItem,
-    project_settings::{SettingsObserver, SettingsObserverEvent},
-};
+use paths::local_settings_file_relative_path;
+use project::{DirectoryLister, DisableAiSettings, ProjectItem};
 use project_panel::ProjectPanel;
 use quick_action_bar::QuickActionBar;
 use recent_projects::open_remote_project;
@@ -67,7 +64,7 @@ use settings::{
     BaseKeymap, DEFAULT_KEYMAP_PATH, DefaultOpenBehavior, InvalidSettingsError, KeybindSource,
     KeymapFile, KeymapFileLoadResult, MigrationStatus, SPECIFIC_OVERRIDES_KEYMAP_PATH, Settings,
     SettingsFile, SettingsStore, VIM_KEYMAP_PATH, initial_project_settings_content,
-    initial_tasks_content, update_settings_file,
+    update_settings_file,
 };
 use sidebar::Sidebar;
 #[cfg(debug_assertions)]
@@ -100,8 +97,8 @@ use workspace::{
 };
 use workspace::{Pane, notifications::DetachAndPromptErr};
 use zed_actions::{
-    About, GetMerch, OpenAccountSettings, OpenBrowser, OpenDocs, OpenProjectTasks,
-    OpenServerSettings, OpenSettingsFile, OpenStatusPage, OpenZedUrl, Quit,
+    About, GetMerch, OpenAccountSettings, OpenBrowser, OpenDocs, OpenServerSettings,
+    OpenSettingsFile, OpenStatusPage, OpenZedUrl, Quit,
 };
 
 const DOCS_URL: &str = "https://zed.dev/docs/";
@@ -127,8 +124,6 @@ actions!(
         OpenDefaultSettings,
         /// Opens project-specific settings file.
         OpenProjectSettingsFile,
-        /// Opens the tasks panel.
-        OpenTasks,
         /// Resets the application database.
         ResetDatabase,
         /// Shows all hidden windows.
@@ -260,16 +255,6 @@ pub fn init(cx: &mut App) {
     .on_action(|_: &OpenAccountSettings, cx| {
         with_active_or_new_workspace(cx, |_, _, cx| {
             cx.open_url(&zed_urls::account_url(cx));
-        });
-    })
-    .on_action(|_: &OpenTasks, cx| {
-        with_active_or_new_workspace(cx, |_, window, cx| {
-            open_settings_file(
-                paths::tasks_file(),
-                || settings::initial_tasks_content().as_ref().into(),
-                window,
-                cx,
-            );
         });
     })
     .on_action(|_: &OpenDefaultSettings, cx| {
@@ -406,7 +391,6 @@ pub fn initialize_workspace(app_state: Arc<AppState>, cx: &mut App) {
     init_cursor_hide_mode(cx);
     init_app_appearance(cx);
     init_reduce_motion(cx);
-    init_global_config_error_notifications(cx);
 
     cx.observe_new(|_multi_workspace: &mut MultiWorkspace, window, cx| {
         let Some(window) = window else {
@@ -1235,8 +1219,6 @@ fn register_actions(
             );
         })
         .register_action(open_project_settings_file)
-        .register_action(open_project_tasks_file)
-        .register_action(open_worktree_setup_tasks_file)
 
         .register_action(
             |workspace: &mut Workspace,
@@ -1992,41 +1974,6 @@ fn notify_settings_errors(result: settings::SettingsParseResult, is_user: bool, 
     };
 }
 
-fn init_global_config_error_notifications(cx: &mut App) {
-    cx.observe_new(|_: &mut SettingsObserver, _, cx| {
-        cx.subscribe_self::<SettingsObserverEvent>(|_, event, cx| {
-            let (result, file_kind, on_click): (_, _, fn(&mut Window, &mut App)) = match event {
-                SettingsObserverEvent::GlobalTasksUpdated(result) => {
-                    (result, "tasks", |window, cx| {
-                        window.dispatch_action(OpenTasks.boxed_clone(), cx)
-                    })
-                }
-                _ => return,
-            };
-            let id = NotificationId::Named(format!("invalid-global-{file_kind}-file").into());
-            match result {
-                Ok(_) => dismiss_app_notification(&id, cx),
-                Err(error) => {
-                    let message = format!("Invalid global {file_kind} file\n{error}");
-                    show_app_notification(id, cx, move |cx| {
-                        cx.new(|cx| {
-                            MessageNotification::new(message.clone(), cx)
-                                .primary_message("Open File")
-                                .primary_icon(IconName::Settings)
-                                .primary_on_click(move |window, cx| {
-                                    on_click(window, cx);
-                                    cx.emit(DismissEvent);
-                                })
-                        })
-                    });
-                }
-            }
-        })
-        .detach();
-    })
-    .detach();
-}
-
 #[derive(Copy, Clone, Debug, settings::RegisterSetting)]
 struct CursorHideModeSetting(gpui::CursorHideMode);
 
@@ -2453,72 +2400,6 @@ fn open_project_settings_file(
     ) {
         task.detach_and_log_err(cx);
     }
-}
-
-fn open_project_tasks_file(
-    workspace: &mut Workspace,
-    _: &OpenProjectTasks,
-    window: &mut Window,
-    cx: &mut Context<Workspace>,
-) {
-    if let Some(task) = open_local_file(
-        workspace,
-        local_tasks_file_relative_path(),
-        initial_tasks_content(),
-        window,
-        cx,
-    ) {
-        task.detach_and_log_err(cx);
-    }
-}
-
-fn open_worktree_setup_tasks_file(
-    workspace: &mut Workspace,
-    _: &zed_actions::OpenWorktreeSetupTasks,
-    window: &mut Window,
-    cx: &mut Context<Workspace>,
-) {
-    // Kept harmless on purpose: tasks with the `create_worktree` hook run automatically
-    // when a worktree is created, so the example must be safe to save unedited.
-    const WORKTREE_SETUP_TASK_EXAMPLE: &str = r#"  {
-    // Runs automatically after Zed creates a new git worktree.
-    // $ZED_WORKTREE_ROOT is the new worktree's root directory, and
-    // $ZED_MAIN_GIT_WORKTREE is the original repository's working directory.
-    "label": "Set up new worktree",
-    "command": "echo \"Setting up $ZED_WORKTREE_ROOT — edit this command\"",
-    "cwd": "$ZED_WORKTREE_ROOT",
-    "hooks": ["create_worktree"]
-  }"#;
-
-    let Some(open_task) = open_local_file(
-        workspace,
-        local_tasks_file_relative_path(),
-        settings::initial_worktree_setup_tasks_content(),
-        window,
-        cx,
-    ) else {
-        return;
-    };
-
-    cx.spawn_in(window, async move |_, cx| {
-        let editor = open_task.await?;
-        editor.update_in(cx, |editor, window, cx| {
-            // Skip insertion if the file already mentions the hook (even in a comment,
-            // like the seeded template's example — uncommenting it beats duplicating it).
-            // `create_git_worktree` is a serde alias for the same hook.
-            let text = editor.text(cx);
-            if text.contains("create_worktree") || text.contains("create_git_worktree") {
-                return anyhow::Ok(());
-            }
-            tasks_ui::insert_task_json_into_editor(
-                editor,
-                WORKTREE_SETUP_TASK_EXAMPLE.to_string(),
-                window,
-                cx,
-            )
-        })?
-    })
-    .detach_and_log_err(cx);
 }
 
 fn open_local_file(
@@ -5954,7 +5835,6 @@ mod tests {
 
             repl::init(app_state.fs.clone(), cx);
             repl::notebook::init(cx);
-            tasks_ui::init(cx);
             initialize_workspace(app_state.clone(), cx);
             search::init(cx);
             cx.set_global(workspace::PaneSearchBarCallbacks {
@@ -6144,71 +6024,6 @@ mod tests {
         cx.run_until_parked();
 
         // If this panics, the test has failed
-    }
-
-    #[gpui::test]
-    async fn test_invalid_global_tasks_file_shows_notification_on_startup(
-        cx: &mut gpui::TestAppContext,
-    ) {
-        let app_state = init_test(cx);
-        let tasks_file_path = paths::tasks_file().as_path();
-        app_state
-            .fs
-            .create_dir(tasks_file_path.parent().unwrap())
-            .await
-            .unwrap();
-        app_state
-            .fs
-            .save(
-                tasks_file_path,
-                &r#"[{ "label": "first" }] [{ "label": "trailing garbage" }]"#.into(),
-                Default::default(),
-            )
-            .await
-            .unwrap();
-
-        let project = Project::test(app_state.fs.clone(), [], cx).await;
-        let window = cx.add_window(|window, cx| MultiWorkspace::test_new(project, window, cx));
-        cx.run_until_parked();
-
-        let workspace = window
-            .read_with(cx, |multi_workspace, _| multi_workspace.workspace().clone())
-            .unwrap();
-        let notification_id = NotificationId::Named("invalid-global-tasks-file".into());
-        let shown_notifications = workspace.read_with(cx, |workspace, _| {
-            workspace
-                .notification_ids()
-                .into_iter()
-                .filter(|id| *id == notification_id)
-                .count()
-        });
-        assert_eq!(
-            shown_notifications, 1,
-            "invalid global tasks file at startup should show an app notification"
-        );
-
-        app_state
-            .fs
-            .save(
-                tasks_file_path,
-                &r#"[{ "label": "first", "command": "echo" }]"#.into(),
-                Default::default(),
-            )
-            .await
-            .unwrap();
-        cx.run_until_parked();
-
-        let shown_notifications = workspace.read_with(cx, |workspace, _| {
-            workspace
-                .notification_ids()
-                .into_iter()
-                .filter(|id| *id == notification_id)
-                .count()
-        });
-        assert_eq!(
-            shown_notifications, 0,
-            "fixing the global tasks file should dismiss the notification"
-        );
     }
 
     #[gpui::test]

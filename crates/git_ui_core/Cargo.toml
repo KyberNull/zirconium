@@ -54,7 +54,6 @@ gpui = { workspace = true, features = ["test-support"] }
 project = { workspace = true, features = ["test-support"] }
 remote_connection = { workspace = true, features = ["test-support"] }
 settings = { workspace = true, features = ["test-support"] }
-task.workspace = true
 theme.workspace = true
 theme_settings.workspace = true
 unindent.workspace = true

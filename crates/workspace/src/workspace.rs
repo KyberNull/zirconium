@@ -1384,7 +1384,6 @@ pub struct Workspace {
     serializable_items_tx: UnboundedSender<Box<dyn SerializableItemHandle>>,
     _items_serializer: Task<Result<()>>,
     session_id: Option<String>,
-    scheduled_tasks: Vec<Task<()>>,
     last_open_dock_positions: Vec<DockPosition>,
     removing: bool,
     open_in_dev_container: bool,
@@ -1833,7 +1832,6 @@ impl Workspace {
             _items_serializer,
             session_id: Some(session_id),
 
-            scheduled_tasks: Vec::new(),
             last_open_dock_positions: Vec::new(),
             removing: false,
             sidebar_focus_handle: None,

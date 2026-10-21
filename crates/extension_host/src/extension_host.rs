@@ -38,7 +38,6 @@ use language::{
     QueryFileContents, QueryFiles,
 };
 use node_runtime::NodeRuntime;
-use project::ContextProviderWithTasks;
 use release_channel::ReleaseChannel;
 use semver::Version;
 use serde::{Deserialize, Serialize};
@@ -53,7 +52,6 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
-use task::TaskTemplates;
 use url::Url;
 use util::{PathExt, ResultExt};
 use wasm_host::{
@@ -1647,29 +1645,14 @@ async fn load_plugin_language(
             toml::from_str::<LanguageConfig>(&contents).map_err(anyhow::Error::from)
         }
     };
-    let context_provider = {
-        let fs = fs.clone();
-        let tasks_path = language_path.join(TaskTemplates::FILE_NAME);
-        async move {
-            fs.load(&tasks_path).await.ok().and_then(|contents| {
-                serde_json_lenient::from_str(&contents)
-                    .log_err()
-                    .map(|definitions| {
-                        Arc::new(ContextProviderWithTasks::new(definitions)) as Arc<_>
-                    })
-            })
-        }
-    };
-    let (config, queries, context_provider) = futures::try_join!(
-        config,
-        async move { Ok(load_plugin_queries(fs, &language_path, query_files).await) },
-        async move { Ok(context_provider.await) }
-    )?;
+    let (config, queries) = futures::try_join!(config, async move {
+        Ok(load_plugin_queries(fs, &language_path, query_files).await)
+    })?;
 
     Ok(LoadedLanguage {
         config,
         queries,
-        context_provider,
+        context_provider: None,
         toolchain_provider: None,
         manifest_name: None,
     })

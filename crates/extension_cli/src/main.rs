@@ -16,7 +16,6 @@ use language::LanguageConfig;
 use reqwest_client::ReqwestClient;
 use snippet_provider::file_to_snippets;
 use snippet_provider::format::VsSnippetsFile;
-use task::TaskTemplates;
 use tokio::process::Command;
 use tree_sitter::{Language, Query, WasmStore};
 
@@ -424,22 +423,6 @@ fn test_languages(
             match file_name {
                 LanguageConfig::FILE_NAME => {
                     // Loaded above
-                }
-                TaskTemplates::FILE_NAME => {
-                    let task_file_content = std::fs::read(&file_path).with_context(|| {
-                        anyhow!(
-                            "Failed to read tasks file at {path}",
-                            path = file_path.display()
-                        )
-                    })?;
-                    let _task_templates =
-                        serde_json_lenient::from_slice::<TaskTemplates>(&task_file_content)
-                            .with_context(|| {
-                                anyhow!(
-                                    "Failed to parse tasks file at {path}",
-                                    path = file_path.display()
-                                )
-                            })?;
                 }
                 _ if file_name.ends_with(".scm") => {
                     let grammar = grammar.with_context(|| {
