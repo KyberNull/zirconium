@@ -4396,39 +4396,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dev_container"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-tar",
- "async-trait",
- "env_logger 0.11.8",
- "fs",
- "futures 0.3.32",
- "gpui",
- "http 1.3.1",
- "http_client",
- "indoc",
- "log",
- "menu",
- "picker",
- "project",
- "regex",
- "serde",
- "serde_json",
- "serde_json_lenient",
- "serde_yaml",
- "settings",
- "shlex 1.3.0",
- "ui",
- "util",
- "walkdir",
- "workspace",
- "worktree",
- "yaml-rust2",
-]
-
-[[package]]
 name = "dialoguer"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -13677,7 +13644,6 @@ dependencies = [
  "askpass",
  "chrono",
  "db",
- "dev_container",
  "editor",
  "extension",
  "extension_host",
@@ -21141,7 +21107,6 @@ dependencies = [
  "copilot_ui",
  "crashes",
  "db",
- "dev_container",
  "edit_prediction",
  "edit_prediction_ui",
  "editor",
