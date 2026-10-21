@@ -2432,7 +2432,6 @@ impl ShellExec {
                     shell,
                     show_summary: false,
                     show_command: false,
-                    show_rerun: false,
                     save: SaveStrategy::default(),
                 };
 

@@ -15,7 +15,7 @@ use crate::{
     HandleInput, HoveredCursor, LineDown, LineHighlight, LineUp, MAX_LINE_LEN, MINIMAP_FONT_SIZE,
     PageDown, PageUp, Point, RowExt, RowRangeExt, Selection, SelectionDragState, SizingBehavior,
     SoftWrap, ToPoint,
-    code_context_menus::{CodeActionsMenu, MENU_ASIDE_MAX_WIDTH, MENU_ASIDE_MIN_WIDTH, MENU_GAP},
+    code_context_menus::{MENU_ASIDE_MAX_WIDTH, MENU_ASIDE_MIN_WIDTH, MENU_GAP},
     column_pixels,
     display_map::{
         Block, BlockContext, BlockStyle, ChunkRendererId, DisplaySnapshot, EditorMargins,
@@ -414,7 +414,6 @@ impl EditorElement {
         register_action(editor, window, Editor::swap_selection_ends);
         register_action(editor, window, Editor::show_completions);
         register_action(editor, window, Editor::show_word_completions);
-        register_action(editor, window, Editor::toggle_code_actions);
         register_action(editor, window, Editor::open_excerpts);
         register_action(editor, window, Editor::open_excerpts_in_split);
         register_action(editor, window, Editor::toggle_soft_wrap);
@@ -476,7 +475,6 @@ impl EditorElement {
         register_action(editor, window, Editor::context_menu_last);
         register_action(editor, window, Editor::display_cursor_names);
         register_action(editor, window, Editor::open_active_item_in_terminal);
-        register_action(editor, window, Editor::spawn_nearest_task);
         register_action(editor, window, Editor::open_selections_in_multibuffer);
         register_action(editor, window, Editor::toggle_bookmark);
         register_action(editor, window, Editor::toggle_bookmark_with_label);
@@ -606,13 +604,6 @@ impl EditorElement {
             });
             register_action(editor, window, |editor, action, window, cx| {
                 if let Some(task) = editor.confirm_completion_insert(action, window, cx) {
-                    editor.detach_and_notify_err(task, window, cx);
-                } else {
-                    cx.propagate();
-                }
-            });
-            register_action(editor, window, |editor, action, window, cx| {
-                if let Some(task) = editor.confirm_code_action(action, window, cx) {
                     editor.detach_and_notify_err(task, window, cx);
                 } else {
                     cx.propagate();
@@ -2101,65 +2092,6 @@ impl EditorElement {
         Some((display_row, buffer_row))
     }
 
-    fn layout_run_indicators(
-        &self,
-        gutter: &Gutter,
-        run_indicators: &HashSet<DisplayRow>,
-        window: &mut Window,
-        cx: &mut App,
-    ) -> Vec<AnyElement> {
-        if self.split_side == Some(SplitSide::Left) {
-            return Vec::new();
-        }
-
-        self.editor.update(cx, |editor, cx| {
-            let active_task_indicator_row =
-                // TODO: add edit button on the right side of each row in the context menu
-                if let Some(crate::CodeContextMenu::CodeActions(CodeActionsMenu {
-                    actions, ..
-                })) = editor.context_menu.borrow().as_ref()
-                {
-                    actions
-                        .tasks()
-                        .map(|tasks| tasks.position.to_display_point(gutter.snapshot).row())
-
-                } else {
-                    None
-                };
-
-            run_indicators
-                .iter()
-                .filter_map(|display_row| {
-                    let task_status = gutter
-                        .row_infos
-                        .get((display_row.0.saturating_sub(gutter.range.start.0)) as usize)
-                        .and_then(|row_info| Some((row_info.buffer_id?, row_info.buffer_row?)))
-                        .and_then(|(buffer_id, buffer_row)| {
-                            editor.runnable_task_status(buffer_id, buffer_row)
-                        });
-
-                    gutter.layout_item(
-                        *display_row,
-                        |cx, _| {
-                            editor
-                                .render_run_indicator(
-                                    &self.style,
-                                    Some(*display_row) == active_task_indicator_row,
-                                    None,
-                                    task_status,
-                                    *display_row,
-                                    cx,
-                                )
-                                .into_any_element()
-                        },
-                        window,
-                        cx,
-                    )
-                })
-                .collect_vec()
-        })
-    }
-
     fn layout_expand_toggles(
         &self,
         gutter_hitbox: &Hitbox,
@@ -3510,74 +3442,6 @@ impl EditorElement {
         None
     }
 
-    fn layout_gutter_menu(
-        &self,
-        line_height: Pixels,
-        text_hitbox: &Hitbox,
-        content_origin: gpui::Point<Pixels>,
-        right_margin: Pixels,
-        scroll_pixel_position: gpui::Point<ScrollPixelOffset>,
-        gutter_overshoot: Pixels,
-        window: &mut Window,
-        cx: &mut App,
-    ) {
-        let editor = self.editor.read(cx);
-        if !editor.context_menu_visible() {
-            return;
-        }
-        let Some(crate::ContextMenuOrigin::GutterIndicator(gutter_row)) =
-            editor.context_menu_origin()
-        else {
-            return;
-        };
-        // Context menu was spawned via a click on a gutter. Ensure it's a bit closer to the
-        // indicator than just a plain first column of the text field.
-        let target_position = content_origin
-            + gpui::Point {
-                x: -gutter_overshoot,
-                y: Pixels::from(
-                    gutter_row.next_row().as_f64() * ScrollPixelOffset::from(line_height)
-                        - scroll_pixel_position.y,
-                ),
-            };
-
-        let (min_height_in_lines, max_height_in_lines) = editor
-            .context_menu_options
-            .as_ref()
-            .map_or((3, 12), |options| {
-                (options.min_entries_visible, options.max_entries_visible)
-            });
-
-        let min_height = line_height * min_height_in_lines as f32 + POPOVER_Y_PADDING;
-        let max_height = line_height * max_height_in_lines as f32 + POPOVER_Y_PADDING;
-        let viewport_bounds =
-            Bounds::new(Default::default(), window.viewport_size()).extend(Edges {
-                right: -right_margin - MENU_GAP,
-                ..Default::default()
-            });
-        self.layout_popovers_above_or_below_line(
-            target_position,
-            line_height,
-            min_height,
-            max_height,
-            editor
-                .context_menu_options
-                .as_ref()
-                .and_then(|options| options.placement.clone()),
-            text_hitbox,
-            viewport_bounds,
-            window,
-            cx,
-            move |height, _max_width_for_stable_x, _, window, cx| {
-                let mut element = self
-                    .render_context_menu(line_height, height, window, cx)
-                    .expect("Visible context menu should always render.");
-                let size = element.layout_as_root(AvailableSpace::min_size(), window, cx);
-                vec![(CursorPopoverType::CodeContextMenu, element, size)]
-            },
-        );
-    }
-
     fn layout_popovers_above_or_below_line(
         &self,
         target_position: gpui::Point<Pixels>,
@@ -4802,10 +4666,6 @@ impl EditorElement {
 
             for breakpoint in layout.breakpoints.iter_mut() {
                 breakpoint.paint(window, cx);
-            }
-
-            for test_indicator in layout.test_indicators.iter_mut() {
-                test_indicator.paint(window, cx);
             }
 
             if let Some(diff_review_button) = layout.diff_review_button.as_mut() {
@@ -7763,10 +7623,6 @@ impl Element for EditorElement {
                         })
                     });
 
-                    let run_indicator_rows = self.editor.update(cx, |editor, cx| {
-                        editor.active_run_indicators(start_row..end_row, window, cx)
-                    });
-
                     let gutter = Gutter {
                         line_height,
                         range: start_row..end_row,
@@ -8339,30 +8195,11 @@ impl Element for EditorElement {
                             None
                         };
 
-                    self.layout_gutter_menu(
-                        line_height,
-                        &text_hitbox,
-                        content_origin,
-                        right_margin,
-                        scroll_pixel_position,
-                        gutter_dimensions.width - gutter_dimensions.left_padding,
-                        window,
-                        cx,
-                    );
-
-                    let test_indicators = if gutter_settings.runnables {
-                        self.layout_run_indicators(&gutter, &run_indicator_rows, window, cx)
-                    } else {
-                        Vec::new()
-                    };
-
                     let show_bookmarks =
                         snapshot.show_bookmarks.unwrap_or(gutter_settings.bookmarks);
 
                     let bookmark_rows = self.editor.update(cx, |editor, cx| {
-                        let mut rows = editor.active_bookmarks(start_row..end_row, window, cx);
-                        rows.retain(|k| !run_indicator_rows.contains(k));
-                        rows
+                        editor.active_bookmarks(start_row..end_row, window, cx)
                     });
 
                     let bookmarks = if show_bookmarks {
@@ -8382,7 +8219,6 @@ impl Element for EditorElement {
                         .map(|phantom| phantom.display_row);
 
                     if let Some(row) = gutter_hover_button
-                        && !run_indicator_rows.contains(&row)
                         && !bookmark_rows.contains(&row)
                         && show_bookmarks
                     {
@@ -8662,7 +8498,6 @@ impl Element for EditorElement {
                         edit_prediction_popover,
                         diff_hunk_controls,
                         mouse_context_menu,
-                        test_indicators,
                         bookmarks,
                         breakpoints,
                         diff_review_button,
@@ -8875,7 +8710,6 @@ pub struct EditorLayout {
     visible_cursors: Vec<CursorLayout>,
     navigation_overlay_paint_commands: Vec<NavigationOverlayPaintCommand>,
     selections: Vec<(PlayerColor, Vec<SelectionLayout>)>,
-    test_indicators: Vec<AnyElement>,
     bookmarks: Vec<AnyElement>,
     breakpoints: Vec<AnyElement>,
     diff_review_button: Option<AnyElement>,

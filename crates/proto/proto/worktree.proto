@@ -189,9 +189,8 @@ message UpdateWorktreeSettings {
 
 enum LocalSettingsKind {
   Settings = 0;
-  Tasks = 1;
   Editorconfig = 2;
-  reserved 3;
+  reserved 1, 3;
 }
 
 message UpdateUserSettings {

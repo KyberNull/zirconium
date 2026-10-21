@@ -1,10 +1,8 @@
 use crate::commit_view::CommitView;
 use git::Oid;
 use gpui::{Action, ClipboardItem, Entity, FocusHandle, SharedString, WeakEntity, Window, actions};
-use project::{GIT_COMMAND_TASK_TAG, git_store::Repository};
-
-use task::{TaskContext, TaskVariables, VariableName};
-use ui::{Color, ContextMenu, ContextMenuEntry, IconName, IconPosition, prelude::*};
+use project::git_store::Repository;
+use ui::{ContextMenu, ContextMenuEntry, prelude::*};
 use workspace::Workspace;
 
 actions!(
@@ -20,7 +18,6 @@ actions!(
 );
 
 const COMMIT_TAG_LIST_WIDTH_IN_REMS: Rems = rems(10.);
-const CUSTOM_GIT_COMMANDS_DOCS_SLUG: &str = "tasks#custom-git-commands";
 
 pub(crate) struct CommitContextMenuData {
     pub(crate) sha: Oid,
@@ -45,11 +42,6 @@ pub(crate) fn commit_context_menu(
 ) -> Entity<ContextMenu> {
     let sha = commit.sha;
     let sha_short = sha.display_short();
-    let git_tasks = git_context_menu_tasks(
-        git_task_context(&repository, sha, ref_name.as_deref(), cx),
-        &workspace,
-        cx,
-    );
     let header = match &ref_name {
         Some(ref_name) => format!("Ref {ref_name}"),
         None => format!("Commit {sha_short}"),
@@ -139,105 +131,5 @@ pub(crate) fn commit_context_menu(
                     );
                 })
             })
-            .map(|mut menu| {
-                menu = menu.separator().header("Custom Commands");
-
-                if git_tasks.is_empty() {
-                    return menu.item(
-                        ContextMenuEntry::new("Learn More")
-                            .icon(IconName::ArrowUpRight)
-                            .icon_color(Color::Muted)
-                            .icon_position(IconPosition::End)
-                            .handler(|_window, cx| {
-                                let docs_url =
-                                    release_channel::docs_url(CUSTOM_GIT_COMMANDS_DOCS_SLUG, cx);
-                                cx.open_url(&docs_url);
-                            }),
-                    );
-                }
-
-                for (task_source_kind, resolved_task) in git_tasks {
-                    let label = resolved_task.display_label().to_string();
-                    let workspace = workspace.clone();
-                    menu = menu.entry(label, None, move |window, cx| {
-                        workspace
-                            .update(cx, |workspace, cx| {
-                                workspace.schedule_resolved_task(
-                                    task_source_kind.clone(),
-                                    resolved_task.clone(),
-                                    false,
-                                    window,
-                                    cx,
-                                );
-                            })
-                            .ok();
-                    });
-                }
-
-                menu
-            })
     })
-}
-
-fn git_task_context(
-    repository: &Option<WeakEntity<Repository>>,
-    commit_sha: git::Oid,
-    ref_name: Option<&str>,
-    cx: &App,
-) -> Option<TaskContext> {
-    let repository_path = repository
-        .as_ref()?
-        .upgrade()?
-        .read(cx)
-        .work_directory_abs_path
-        .to_path_buf();
-    let repository_name = repository_path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .map(ToString::to_string);
-    let mut task_variables = TaskVariables::from_iter([
-        (VariableName::GitSha, commit_sha.to_string()),
-        (VariableName::GitShaShort, commit_sha.display_short()),
-        (
-            VariableName::GitRepositoryPath,
-            repository_path.to_string_lossy().into_owned(),
-        ),
-    ]);
-
-    if let Some(repository_name) = repository_name {
-        task_variables.insert(VariableName::GitRepositoryName, repository_name);
-    }
-    if let Some(ref_name) = ref_name {
-        task_variables.insert(VariableName::GitRef, ref_name.to_string());
-    }
-
-    Some(TaskContext {
-        cwd: Some(repository_path),
-        task_variables,
-        ..TaskContext::default()
-    })
-}
-
-fn git_context_menu_tasks(
-    task_context: Option<TaskContext>,
-    workspace: &WeakEntity<Workspace>,
-    cx: &App,
-) -> Vec<(project::TaskSourceKind, task::ResolvedTask)> {
-    let Some(task_context) = task_context else {
-        return Vec::new();
-    };
-    let Some(workspace) = workspace.upgrade() else {
-        return Vec::new();
-    };
-    let project = workspace.read(cx).project().clone();
-    let task_inventory = project.read_with(cx, |project, cx| {
-        project.task_store().read(cx).task_inventory().cloned()
-    });
-    let Some(task_inventory) = task_inventory else {
-        return Vec::new();
-    };
-
-    task_inventory
-        .read(cx)
-        .resolve_global_tasks_with_tag(GIT_COMMAND_TASK_TAG, &task_context)
 }

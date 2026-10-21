@@ -19,7 +19,6 @@ serde_json.workspace = true
 settings.workspace = true
 util.workspace = true
 zlog.workspace = true
-task.workspace = true
 theme.workspace = true
 
 [lints]

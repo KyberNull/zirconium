@@ -10,7 +10,6 @@ mod manifest_tree;
 mod project_search;
 mod search;
 mod search_history;
-mod task_inventory;
 mod trusted_worktrees;
 
 use anyhow::Result;
@@ -26,10 +25,7 @@ use git::{
     repository::{RepoPath, repo_path},
     status::{DiffStat, FileStatus, StatusCode, TrackedStatus},
 };
-use gpui::{
-    App, AppContext, BackgroundExecutor, BorrowAppContext, Entity, FutureExt, Task, TestAppContext,
-    UpdateGlobal,
-};
+use gpui::{BackgroundExecutor, BorrowAppContext, Entity, FutureExt, TestAppContext, UpdateGlobal};
 use language::{
     BufferEvent, DiskState, Language, LanguageConfig, LanguageMatcher, LineEnding, OffsetRangeExt,
     Point,
@@ -37,14 +33,12 @@ use language::{
     markdown_lang, rust_lang,
 };
 use parking_lot::Mutex;
-use paths::tasks_file;
 use postage::stream::Stream as _;
 use pretty_assertions::{assert_eq, assert_matches};
 use project::{
-    Event, TaskContexts,
+    Event,
     git_store::{GitStoreEvent, Repository, RepositoryEvent, StatusEntry, pending_op},
     search::{SearchQuery, SearchResult},
-    task_store::{TaskSettingsLocation, TaskStore},
     *,
 };
 use rand::{Rng as _, rngs::StdRng};
@@ -66,7 +60,6 @@ use std::{
     time::Duration,
 };
 use sum_tree::SumTree;
-use task::{ResolvedTask, TaskContext};
 use text::{Anchor, ReplicaId, ToOffset};
 use unindent::Unindent as _;
 use util::{
@@ -983,7 +976,6 @@ async fn test_git_provider_project_setting(cx: &mut gpui::TestAppContext) {
 #[gpui::test]
 async fn test_managing_project_specific_settings(cx: &mut gpui::TestAppContext) {
     init_test(cx);
-    TaskStore::init(None);
 
     let fs = FakeFs::new(cx.executor());
     fs.insert_tree(
@@ -991,11 +983,6 @@ async fn test_managing_project_specific_settings(cx: &mut gpui::TestAppContext) 
         json!({
             ".zed": {
                 "settings.json": r#"{ "tab_size": 8 }"#,
-                "tasks.json": r#"[{
-                    "label": "cargo check all",
-                    "command": "cargo",
-                    "args": ["check", "--all"]
-                },]"#,
             },
             "a": {
                 "a.rs": "fn a() {\n    A\n}"
@@ -1003,11 +990,6 @@ async fn test_managing_project_specific_settings(cx: &mut gpui::TestAppContext) 
             "b": {
                 ".zed": {
                     "settings.json": r#"{ "tab_size": 2 }"#,
-                    "tasks.json": r#"[{
-                        "label": "cargo check",
-                        "command": "cargo",
-                        "args": ["check"]
-                    },]"#,
                 },
                 "b.rs": "fn b() {\n  B\n}"
             }
@@ -1019,21 +1001,6 @@ async fn test_managing_project_specific_settings(cx: &mut gpui::TestAppContext) 
     let worktree = project.update(cx, |project, cx| project.worktrees(cx).next().unwrap());
 
     cx.executor().run_until_parked();
-    let worktree_id = cx.update(|cx| {
-        project.update(cx, |project, cx| {
-            project.worktrees(cx).next().unwrap().read(cx).id()
-        })
-    });
-
-    let mut task_contexts = TaskContexts::default();
-    task_contexts.active_worktree_context = Some((worktree_id, TaskContext::default()));
-    let task_contexts = Arc::new(task_contexts);
-
-    let topmost_local_task_source_kind = TaskSourceKind::Worktree {
-        id: worktree_id,
-        directory_in_worktree: rel_path(".zed").into(),
-        id_base: "local worktree tasks from directory \".zed\"".into(),
-    };
 
     let buffer_a = project
         .update(cx, |project, cx| {
@@ -1054,281 +1021,6 @@ async fn test_managing_project_specific_settings(cx: &mut gpui::TestAppContext) 
         assert_eq!(settings_a.tab_size.get(), 8);
         assert_eq!(settings_b.tab_size.get(), 2);
     });
-
-    let all_tasks = cx
-        .update(|cx| get_all_tasks(&project, task_contexts.clone(), cx))
-        .await
-        .into_iter()
-        .map(|(source_kind, task)| {
-            let resolved = task.resolved;
-            (
-                source_kind,
-                task.resolved_label,
-                resolved.args,
-                resolved.env,
-            )
-        })
-        .collect::<Vec<_>>();
-    assert_eq!(
-        all_tasks,
-        vec![
-            (
-                TaskSourceKind::Worktree {
-                    id: worktree_id,
-                    directory_in_worktree: rel_path("b/.zed").into(),
-                    id_base: "local worktree tasks from directory \"b/.zed\"".into()
-                },
-                "cargo check".to_string(),
-                vec!["check".to_string()],
-                HashMap::default(),
-            ),
-            (
-                topmost_local_task_source_kind.clone(),
-                "cargo check all".to_string(),
-                vec!["check".to_string(), "--all".to_string()],
-                HashMap::default(),
-            ),
-        ]
-    );
-
-    let (_, resolved_task) = cx
-        .update(|cx| get_all_tasks(&project, task_contexts.clone(), cx))
-        .await
-        .into_iter()
-        .find(|(source_kind, _)| source_kind == &topmost_local_task_source_kind)
-        .expect("should have one global task");
-    project.update(cx, |project, cx| {
-        let task_inventory = project
-            .task_store()
-            .read(cx)
-            .task_inventory()
-            .cloned()
-            .unwrap();
-        task_inventory.update(cx, |inventory, _| {
-            inventory.task_scheduled(topmost_local_task_source_kind.clone(), resolved_task);
-            inventory
-                .update_file_based_tasks(
-                    TaskSettingsLocation::Global(tasks_file()),
-                    Some(
-                        &json!([{
-                            "label": "cargo check unstable",
-                            "command": "cargo",
-                            "args": [
-                                "check",
-                                "--all",
-                                "--all-targets"
-                            ],
-                            "env": {
-                                "RUSTFLAGS": "-Zunstable-options"
-                            }
-                        }])
-                        .to_string(),
-                    ),
-                )
-                .unwrap();
-        });
-    });
-    cx.run_until_parked();
-
-    let all_tasks = cx
-        .update(|cx| get_all_tasks(&project, task_contexts.clone(), cx))
-        .await
-        .into_iter()
-        .map(|(source_kind, task)| {
-            let resolved = task.resolved;
-            (
-                source_kind,
-                task.resolved_label,
-                resolved.args,
-                resolved.env,
-            )
-        })
-        .collect::<Vec<_>>();
-    assert_eq!(
-        all_tasks,
-        vec![
-            (
-                topmost_local_task_source_kind.clone(),
-                "cargo check all".to_string(),
-                vec!["check".to_string(), "--all".to_string()],
-                HashMap::default(),
-            ),
-            (
-                TaskSourceKind::Worktree {
-                    id: worktree_id,
-                    directory_in_worktree: rel_path("b/.zed").into(),
-                    id_base: "local worktree tasks from directory \"b/.zed\"".into()
-                },
-                "cargo check".to_string(),
-                vec!["check".to_string()],
-                HashMap::default(),
-            ),
-            (
-                TaskSourceKind::AbsPath {
-                    abs_path: paths::tasks_file().clone(),
-                    id_base: "global tasks.json".into(),
-                },
-                "cargo check unstable".to_string(),
-                vec![
-                    "check".to_string(),
-                    "--all".to_string(),
-                    "--all-targets".to_string(),
-                ],
-                HashMap::from_iter(Some((
-                    "RUSTFLAGS".to_string(),
-                    "-Zunstable-options".to_string()
-                ))),
-            ),
-        ]
-    );
-}
-
-#[gpui::test]
-async fn test_invalid_local_tasks_shows_toast_with_doc_link(cx: &mut gpui::TestAppContext) {
-    init_test(cx);
-    TaskStore::init(None);
-
-    // We need to start with a valid `.zed/tasks.json` file as otherwise the
-    // event is emitted before we havd a chance to setup the event subscription.
-    let fs = FakeFs::new(cx.executor());
-    fs.insert_tree(
-        path!("/dir"),
-        json!({
-            ".zed": {
-                "tasks.json": r#"[{ "label": "valid task", "command": "echo" }]"#,
-            },
-            "file.rs": ""
-        }),
-    )
-    .await;
-
-    let project = Project::test(fs.clone(), [path!("/dir").as_ref()], cx).await;
-    let saw_toast = Rc::new(RefCell::new(false));
-
-    // Update the `.zed/tasks.json` file with an invalid variable, so we can
-    // later assert that the `Event::Toast` even is emitted.
-    fs.save(
-        path!("/dir/.zed/tasks.json").as_ref(),
-        &r#"[{ "label": "test $ZED_FOO", "command": "echo" }]"#.into(),
-        Default::default(),
-    )
-    .await
-    .unwrap();
-
-    project.update(cx, |_, cx| {
-        let saw_toast = saw_toast.clone();
-
-        cx.subscribe(&project, move |_, _, event: &Event, _| match event {
-            Event::Toast {
-                notification_id,
-                message,
-                link: Some(ToastLink { url, .. }),
-            } => {
-                assert!(notification_id.starts_with("local-tasks-"));
-                assert!(message.contains("ZED_FOO"));
-                assert_eq!(*url, "https://zed.dev/docs/tasks");
-                *saw_toast.borrow_mut() = true;
-            }
-            _ => {}
-        })
-        .detach();
-    });
-
-    cx.run_until_parked();
-    assert!(
-        *saw_toast.borrow(),
-        "Expected `Event::Toast` was never emitted"
-    );
-}
-
-#[gpui::test]
-async fn test_fallback_to_single_worktree_tasks(cx: &mut gpui::TestAppContext) {
-    init_test(cx);
-    TaskStore::init(None);
-
-    let fs = FakeFs::new(cx.executor());
-    fs.insert_tree(
-        path!("/dir"),
-        json!({
-            ".zed": {
-                "tasks.json": r#"[{
-                    "label": "test worktree root",
-                    "command": "echo $ZED_WORKTREE_ROOT"
-                }]"#,
-            },
-            "a": {
-                "a.rs": "fn a() {\n    A\n}"
-            },
-        }),
-    )
-    .await;
-
-    let project = Project::test(fs.clone(), [path!("/dir").as_ref()], cx).await;
-    let _worktree = project.update(cx, |project, cx| project.worktrees(cx).next().unwrap());
-
-    cx.executor().run_until_parked();
-    let worktree_id = cx.update(|cx| {
-        project.update(cx, |project, cx| {
-            project.worktrees(cx).next().unwrap().read(cx).id()
-        })
-    });
-
-    let active_non_worktree_item_tasks = cx
-        .update(|cx| {
-            get_all_tasks(
-                &project,
-                Arc::new(TaskContexts {
-                    active_item_context: Some((Some(worktree_id), None, TaskContext::default())),
-                    active_worktree_context: None,
-                    other_worktree_contexts: Vec::new(),
-                    latest_selection: None,
-                }),
-                cx,
-            )
-        })
-        .await;
-    assert!(
-        active_non_worktree_item_tasks.is_empty(),
-        "A task can not be resolved with context with no ZED_WORKTREE_ROOT data"
-    );
-
-    let active_worktree_tasks = cx
-        .update(|cx| {
-            get_all_tasks(
-                &project,
-                Arc::new(TaskContexts {
-                    active_item_context: Some((Some(worktree_id), None, TaskContext::default())),
-                    active_worktree_context: Some((worktree_id, {
-                        let mut worktree_context = TaskContext::default();
-                        worktree_context
-                            .task_variables
-                            .insert(task::VariableName::WorktreeRoot, "/dir".to_string());
-                        worktree_context
-                    })),
-                    other_worktree_contexts: Vec::new(),
-                    latest_selection: None,
-                }),
-                cx,
-            )
-        })
-        .await;
-    assert_eq!(
-        active_worktree_tasks
-            .into_iter()
-            .map(|(source_kind, task)| {
-                let resolved = task.resolved;
-                (source_kind, resolved.command.unwrap())
-            })
-            .collect::<Vec<_>>(),
-        vec![(
-            TaskSourceKind::Worktree {
-                id: worktree_id,
-                directory_in_worktree: rel_path(".zed").into(),
-                id_base: "local worktree tasks from directory \".zed\"".into(),
-            },
-            "echo /dir".to_string(),
-        )]
-    );
 }
 
 #[gpui::test]
@@ -9499,26 +9191,6 @@ fn js_lang() -> Arc<Language> {
         },
         None,
     ))
-}
-
-fn get_all_tasks(
-    project: &Entity<Project>,
-    task_contexts: Arc<TaskContexts>,
-    cx: &mut App,
-) -> Task<Vec<(TaskSourceKind, ResolvedTask)>> {
-    let new_tasks = project.update(cx, |project, cx| {
-        project.task_store().update(cx, |task_store, cx| {
-            task_store.task_inventory().unwrap().update(cx, |this, cx| {
-                this.used_and_current_resolved_tasks(task_contexts, cx)
-            })
-        })
-    });
-
-    cx.background_spawn(async move {
-        let (mut old, new) = new_tasks.await;
-        old.extend(new);
-        old
-    })
 }
 
 #[track_caller]

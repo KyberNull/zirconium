@@ -224,7 +224,6 @@ async fn setup_project(
             None,
             project::LocalProjectFlags {
                 init_worktree_trust: false,
-                watch_global_configs: false,
             },
             cx,
         )

@@ -64,7 +64,6 @@ smallvec.workspace = true
 sqlez.workspace = true
 streaming_diff.workspace = true
 strsim.workspace = true
-task.workspace = true
 telemetry.workspace = true
 tempfile.workspace = true
 text.workspace = true

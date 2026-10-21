@@ -15,8 +15,6 @@ pub mod prettier_store;
 pub mod project_search;
 pub mod project_settings;
 pub mod search;
-pub mod task_inventory;
-pub mod task_store;
 pub mod telemetry_snapshot;
 pub mod terminals;
 pub mod toolchain_store;
@@ -109,10 +107,8 @@ use std::{
     time::Duration,
 };
 
-use task_store::TaskStore;
 use terminals::Terminals;
 use text::{Anchor, BufferId, Rope};
-use toolchain_store::EmptyToolchainStore;
 use util::{
     ResultExt as _, maybe,
     path_list::PathList,
@@ -133,10 +129,6 @@ pub use language::Location;
 pub use prettier::FORMAT_SUFFIX as TEST_PRETTIER_FORMAT_SUFFIX;
 #[cfg(any(test, feature = "test-support"))]
 pub use prettier::RANGE_FORMAT_SUFFIX as TEST_PRETTIER_RANGE_FORMAT_SUFFIX;
-pub use task_inventory::{
-    BasicContextProvider, ContextProviderWithTasks, GIT_COMMAND_TASK_TAG, Inventory, TaskContexts,
-    TaskSourceKind,
-};
 
 pub use buffer_store::ProjectTransaction;
 pub use format_store::{FormatStore, FormatTarget, FormatTrigger};
@@ -146,14 +138,12 @@ const MAX_PROJECT_SEARCH_HISTORY_SIZE: usize = 500;
 #[derive(Clone, Copy, Debug)]
 pub struct LocalProjectFlags {
     pub init_worktree_trust: bool,
-    pub watch_global_configs: bool,
 }
 
 impl Default for LocalProjectFlags {
     fn default() -> Self {
         Self {
             init_worktree_trust: true,
-            watch_global_configs: true,
         }
     }
 }
@@ -192,7 +182,6 @@ pub struct Project {
     bookmark_store: Entity<BookmarkStore>,
     collab_client: Arc<client::Client>,
     join_project_response_message_id: u32,
-    task_store: Entity<TaskStore>,
     user_store: Entity<UserStore>,
     fs: Arc<dyn Fs>,
     remote_client: Option<Entity<RemoteClient>>,
@@ -912,7 +901,6 @@ impl Project {
         FormatStore::init(&client);
         GitStore::init(&client);
         SettingsObserver::init(&client);
-        TaskStore::init(Some(&client));
         ToolchainStore::init(&client);
         context_server_store::init(cx);
     }
@@ -1002,26 +990,8 @@ impl Project {
                 )
             });
 
-            let task_store = cx.new(|cx| {
-                TaskStore::local(
-                    buffer_store.downgrade(),
-                    worktree_store.clone(),
-                    toolchain_store.read(cx).as_language_toolchain_store(),
-                    environment.clone(),
-                    git_store.clone(),
-                    cx,
-                )
-            });
-
-            let settings_observer = cx.new(|cx| {
-                SettingsObserver::new_local(
-                    fs.clone(),
-                    worktree_store.clone(),
-                    task_store.clone(),
-                    flags.watch_global_configs,
-                    cx,
-                )
-            });
+            let settings_observer =
+                cx.new(|cx| SettingsObserver::new_local(fs.clone(), worktree_store.clone(), cx));
             cx.subscribe(&settings_observer, Self::on_settings_observer_event)
                 .detach();
 
@@ -1066,7 +1036,6 @@ impl Project {
                 snippets,
                 languages,
                 collab_client: client,
-                task_store,
                 user_store,
                 settings_observer,
                 fs,
@@ -1216,23 +1185,9 @@ impl Project {
                 )
             });
 
-            let task_store = cx.new(|cx| {
-                TaskStore::remote(
-                    buffer_store.downgrade(),
-                    worktree_store.clone(),
-                    toolchain_store.read(cx).as_language_toolchain_store(),
-                    remote.read(cx).proto_client(),
-                    REMOTE_SERVER_PROJECT_ID,
-                    git_store.clone(),
-                    cx,
-                )
-            });
-
             let settings_observer = cx.new(|cx| {
                 SettingsObserver::new_remote(
-                    fs.clone(),
                     worktree_store.clone(),
-                    task_store.clone(),
                     Some(remote_proto.clone()),
                     false,
                     cx,
@@ -1289,7 +1244,6 @@ impl Project {
                 snippets,
                 languages,
                 collab_client: client,
-                task_store,
                 user_store,
                 settings_observer,
                 fs,
@@ -1340,7 +1294,6 @@ impl Project {
             WorktreeStore::init_remote(&remote_proto);
             FormatStore::init(&remote_proto);
             SettingsObserver::init(&remote_proto);
-            TaskStore::init(Some(&remote_proto));
             ToolchainStore::init(&remote_proto);
             GitStore::init(&remote_proto);
             AgentServerStore::init_remote(&remote_proto);
@@ -1387,7 +1340,6 @@ impl Project {
             response,
             subscriptions,
             client,
-            false,
             user_store,
             languages,
             fs,
@@ -1400,7 +1352,6 @@ impl Project {
         response: TypedEnvelope<proto::JoinProjectResponse>,
         subscriptions: [EntitySubscription; 6],
         client: Arc<Client>,
-        run_tasks: bool,
         user_store: Entity<UserStore>,
         languages: Arc<LanguageRegistry>,
         fs: Arc<dyn Fs>,
@@ -1452,32 +1403,8 @@ impl Project {
             )
         });
 
-        let task_store = cx.new(|cx| {
-            if run_tasks {
-                TaskStore::remote(
-                    buffer_store.downgrade(),
-                    worktree_store.clone(),
-                    Arc::new(EmptyToolchainStore),
-                    client.clone().into(),
-                    remote_id,
-                    git_store.clone(),
-                    cx,
-                )
-            } else {
-                TaskStore::Noop
-            }
-        });
-
-        let settings_observer = cx.new(|cx| {
-            SettingsObserver::new_remote(
-                fs.clone(),
-                worktree_store.clone(),
-                task_store.clone(),
-                None,
-                true,
-                cx,
-            )
-        });
+        let settings_observer =
+            cx.new(|cx| SettingsObserver::new_remote(worktree_store.clone(), None, true, cx));
 
         let agent_server_store = cx.new(|_cx| AgentServerStore::collab());
         let replica_id = ReplicaId::new(response.payload.replica_id as u16);
@@ -1533,7 +1460,6 @@ impl Project {
                 join_project_response_message_id: response.message_id,
                 languages,
                 user_store: user_store.clone(),
-                task_store,
                 snippets,
                 fs,
                 remote_client: None,
@@ -1959,11 +1885,6 @@ impl Project {
                 }
             }
         }
-    }
-
-    #[inline]
-    pub fn task_store(&self) -> &Entity<TaskStore> {
-        &self.task_store
     }
 
     #[inline]
@@ -2397,9 +2318,6 @@ impl Project {
         self.worktree_store.update(cx, |worktree_store, cx| {
             worktree_store.shared(project_id, self.collab_client.clone().into(), cx);
         });
-        self.task_store.update(cx, |task_store, cx| {
-            task_store.shared(project_id, self.collab_client.clone().into(), cx);
-        });
         self.settings_observer.update(cx, |settings_observer, cx| {
             settings_observer.shared(project_id, self.collab_client.clone().into(), cx)
         });
@@ -2483,9 +2401,6 @@ impl Project {
             self.buffer_store.update(cx, |buffer_store, cx| {
                 buffer_store.forget_shared_buffers();
                 buffer_store.unshared(cx)
-            });
-            self.task_store.update(cx, |task_store, cx| {
-                task_store.unshared(cx);
             });
             self.settings_observer.update(cx, |settings_observer, cx| {
                 settings_observer.unshared(cx);
@@ -3188,24 +3103,6 @@ impl Project {
                 }),
                 Err(_) => {}
             },
-            SettingsObserverEvent::LocalTasksUpdated(result) => match result {
-                Err(InvalidSettingsError::Tasks { message, path }) => {
-                    let message = format!("Failed to set local tasks in {path:?}:\n{message}");
-                    cx.emit(Event::Toast {
-                        notification_id: format!("local-tasks-{path:?}").into(),
-                        link: Some(ToastLink {
-                            label: "Open Tasks Documentation",
-                            url: "https://zed.dev/docs/tasks",
-                        }),
-                        message,
-                    });
-                }
-                Ok(path) => cx.emit(Event::HideToast {
-                    notification_id: format!("local-tasks-{path:?}").into(),
-                }),
-                Err(_) => {}
-            },
-            SettingsObserverEvent::GlobalTasksUpdated(_) => {}
         }
     }
 

@@ -22,7 +22,6 @@ use project::{
     image_store::ImageId,
     project_settings::SettingsObserver,
     search::SearchQuery,
-    task_store::TaskStore,
     trusted_worktrees::{PathTrust, RemoteHostLocation, TrustedWorktrees},
     worktree_store::{WorktreeIdCounter, WorktreeStore},
 };
@@ -52,7 +51,6 @@ pub struct HeadlessProject {
     pub buffer_store: Entity<BufferStore>,
     pub format_store: Entity<FormatStore>,
     _buffer_languages: Entity<BufferLanguages>,
-    pub task_store: Entity<TaskStore>,
     pub agent_server_store: Entity<AgentServerStore>,
     pub context_server_store: Entity<ContextServerStore>,
     pub settings_observer: Entity<SettingsObserver>,
@@ -166,26 +164,8 @@ impl HeadlessProject {
         let buffer_languages =
             cx.new(|cx| BufferLanguages::new(buffer_store.clone(), languages.clone(), cx));
 
-        let task_store = cx.new(|cx| {
-            let mut task_store = TaskStore::local(
-                buffer_store.downgrade(),
-                worktree_store.clone(),
-                toolchain_store.read(cx).as_language_toolchain_store(),
-                environment.clone(),
-                git_store.clone(),
-                cx,
-            );
-            task_store.shared(REMOTE_SERVER_PROJECT_ID, session.clone(), cx);
-            task_store
-        });
         let settings_observer = cx.new(|cx| {
-            let mut observer = SettingsObserver::new_local(
-                fs.clone(),
-                worktree_store.clone(),
-                task_store.clone(),
-                true,
-                cx,
-            );
+            let mut observer = SettingsObserver::new_local(fs.clone(), worktree_store.clone(), cx);
             observer.shared(REMOTE_SERVER_PROJECT_ID, session.clone(), cx);
             observer
         });
@@ -225,7 +205,6 @@ impl HeadlessProject {
         session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &buffer_store);
         session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &cx.entity());
         session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &format_store);
-        session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &task_store);
         session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &toolchain_store);
         session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &settings_observer);
         session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &git_store);
@@ -262,7 +241,6 @@ impl HeadlessProject {
         WorktreeStore::init(&session);
         SettingsObserver::init(&session);
         FormatStore::init(&session);
-        TaskStore::init(Some(&session));
         ToolchainStore::init(&session);
         GitStore::init(&session);
         AgentServerStore::init_headless(&session);
@@ -277,7 +255,6 @@ impl HeadlessProject {
             buffer_store,
             format_store,
             _buffer_languages: buffer_languages,
-            task_store,
             agent_server_store,
             context_server_store,
             languages,
