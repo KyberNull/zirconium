@@ -57,19 +57,9 @@ commit=$(git rev-parse HEAD | cut -c 1-7)
 version_info=$(rustc --version --verbose)
 host_line=$(echo "$version_info" | grep host)
 target_triple=${host_line#*: }
-musl_triple=${target_triple%-gnu}-musl
-remote_server_triple=${REMOTE_SERVER_TARGET:-"${musl_triple}"}
-rustup_installed=false
-if command -v rustup >/dev/null 2>&1; then
-    rustup_installed=true
-fi
 
 # Generate the licenses first, so they can be baked into the binaries
 script/generate-licenses
-
-if "$rustup_installed"; then
-    rustup target add "$remote_server_triple"
-fi
 
 export CC=${CC:-$(which clang)}
 
@@ -84,14 +74,6 @@ else
     export RUSTFLAGS="${RUSTFLAGS:-} -C link-args=-Wl,--disable-new-dtags,-rpath,\$ORIGIN/../lib"
 fi
 cargo build --release --target "${target_triple}" --package zed --package cli
-# Build remote_server in separate invocation to prevent feature unification from other crates
-# from influencing dynamic libraries required by it.
-if [[ "$remote_server_triple" == "$musl_triple" ]]; then
-    export RUSTFLAGS="${RUSTFLAGS:-} -C target-feature=+crt-static"
-    musl_cc_var="CC_$(echo "$remote_server_triple" | tr '-' '_')"
-    export "$musl_cc_var"=musl-gcc
-fi
-cargo build --release --target "${remote_server_triple}" --package remote_server
 
 # Upload debug info to sentry.io
 if ! command -v sentry-cli >/dev/null 2>&1; then
@@ -105,8 +87,7 @@ else
         for attempt in 1 2 3; do
             echo "Attempting sentry upload (attempt $attempt/3)..."
             if sentry-cli debug-files upload --include-sources --wait -p zed -o zed-dev \
-                "${target_dir}/${target_triple}"/release/zed \
-                "${target_dir}/${remote_server_triple}"/release/remote_server; then
+                "${target_dir}/${target_triple}"/release/zed; then
                 echo "Sentry upload successful on attempt $attempt"
                 break
             else
@@ -126,16 +107,6 @@ fi
 # doesn't understand CREL sections produced by newer LLVM.
 llvm-objcopy --strip-debug "${target_dir}/${target_triple}/release/zed"
 llvm-objcopy --strip-debug "${target_dir}/${target_triple}/release/cli"
-llvm-objcopy --strip-debug "${target_dir}/${remote_server_triple}/release/remote_server"
-
-# Ensure that remote_server does not depend on libssl nor libcrypto, as we got rid of these deps.
-if ldd "${target_dir}/${remote_server_triple}/release/remote_server" | grep -q 'libcrypto\|libssl'; then
-    if [[ "$remote_server_triple" == *-musl ]]; then
-        echo "Error: remote_server still depends on libssl or libcrypto" && exit 1
-    else
-        echo "Info: Using non-musl remote-server build."
-    fi
-fi
 
 suffix=""
 if [ "$channel" != "stable" ]; then
@@ -211,4 +182,3 @@ remove_match="zed(-[a-zA-Z0-9]+)?-linux-$(uname -m)\.tar\.gz"
 ls "${target_dir}/release" | grep -E ${remove_match} | xargs -d "\n" -I {} rm -f "${target_dir}/release/{}" || true
 tar -czvf "${target_dir}/release/$archive" -C ${temp_dir} "zed$suffix.app"
 
-gzip -f --stdout --best "${target_dir}/${remote_server_triple}/release/remote_server" > "${target_dir}/zed-remote-server-linux-${arch}.gz"
