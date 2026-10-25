@@ -202,11 +202,6 @@ fn run_visual_tests(project_path: PathBuf, update_baseline: bool) -> Result<()> 
         prompt_store::init(cx);
         let prompt_builder = prompt_store::PromptBuilder::load(app_state.fs.clone(), false, cx);
         language_model::init(cx);
-        client::RefreshLlmTokenListener::register(
-            app_state.client.clone(),
-            app_state.user_store.clone(),
-            cx,
-        );
         language_models::init(app_state.client.clone(), cx);
         git_ui::init(cx);
         project::AgentRegistryStore::init_global(

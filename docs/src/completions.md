@@ -8,7 +8,7 @@ description: Zed's word and snippet completions and edit predictions. Configure 
 Zed supports two sources for completions:
 
 1. "Code Completions" from the words in your open buffers and from [snippets](./snippets.md).
-2. "Edit Predictions" provided by Zed's own Zeta model or by external providers like [GitHub Copilot](#github-copilot).
+2. "Edit Predictions" provided by external providers like [GitHub Copilot](#github-copilot) or by a local model.
 
 ## Code Completions {#code-completions}
 
@@ -31,7 +31,7 @@ For more information, see:
 
 ## Edit Predictions {#edit-predictions}
 
-Zed has built-in support for predicting multiple edits at a time [via Zeta](https://huggingface.co/zed-industries/zeta), Zed's open-source and open-data model.
+Zed supports predicting multiple edits at a time through the configured edit prediction provider.
 Edit predictions appear as you type, and most of the time, you can accept them by pressing `tab`.
 
 See the [edit predictions documentation](./ai/edit-prediction.md) for more information on how to setup and configure Zed's edit predictions.

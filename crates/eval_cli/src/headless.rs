@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use client::{Client, ProxySettings, RefreshLlmTokenListener, UserStore};
+use client::{Client, ProxySettings, UserStore};
 use db::AppDatabase;
 use extension::ExtensionHostProxy;
 use fs::RealFs;
@@ -108,7 +108,6 @@ pub fn init(cx: &mut App) -> Arc<AgentCliAppState> {
     let extension_host_proxy = ExtensionHostProxy::global(cx);
     language_extension::init(extension_host_proxy, languages.clone());
     language_model::init(cx);
-    RefreshLlmTokenListener::register(client.clone(), user_store.clone(), cx);
     language_models::init(client.clone(), cx);
     languages::init(languages.clone(), fs.clone(), node_runtime.clone(), cx);
     prompt_store::init(cx);

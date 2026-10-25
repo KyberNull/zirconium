@@ -1,10 +1,9 @@
-use client::{Client, UserStore};
 use codestral::{CodestralEditPredictionDelegate, load_codestral_api_key};
 use collections::HashMap;
 use copilot::CopilotEditPredictionDelegate;
 use edit_prediction::{EditPredictionModel, ZedEditPredictionDelegate};
 use editor::{EditPredictionRequestTrigger, Editor};
-use gpui::{AnyWindowHandle, App, AppContext as _, Context, Entity, WeakEntity};
+use gpui::{AnyWindowHandle, App, AppContext as _, Context, WeakEntity};
 use language::{
     ZetaVersion,
     language_settings::{
@@ -13,17 +12,15 @@ use language::{
 };
 
 use settings::SettingsStore;
-use std::{cell::RefCell, rc::Rc, sync::Arc};
+use std::{cell::RefCell, rc::Rc};
 use ui::Window;
 
-pub fn init(client: Arc<Client>, user_store: Entity<UserStore>, cx: &mut App) {
-    edit_prediction::EditPredictionStore::global(&client, &user_store, cx);
+pub fn init(cx: &mut App) {
+    edit_prediction::EditPredictionStore::global(cx);
 
     let editors: Rc<RefCell<HashMap<WeakEntity<Editor>, AnyWindowHandle>>> = Rc::default();
     cx.observe_new({
         let editors = editors.clone();
-        let client = client.clone();
-        let user_store = user_store.clone();
         move |editor: &mut Editor, window, cx: &mut Context<Editor>| {
             if !editor.mode().is_full() {
                 return;
@@ -51,8 +48,6 @@ pub fn init(client: Arc<Client>, user_store: Entity<UserStore>, cx: &mut App) {
                 editor,
                 provider_config,
                 EditPredictionRequestTrigger::EditorCreated,
-                &client,
-                user_store.clone(),
                 window,
                 cx,
             );
@@ -61,28 +56,6 @@ pub fn init(client: Arc<Client>, user_store: Entity<UserStore>, cx: &mut App) {
     .detach();
 
     cx.on_action(clear_edit_prediction_store_edit_history);
-
-    cx.subscribe(&user_store, {
-        let editors = editors.clone();
-        let client = client.clone();
-
-        move |user_store, event, cx| match event {
-            client::user::Event::PrivateUserInfoUpdated
-            | client::user::Event::OrganizationChanged => {
-                let provider_config = edit_prediction_provider_config_for_settings(cx);
-                assign_edit_prediction_providers(
-                    &editors,
-                    provider_config,
-                    EditPredictionRequestTrigger::UserInfoChanged,
-                    &client,
-                    user_store,
-                    cx,
-                );
-            }
-            _ => {}
-        }
-    })
-    .detach();
 
     cx.observe_global::<SettingsStore>({
         let mut previous_config = edit_prediction_provider_config_for_settings(cx);
@@ -101,8 +74,6 @@ pub fn init(client: Arc<Client>, user_store: Entity<UserStore>, cx: &mut App) {
                     &editors,
                     new_provider_config,
                     EditPredictionRequestTrigger::ProviderChanged,
-                    &client,
-                    user_store.clone(),
                     cx,
                 );
             }
@@ -117,9 +88,6 @@ fn edit_prediction_provider_config_for_settings(cx: &App) -> Option<EditPredicti
     match provider {
         EditPredictionProvider::None => None,
         EditPredictionProvider::Copilot => Some(EditPredictionProviderConfig::Copilot),
-        EditPredictionProvider::Zed => {
-            Some(EditPredictionProviderConfig::Zed(EditPredictionModel::Zeta))
-        }
         EditPredictionProvider::Codestral => Some(EditPredictionProviderConfig::Codestral),
         EditPredictionProvider::Ollama | EditPredictionProvider::OpenAiCompatibleApi => {
             let custom_settings = if provider == EditPredictionProvider::Ollama {
@@ -139,19 +107,21 @@ fn edit_prediction_provider_config_for_settings(cx: &App) -> Option<EditPredicti
             }
 
             if matches!(format, EditPredictionPromptFormat::Zeta(_)) {
-                Some(EditPredictionProviderConfig::Zed(EditPredictionModel::Zeta))
+                Some(EditPredictionProviderConfig::Store(
+                    EditPredictionModel::Zeta,
+                ))
             } else if format == EditPredictionPromptFormat::Sweep {
-                Some(EditPredictionProviderConfig::Zed(
+                Some(EditPredictionProviderConfig::Store(
                     EditPredictionModel::SweepPrompt,
                 ))
             } else {
-                Some(EditPredictionProviderConfig::Zed(
+                Some(EditPredictionProviderConfig::Store(
                     EditPredictionModel::Fim { format },
                 ))
             }
         }
 
-        EditPredictionProvider::Mercury => Some(EditPredictionProviderConfig::Zed(
+        EditPredictionProvider::Mercury => Some(EditPredictionProviderConfig::Store(
             EditPredictionModel::Mercury,
         )),
     }
@@ -183,7 +153,7 @@ fn infer_prompt_format(model: &str) -> Option<EditPredictionPromptFormat> {
 enum EditPredictionProviderConfig {
     Copilot,
     Codestral,
-    Zed(EditPredictionModel),
+    Store(EditPredictionModel),
 }
 
 impl EditPredictionProviderConfig {
@@ -191,7 +161,7 @@ impl EditPredictionProviderConfig {
         match self {
             EditPredictionProviderConfig::Copilot => "Copilot",
             EditPredictionProviderConfig::Codestral => "Codestral",
-            EditPredictionProviderConfig::Zed(model) => match model {
+            EditPredictionProviderConfig::Store(model) => match model {
                 EditPredictionModel::Zeta => "Zeta",
                 EditPredictionModel::Fim { .. } => "FIM",
                 EditPredictionModel::SweepPrompt => "Sweep Prompt",
@@ -211,8 +181,6 @@ fn assign_edit_prediction_providers(
     editors: &Rc<RefCell<HashMap<WeakEntity<Editor>, AnyWindowHandle>>>,
     provider_config: Option<EditPredictionProviderConfig>,
     trigger: EditPredictionRequestTrigger,
-    client: &Arc<Client>,
-    user_store: Entity<UserStore>,
     cx: &mut App,
 ) {
     if provider_config == Some(EditPredictionProviderConfig::Codestral) {
@@ -221,15 +189,7 @@ fn assign_edit_prediction_providers(
     for (editor, window) in editors.borrow().iter() {
         _ = window.update(cx, |_window, window, cx| {
             _ = editor.update(cx, |editor, cx| {
-                assign_edit_prediction_provider(
-                    editor,
-                    provider_config,
-                    trigger,
-                    client,
-                    user_store.clone(),
-                    window,
-                    cx,
-                );
+                assign_edit_prediction_provider(editor, provider_config, trigger, window, cx);
             })
         });
     }
@@ -239,12 +199,9 @@ fn assign_edit_prediction_provider(
     editor: &mut Editor,
     provider_config: Option<EditPredictionProviderConfig>,
     trigger: EditPredictionRequestTrigger,
-    client: &Arc<Client>,
-    user_store: Entity<UserStore>,
     window: &mut Window,
     cx: &mut Context<Editor>,
 ) {
-    // TODO: Do we really want to collect data only for singleton buffers?
     let singleton_buffer = editor.buffer().read(cx).as_singleton();
 
     match provider_config {
@@ -254,7 +211,7 @@ fn assign_edit_prediction_provider(
             );
         }
         Some(EditPredictionProviderConfig::Copilot) => {
-            let ep_store = edit_prediction::EditPredictionStore::global(client, &user_store, cx);
+            let ep_store = edit_prediction::EditPredictionStore::global(cx);
             let Some(project) = editor.project().cloned() else {
                 return;
             };
@@ -272,24 +229,12 @@ fn assign_edit_prediction_provider(
             }
         }
         Some(EditPredictionProviderConfig::Codestral) => {
-            let http_client = client.http_client();
+            let http_client = cx.http_client();
             let provider = cx.new(|_| CodestralEditPredictionDelegate::new(http_client));
             editor.set_edit_prediction_provider(Some(provider), trigger, window, cx);
         }
-        Some(EditPredictionProviderConfig::Zed(model)) => {
-            let ep_store = edit_prediction::EditPredictionStore::global(client, &user_store, cx);
-
-            if let Some(organization_configuration) =
-                user_store.read(cx).current_organization_configuration()
-            {
-                if !organization_configuration.edit_prediction.is_enabled {
-                    editor.set_edit_prediction_provider::<ZedEditPredictionDelegate>(
-                        None, trigger, window, cx,
-                    );
-
-                    return;
-                }
-            }
+        Some(EditPredictionProviderConfig::Store(model)) => {
+            let ep_store = edit_prediction::EditPredictionStore::global(cx);
 
             if let Some(project) = editor.project() {
                 ep_store.update(cx, |ep_store, cx| {
@@ -299,15 +244,7 @@ fn assign_edit_prediction_provider(
                     }
                 });
 
-                let provider = cx.new(|cx| {
-                    ZedEditPredictionDelegate::new(
-                        project.clone(),
-                        singleton_buffer,
-                        &client,
-                        &user_store,
-                        cx,
-                    )
-                });
+                let provider = cx.new(|cx| ZedEditPredictionDelegate::new(project.clone(), cx));
                 editor.set_edit_prediction_provider(Some(provider), trigger, window, cx);
             }
         }
@@ -326,7 +263,6 @@ mod tests {
     async fn test_sweep_prompt_format_routes_to_sweep_prompt_model(cx: &mut TestAppContext) {
         let app_state = cx.update(|cx| {
             let app_state = AppState::test(cx);
-            client::init(&app_state.client, cx);
             language_model::init(cx);
             app_state
         });
@@ -357,7 +293,7 @@ mod tests {
         assert!(
             matches!(
                 config,
-                Some(EditPredictionProviderConfig::Zed(
+                Some(EditPredictionProviderConfig::Store(
                     EditPredictionModel::SweepPrompt,
                 ))
             ),
@@ -371,25 +307,16 @@ mod tests {
     }
 
     #[gpui::test]
-    async fn test_subscribe_uses_stale_provider_config_after_settings_change(
+    async fn test_provider_is_assigned_to_existing_editors_after_settings_change(
         cx: &mut TestAppContext,
     ) {
-        let app_state = cx.update(|cx| {
+        cx.update(|cx| {
             let app_state = AppState::test(cx);
-            client::init(&app_state.client, cx);
             language_model::init(cx);
-            client::RefreshLlmTokenListener::register(
-                app_state.client.clone(),
-                app_state.user_store.clone(),
-                cx,
-            );
             editor::init(cx);
-            app_state
+            drop(app_state);
         });
 
-        // Override the default provider to None so the subscribe closure
-        // captures None at init time. (The test default is Zed/Zeta1, which
-        // is a no-op on project-less editors and would mask the bug.)
         cx.update(|cx| {
             cx.update_global::<SettingsStore, _>(|store: &mut SettingsStore, cx| {
                 store.update_user_settings(cx, |settings| {
@@ -403,10 +330,9 @@ mod tests {
         });
 
         cx.update(|cx| {
-            init(app_state.client.clone(), app_state.user_store.clone(), cx);
+            init(cx);
         });
 
-        // Create an editor in a window so observe_new registers it.
         let editor = cx.add_window(|window, cx| {
             let buffer = cx.new(|_cx| MultiBuffer::new(language::Capability::ReadWrite));
             Editor::new(editor::EditorMode::full(), buffer, None, window, cx)
@@ -421,8 +347,6 @@ mod tests {
             })
             .unwrap();
 
-        // Change settings to Codestral. The observe_global closure updates its
-        // own copy of provider_config and assigns Codestral to all editors.
         cx.update(|cx| {
             cx.update_global::<SettingsStore, _>(|store: &mut SettingsStore, cx| {
                 store.update_user_settings(cx, |settings| {
@@ -440,25 +364,6 @@ mod tests {
                 assert!(
                     editor.edit_prediction_provider().is_some(),
                     "editor should have a provider after changing settings to Codestral"
-                );
-            })
-            .unwrap();
-
-        // Emit PrivateUserInfoUpdated. The subscribe closure should use the
-        // CURRENT provider config (Codestral), but due to the bug it uses the
-        // stale init-time value (None) and clears the provider.
-        cx.update(|cx| {
-            app_state.user_store.update(cx, |_, cx| {
-                cx.emit(client::user::Event::PrivateUserInfoUpdated);
-            });
-        });
-        cx.run_until_parked();
-
-        editor
-            .update(cx, |editor, _window, _cx| {
-                assert!(
-                    editor.edit_prediction_provider().is_some(),
-                    "BUG: subscribe closure used stale provider_config (None) instead of current (Codestral)"
                 );
             })
             .unwrap();

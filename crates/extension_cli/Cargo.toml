@@ -15,7 +15,6 @@ path = "src/main.rs"
 [dependencies]
 anyhow.workspace = true
 clap = { workspace = true, features = ["derive"] }
-cloud_api_types.workspace = true
 env_logger.workspace = true
 extension.workspace = true
 futures.workspace = true

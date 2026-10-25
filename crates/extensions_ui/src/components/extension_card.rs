@@ -1,6 +1,6 @@
 use std::{collections::BTreeSet, sync::Arc};
 
-use cloud_api_types::{ExtensionApiManifest, ExtensionMetadata, ExtensionProvides};
+use extension::{ExtensionApiManifest, ExtensionMetadata, ExtensionProvides};
 use extension::{ExtensionManifest, SchemaVersion};
 use extension_host::{ExtensionOperation, ExtensionStore};
 use gpui::{Anchor, ElementId, Entity, Point, SharedString, prelude::*};

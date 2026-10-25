@@ -47,4 +47,4 @@ Zed has several AI-powered workflows:
 
 Use [AI Quick Start](./quick-start.md) to choose the right setup path, configure model access, add agents or MCP servers, control tools, and turn AI off.
 
-For privacy, provider data boundaries, and opt-in data sharing, see [AI Privacy](./privacy-and-security.md) and [Feedback and Training Data](./ai-improvement.md).
+For privacy and provider data boundaries, see [AI Privacy](./privacy-and-security.md).

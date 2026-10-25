@@ -671,7 +671,7 @@ List of `string` values.
 
 - Description: How long Zed waits after you stop typing before automatically requesting an edit prediction.
 - Setting: `edit_predictions.<provider>.prediction_debounce`
-- Default: `75` for GitHub Copilot, `150` for Codestral, and `0` for Zed, Mercury, Ollama, and OpenAI-compatible APIs.
+- Default: `75` for GitHub Copilot, `150` for Codestral, and `0` for Mercury, Ollama, and OpenAI-compatible APIs.
 
 **Options**
 
@@ -1814,7 +1814,7 @@ There is an experimental setting that completely hides the status bar. This caus
 ```json [settings]
 {
   "edit_predictions": {
-    "provider": "zed"
+    "provider": "none"
   }
 }
 ```
@@ -1823,21 +1823,11 @@ There is an experimental setting that completely hides the status bar. This caus
 
 - Description: Which edit prediction provider to use
 - Setting: `edit_prediction_provider`
-- Default: `"zed"`
+- Default: `"none"`
 
 **Options**
 
-1. Use Zeta as the edit prediction provider:
-
-```json [settings]
-{
-  "edit_predictions": {
-    "provider": "zed"
-  }
-}
-```
-
-2. Use Copilot as the edit prediction provider:
+1. Use Copilot as the edit prediction provider:
 
 ```json [settings]
 {
@@ -1847,7 +1837,7 @@ There is an experimental setting that completely hides the status bar. This caus
 }
 ```
 
-3. Turn off edit predictions across all providers
+2. Turn off edit predictions across all providers
 
 ```json [settings]
 {

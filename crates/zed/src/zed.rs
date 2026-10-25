@@ -22,7 +22,6 @@ pub use app_menus::*;
 use assets::Assets;
 
 use breadcrumbs::Breadcrumbs;
-use client::zed_urls;
 use collections::VecDeque;
 use editor::{Editor, MultiBuffer};
 use extension_host::ExtensionStore;
@@ -100,8 +99,8 @@ use workspace::{
 };
 use workspace::{Pane, notifications::DetachAndPromptErr};
 use zed_actions::{
-    About, GetMerch, OpenAccountSettings, OpenBrowser, OpenDocs, OpenProjectTasks,
-    OpenServerSettings, OpenSettingsFile, OpenStatusPage, OpenZedUrl, Quit,
+    About, GetMerch, OpenBrowser, OpenDocs, OpenProjectTasks, OpenServerSettings, OpenSettingsFile,
+    OpenStatusPage, OpenZedUrl, Quit,
 };
 
 const DOCS_URL: &str = "https://zed.dev/docs/";
@@ -255,11 +254,6 @@ pub fn init(cx: &mut App) {
                 window,
                 cx,
             );
-        });
-    })
-    .on_action(|_: &OpenAccountSettings, cx| {
-        with_active_or_new_workspace(cx, |_, _, cx| {
-            cx.open_url(&zed_urls::account_url(cx));
         });
     })
     .on_action(|_: &OpenTasks, cx| {
@@ -555,7 +549,6 @@ pub fn initialize_workspace(app_state: Arc<AppState>, cx: &mut App) {
         let edit_prediction_ui = cx.new(|cx| {
             edit_prediction_ui::EditPredictionButton::new(
                 app_state.fs.clone(),
-                app_state.user_store.clone(),
                 edit_prediction_menu_handle.clone(),
                 workspace.project().clone(),
                 cx,
@@ -2381,7 +2374,6 @@ const AI_ACTION_NAMESPACES: &[&str] = &[
     "assistant::",
     "edit_prediction::",
     "inline_assistant::",
-    "zeta::",
 ];
 
 fn is_ai_keybinding(binding: &KeyBinding) -> bool {
@@ -5927,11 +5919,6 @@ mod tests {
             );
             image_viewer::init(cx);
             language_model::init(cx);
-            client::RefreshLlmTokenListener::register(
-                app_state.client.clone(),
-                app_state.user_store.clone(),
-                cx,
-            );
             language_models::init(app_state.client.clone(), cx);
             web_search::init(cx);
             let prompt_builder = PromptBuilder::load(app_state.fs.clone(), false, cx);

@@ -1,30 +1,14 @@
 use super::{Client, Status, TypedEnvelope, proto};
 use anyhow::{Context as _, Result};
-use chrono::{DateTime, Utc};
-use cloud_api_client::websocket_protocol::MessageToClient;
-use cloud_api_client::{
-    GetAuthenticatedUserResponse, KnownOrUnknown, Organization, OrganizationId, Plan, PlanInfo,
-    UpdateSystemSettingsBody,
-};
-use cloud_api_types::{
-    EDIT_PREDICTIONS_USAGE_AMOUNT_HEADER_NAME, EDIT_PREDICTIONS_USAGE_LIMIT_HEADER_NAME,
-    OrganizationConfiguration, UsageLimit,
-};
 use collections::{HashMap, HashSet, hash_map::Entry};
-use derive_more::Deref;
-use feature_flags::FeatureFlagAppExt;
 use futures::{Future, StreamExt, channel::mpsc};
 use gpui::{
-    App, AppContext as _, AsyncApp, Context, Entity, EventEmitter, SharedString, SharedUri, Task,
-    TaskExt, WeakEntity,
+    App, AsyncApp, Context, Entity, EventEmitter, SharedString, SharedUri, Task, TaskExt,
+    WeakEntity,
 };
-use http_client::http::{HeaderMap, HeaderValue};
 use postage::{sink::Sink, watch};
 use rpc::proto::{RequestMessage, UsersResponse};
-use std::{
-    str::FromStr as _,
-    sync::{Arc, Weak},
-};
+use std::sync::{Arc, Weak};
 use text::ReplicaId;
 use util::{ResultExt, TryFutureExt as _};
 
@@ -110,13 +94,7 @@ pub struct UserStore {
     users: HashMap<u64, Arc<User>>,
     participant_indices: HashMap<u64, ParticipantIndex>,
     update_contacts_tx: mpsc::UnboundedSender<UpdateContacts>,
-    edit_prediction_usage: Option<EditPredictionUsage>,
-    plan_info: Option<PlanInfo>,
     current_user: watch::Receiver<Option<Arc<User>>>,
-    current_organization: Option<Arc<Organization>>,
-    organizations: Vec<Arc<Organization>>,
-    plans_by_organization: HashMap<OrganizationId, Plan>,
-    configuration_by_organization: HashMap<OrganizationId, OrganizationConfiguration>,
     contacts: Vec<Arc<Contact>>,
     incoming_contact_requests: Vec<Arc<User>>,
     outgoing_contact_requests: Vec<Arc<User>>,
@@ -124,7 +102,6 @@ pub struct UserStore {
     client: Weak<Client>,
     _maintain_contacts: Task<()>,
     _maintain_current_user: Task<Result<()>>,
-    _handle_sign_out: Task<()>,
     weak_self: WeakEntity<Self>,
 }
 
@@ -142,8 +119,6 @@ pub enum Event {
     ShowContacts,
     ParticipantIndicesChanged,
     PrivateUserInfoUpdated,
-    PlanUpdated,
-    OrganizationChanged,
 }
 
 #[derive(Clone, Copy)]
@@ -161,40 +136,18 @@ enum UpdateContacts {
     Clear(postage::barrier::Sender),
 }
 
-#[derive(Debug, Clone, Copy, Deref)]
-pub struct EditPredictionUsage(pub RequestUsage);
-
-#[derive(Debug, Clone, Copy)]
-pub struct RequestUsage {
-    pub limit: UsageLimit,
-    pub amount: i32,
-}
-
 impl UserStore {
     pub fn new(client: Arc<Client>, cx: &Context<Self>) -> Self {
         let (mut current_user_tx, current_user_rx) = watch::channel();
-        let (sign_out_tx, mut sign_out_rx) = mpsc::unbounded();
         let (update_contacts_tx, mut update_contacts_rx) = mpsc::unbounded();
         let rpc_subscriptions = vec![
             client.add_message_handler(cx.weak_entity(), Self::handle_update_contacts),
             client.add_message_handler(cx.weak_entity(), Self::handle_show_contacts),
         ];
 
-        client.sign_out_tx.lock().replace(sign_out_tx);
-        client.add_message_to_client_handler({
-            let this = cx.weak_entity();
-            move |message, cx| Self::handle_message_to_client(this.clone(), message, cx)
-        });
-
         Self {
             users: Default::default(),
             current_user: current_user_rx,
-            current_organization: None,
-            organizations: Vec::new(),
-            plans_by_organization: HashMap::default(),
-            configuration_by_organization: HashMap::default(),
-            plan_info: None,
-            edit_prediction_usage: None,
             contacts: Default::default(),
             incoming_contact_requests: Default::default(),
             participant_indices: Default::default(),
@@ -222,58 +175,23 @@ impl UserStore {
                         return Ok(());
                     };
                     match status {
-                        Status::Authenticated
-                        | Status::Reauthenticated
-                        | Status::Connected { .. } => {
+                        Status::Connected { .. } => {
                             if let Some(user_id) = client.user_id() {
-                                let system_id =
-                                    client.telemetry().system_id().map(|id| id.to_string());
-                                let response = client
-                                    .cloud_client()
-                                    .get_authenticated_user(system_id)
+                                let user = this
+                                    .update(cx, |this, cx| this.get_user(user_id, cx))?
                                     .await
                                     .log_err();
+                                current_user_tx.send(user).await.ok();
 
-                                let current_user_and_response = if let Some(response) = response {
-                                    let user = Arc::new(User {
-                                        legacy_id: user_id,
-                                        username: response.user.username.clone().into(),
-                                        avatar_uri: response.user.avatar_url.clone().into(),
-                                        name: response.user.name.clone(),
-                                    });
-
-                                    Some((user, response))
-                                } else {
-                                    None
-                                };
-                                current_user_tx
-                                    .send(
-                                        current_user_and_response
-                                            .as_ref()
-                                            .map(|(user, _)| user.clone()),
-                                    )
-                                    .await
-                                    .ok();
-
-                                cx.update(|cx| {
-                                    if let Some((user, response)) = current_user_and_response {
-                                        this.update(cx, |this, cx| {
-                                            this.users.insert(user_id, user);
-                                            this.update_authenticated_user(response, cx)
-                                        })
-                                    } else {
-                                        anyhow::Ok(())
-                                    }
+                                this.update(cx, |_, cx| {
+                                    cx.emit(Event::PrivateUserInfoUpdated);
+                                    cx.notify();
                                 })?;
-
-                                this.update(cx, |_, cx| cx.notify())?;
                             }
                         }
                         Status::SignedOut => {
                             current_user_tx.send(None).await.ok();
                             this.update(cx, |this, cx| {
-                                this.clear_organizations();
-                                this.clear_plan_and_usage();
                                 cx.emit(Event::PrivateUserInfoUpdated);
                                 cx.notify();
                                 this.clear_contacts()
@@ -291,19 +209,6 @@ impl UserStore {
                     }
                 }
                 Ok(())
-            }),
-            _handle_sign_out: cx.spawn(async move |this, cx| {
-                while let Some(()) = sign_out_rx.next().await {
-                    let Some(client) = this
-                        .read_with(cx, |this, _cx| this.client.upgrade())
-                        .ok()
-                        .flatten()
-                    else {
-                        break;
-                    };
-
-                    client.sign_out(cx).await;
-                }
             }),
             pending_contact_requests: Default::default(),
             weak_self: cx.weak_entity(),
@@ -687,250 +592,6 @@ impl UserStore {
         self.current_user.borrow().clone()
     }
 
-    pub fn current_organization(&self) -> Option<Arc<Organization>> {
-        self.current_organization.clone()
-    }
-
-    pub fn set_current_organization(
-        &mut self,
-        organization: Arc<Organization>,
-        cx: &mut Context<Self>,
-    ) -> Task<Result<()>> {
-        let is_same_organization = self
-            .current_organization
-            .as_ref()
-            .is_some_and(|current| current.id == organization.id);
-
-        if is_same_organization {
-            return Task::ready(Ok(()));
-        }
-
-        let organization_id = organization.id.clone();
-        self.current_organization.replace(organization);
-        cx.emit(Event::OrganizationChanged);
-        cx.notify();
-
-        let Some(client) = self.client.upgrade() else {
-            return Task::ready(Ok(()));
-        };
-        let Some(system_id) = client.telemetry().system_id().map(|id| id.to_string()) else {
-            // Without a system ID we have no addressable target row on the
-            // server, so the selection stays purely session-local.
-            return Task::ready(Ok(()));
-        };
-        let cloud_client = client.cloud_client();
-
-        cx.background_spawn(async move {
-            let body = UpdateSystemSettingsBody {
-                selected_organization_id: Some(organization_id),
-            };
-            cloud_client
-                .update_system_settings(system_id, body)
-                .await
-                .context("failed to persist selected organization")?;
-            Ok(())
-        })
-    }
-
-    pub fn organizations(&self) -> &Vec<Arc<Organization>> {
-        &self.organizations
-    }
-
-    pub fn plan_for_organization(&self, organization_id: &OrganizationId) -> Option<Plan> {
-        self.plans_by_organization.get(organization_id).copied()
-    }
-
-    pub fn current_organization_configuration(&self) -> Option<&OrganizationConfiguration> {
-        let current_organization = self.current_organization.as_ref()?;
-
-        self.configuration_by_organization
-            .get(&current_organization.id)
-    }
-
-    #[cfg(any(test, feature = "test-support"))]
-    pub fn set_current_organization_configuration_for_test(
-        &mut self,
-        organization: Arc<Organization>,
-        configuration: OrganizationConfiguration,
-        cx: &mut Context<Self>,
-    ) {
-        self.current_organization = Some(organization.clone());
-        self.organizations = vec![organization.clone()];
-        self.configuration_by_organization
-            .insert(organization.id.clone(), configuration);
-        cx.emit(Event::OrganizationChanged);
-        cx.notify();
-    }
-
-    pub fn plan(&self) -> Option<Plan> {
-        #[cfg(debug_assertions)]
-        if let Ok(plan) = std::env::var("ZED_SIMULATE_PLAN").as_ref() {
-            use cloud_api_client::Plan;
-
-            return match plan.as_str() {
-                "free" => Some(Plan::ZedFree),
-                "trial" => Some(Plan::ZedProTrial),
-                "pro" => Some(Plan::ZedPro),
-                _ => {
-                    panic!("ZED_SIMULATE_PLAN must be one of 'free', 'trial', or 'pro'");
-                }
-            };
-        }
-
-        if let Some(organization) = &self.current_organization {
-            return self.plan_for_organization(&organization.id);
-        }
-
-        self.plan_info.as_ref().map(|info| info.plan())
-    }
-
-    pub fn subscription_period(&self) -> Option<(DateTime<Utc>, DateTime<Utc>)> {
-        self.plan_info
-            .as_ref()
-            .and_then(|plan| plan.subscription_period)
-            .map(|subscription_period| {
-                (
-                    subscription_period.started_at.0,
-                    subscription_period.ended_at.0,
-                )
-            })
-    }
-
-    pub fn trial_started_at(&self) -> Option<DateTime<Utc>> {
-        self.plan_info
-            .as_ref()
-            .and_then(|plan| plan.trial_started_at)
-            .map(|trial_started_at| trial_started_at.0)
-    }
-
-    /// Returns whether the user's account is too new to use the service.
-    ///
-    /// This only applies when operating under the user's personal organization,
-    /// not a business organization.
-    pub fn account_too_young(&self) -> bool {
-        if let Some(org) = &self.current_organization {
-            if !org.is_personal {
-                return false;
-            }
-        }
-
-        self.plan_info
-            .as_ref()
-            .map(|plan| plan.is_account_too_young)
-            .unwrap_or_default()
-    }
-
-    /// Returns whether the current user has overdue invoices and usage should be blocked.
-    pub fn has_overdue_invoices(&self) -> bool {
-        self.plan_info
-            .as_ref()
-            .map(|plan| plan.has_overdue_invoices)
-            .unwrap_or_default()
-    }
-
-    pub fn edit_prediction_usage(&self) -> Option<EditPredictionUsage> {
-        self.edit_prediction_usage
-    }
-
-    pub fn update_edit_prediction_usage(
-        &mut self,
-        usage: EditPredictionUsage,
-        cx: &mut Context<Self>,
-    ) {
-        self.edit_prediction_usage = Some(usage);
-        cx.notify();
-    }
-
-    pub fn clear_organizations(&mut self) {
-        self.organizations.clear();
-        self.current_organization = None;
-    }
-
-    pub fn clear_plan_and_usage(&mut self) {
-        self.plan_info = None;
-        self.edit_prediction_usage = None;
-    }
-
-    fn update_authenticated_user(
-        &mut self,
-        response: GetAuthenticatedUserResponse,
-        cx: &mut Context<Self>,
-    ) {
-        let staff = response.user.is_staff && !*feature_flags::ZED_DISABLE_STAFF;
-        cx.update_flags(staff, response.feature_flags);
-        if let Some(client) = self.client.upgrade() {
-            client
-                .telemetry
-                .set_authenticated_user_info(Some(response.user.metrics_id.clone()), staff);
-        }
-
-        self.organizations = response.organizations.into_iter().map(Arc::new).collect();
-
-        self.current_organization = response
-            .default_organization_id
-            .and_then(|default_organization_id| {
-                self.organizations
-                    .iter()
-                    .find(|organization| organization.id == default_organization_id)
-                    .cloned()
-            })
-            .or_else(|| self.organizations.first().cloned());
-        self.plans_by_organization = response
-            .plans_by_organization
-            .into_iter()
-            .map(|(organization_id, plan)| {
-                let plan = match plan {
-                    KnownOrUnknown::Known(plan) => plan,
-                    KnownOrUnknown::Unknown(_) => {
-                        // If we get a plan that we don't recognize, fall back to the Free plan.
-                        Plan::ZedFree
-                    }
-                };
-
-                (organization_id, plan)
-            })
-            .collect();
-        self.configuration_by_organization =
-            response.configuration_by_organization.into_iter().collect();
-
-        self.edit_prediction_usage = Some(EditPredictionUsage(RequestUsage {
-            limit: response.plan.usage.edit_predictions.limit,
-            amount: response.plan.usage.edit_predictions.used as i32,
-        }));
-        self.plan_info = Some(response.plan);
-        cx.emit(Event::PrivateUserInfoUpdated);
-    }
-
-    fn handle_message_to_client(this: WeakEntity<Self>, message: &MessageToClient, cx: &App) {
-        cx.spawn(async move |cx| {
-            match message {
-                MessageToClient::UserUpdated => {
-                    let (cloud_client, system_id) = cx
-                        .update(|cx| {
-                            this.read_with(cx, |this, _cx| {
-                                this.client.upgrade().map(|client| {
-                                    let system_id =
-                                        client.telemetry().system_id().map(|id| id.to_string());
-                                    (client.cloud_client(), system_id)
-                                })
-                            })
-                        })?
-                        .ok_or(anyhow::anyhow!("Failed to get Cloud client"))?;
-
-                    let response = cloud_client.get_authenticated_user(system_id).await?;
-                    cx.update(|cx| {
-                        this.update(cx, |this, cx| {
-                            this.update_authenticated_user(response, cx);
-                        })
-                    })?;
-                }
-            }
-
-            anyhow::Ok(())
-        })
-        .detach_and_log_err(cx);
-    }
-
     pub fn watch_current_user(&self) -> watch::Receiver<Option<Arc<User>>> {
         self.current_user.clone()
     }
@@ -1044,42 +705,5 @@ impl Collaborator {
             committer_name: message.committer_name,
             committer_email: message.committer_email,
         })
-    }
-}
-
-impl RequestUsage {
-    pub fn over_limit(&self) -> bool {
-        match self.limit {
-            UsageLimit::Limited(limit) => self.amount >= limit,
-            UsageLimit::Unlimited => false,
-        }
-    }
-
-    fn from_headers(
-        limit_name: &str,
-        amount_name: &str,
-        headers: &HeaderMap<HeaderValue>,
-    ) -> Result<Self> {
-        let limit = headers
-            .get(limit_name)
-            .with_context(|| format!("missing {limit_name:?} header"))?;
-        let limit = UsageLimit::from_str(limit.to_str()?)?;
-
-        let amount = headers
-            .get(amount_name)
-            .with_context(|| format!("missing {amount_name:?} header"))?;
-        let amount = amount.to_str()?.parse::<i32>()?;
-
-        Ok(Self { limit, amount })
-    }
-}
-
-impl EditPredictionUsage {
-    pub fn from_headers(headers: &HeaderMap<HeaderValue>) -> Result<Self> {
-        Ok(Self(RequestUsage::from_headers(
-            EDIT_PREDICTIONS_USAGE_LIMIT_HEADER_NAME,
-            EDIT_PREDICTIONS_USAGE_AMOUNT_HEADER_NAME,
-            headers,
-        )?))
     }
 }

@@ -18,7 +18,7 @@ use agent_ui::AgentPanel;
 use anyhow::{Context as _, Result};
 use clap::Parser;
 use cli::FORCE_CLI_MODE_ENV_VAR_NAME;
-use client::{Client, ProxySettings, RefreshLlmTokenListener, UserStore, parse_zed_link};
+use client::{Client, ProxySettings, UserStore, parse_zed_link};
 use collections::HashMap;
 use crashes::InitCrashHandler;
 use db::kvp::{GlobalKeyValueStore, KeyValueStore};
@@ -672,11 +672,6 @@ fn main() {
 
         copilot_ui::init(&app_state, cx);
         language_model::init(cx);
-        RefreshLlmTokenListener::register(
-            app_state.client.clone(),
-            app_state.user_store.clone(),
-            cx,
-        );
         language_models::init(app_state.client.clone(), cx);
         acp_tools::init(cx);
         zed::telemetry_log::init(cx);
@@ -684,7 +679,7 @@ fn main() {
         edit_prediction_ui::init(cx);
         web_search::init(cx);
         snippet_provider::init(cx);
-        edit_prediction_registry::init(app_state.client.clone(), app_state.user_store.clone(), cx);
+        edit_prediction_registry::init(cx);
         let prompt_builder = PromptBuilder::load(app_state.fs.clone(), stdout_is_a_pty(), cx);
         project::AgentRegistryStore::init_global(
             cx,
@@ -1229,14 +1224,8 @@ fn handle_open_request(request: OpenRequest, app_state: Arc<AppState>, cx: &mut 
 }
 
 async fn authenticate(client: Arc<Client>, cx: &AsyncApp) -> Result<()> {
-    if stdout_is_a_pty() {
-        if client::IMPERSONATE_LOGIN.is_some() {
-            client.sign_in_with_optional_connect(false, cx).await?;
-        } else if client.has_credentials(cx).await {
-            client.sign_in_with_optional_connect(true, cx).await?;
-        }
-    } else if client.has_credentials(cx).await {
-        client.sign_in_with_optional_connect(true, cx).await?;
+    if client.has_credentials(cx).await {
+        client.sign_in(true, cx).await?;
     }
 
     Ok(())

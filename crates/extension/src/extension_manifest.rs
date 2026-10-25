@@ -4,14 +4,13 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use anyhow::{Context as _, Result, anyhow, bail};
-use cloud_api_types::ExtensionProvides;
 use collections::{BTreeMap, BTreeSet, HashMap};
 use fs::Fs;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use util::rel_path::RelPathBuf;
 
-use crate::ExtensionCapability;
+use crate::{ExtensionCapability, ExtensionProvides};
 
 /// This is the old version of the extension manifest, from when it was `extension.json`.
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
