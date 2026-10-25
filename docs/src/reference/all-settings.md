@@ -840,7 +840,6 @@ List of `string` values
 {
   "gutter": {
     "line_numbers": true,
-    "runnables": true,
     "breakpoints": true,
     "folds": true,
     "min_line_number_digits": 4,
@@ -852,7 +851,6 @@ List of `string` values
 **Options**
 
 - `line_numbers`: Whether to show line numbers in the gutter
-- `runnables`: Whether to show runnable buttons in the gutter
 - `breakpoints`: Whether to show breakpoints in the gutter
 - `folds`: Whether to show fold buttons in the gutter
 - `min_line_number_digits`: Minimum number of characters to reserve space for in the gutter

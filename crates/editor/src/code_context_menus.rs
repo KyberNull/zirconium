@@ -13,7 +13,7 @@ use markdown::{CopyButtonVisibility, Markdown, MarkdownElement};
 use multi_buffer::Anchor;
 use ordered_float::OrderedFloat;
 use project::CompletionDocumentation;
-use project::{Completion, CompletionGroup, TaskSourceKind};
+use project::{Completion, CompletionGroup};
 use project::{CompletionDisplayOptions, CompletionSource};
 
 use std::sync::Arc;
@@ -25,7 +25,6 @@ use std::{
     ops::Range,
     rc::Rc,
 };
-use task::ResolvedTask;
 use ui::{
     Divider, ListItem, ListSubHeader, Popover, ScrollAxes, Scrollbars, Tooltip, WithScrollbar,
     prelude::*,
@@ -33,10 +32,10 @@ use ui::{
 use util::ResultExt;
 
 use crate::hover_popover::{hover_markdown_style, open_markdown_url};
-use crate::{CodeActionSource, EditorSettings};
+use crate::EditorSettings;
 use crate::{
-    CompletionId, CompletionProvider, DisplayRow, Editor, EditorStyle, ResolvedTasks,
-    actions::{ConfirmCodeAction, ConfirmCompletion},
+    CompletionId, CompletionProvider, DisplayRow, Editor, EditorStyle,
+    actions::ConfirmCompletion,
     split_words, styled_runs_for_code_label,
 };
 use collections::{HashSet, VecDeque};
@@ -87,7 +86,6 @@ impl CompletionMenuEntry {
 
 pub enum CodeContextMenu {
     Completions(CompletionsMenu),
-    CodeActions(CodeActionsMenu),
 }
 
 impl CodeContextMenu {
@@ -100,7 +98,6 @@ impl CodeContextMenu {
         if self.visible() {
             match self {
                 CodeContextMenu::Completions(menu) => menu.select_first(provider, window, cx),
-                CodeContextMenu::CodeActions(menu) => menu.select_first(cx),
             }
             true
         } else {
@@ -117,7 +114,6 @@ impl CodeContextMenu {
         if self.visible() {
             match self {
                 CodeContextMenu::Completions(menu) => menu.select_prev(provider, window, cx),
-                CodeContextMenu::CodeActions(menu) => menu.select_prev(cx),
             }
             true
         } else {
@@ -134,7 +130,6 @@ impl CodeContextMenu {
         if self.visible() {
             match self {
                 CodeContextMenu::Completions(menu) => menu.select_next(provider, window, cx),
-                CodeContextMenu::CodeActions(menu) => menu.select_next(cx),
             }
             true
         } else {
@@ -151,7 +146,6 @@ impl CodeContextMenu {
         if self.visible() {
             match self {
                 CodeContextMenu::Completions(menu) => menu.select_last(provider, window, cx),
-                CodeContextMenu::CodeActions(menu) => menu.select_last(cx),
             }
             true
         } else {
@@ -162,14 +156,12 @@ impl CodeContextMenu {
     pub fn visible(&self) -> bool {
         match self {
             CodeContextMenu::Completions(menu) => menu.visible(),
-            CodeContextMenu::CodeActions(menu) => menu.visible(),
         }
     }
 
     pub fn origin(&self) -> ContextMenuOrigin {
         match self {
             CodeContextMenu::Completions(menu) => menu.origin(),
-            CodeContextMenu::CodeActions(menu) => menu.origin(),
         }
     }
 
@@ -184,9 +176,6 @@ impl CodeContextMenu {
             CodeContextMenu::Completions(menu) => {
                 menu.render(style, max_height_in_lines, window, cx)
             }
-            CodeContextMenu::CodeActions(menu) => {
-                menu.render(style, max_height_in_lines, window, cx)
-            }
         }
     }
 
@@ -198,7 +187,6 @@ impl CodeContextMenu {
     ) -> Option<AnyElement> {
         match self {
             CodeContextMenu::Completions(menu) => menu.render_aside(max_size, window, cx),
-            CodeContextMenu::CodeActions(menu) => menu.render_aside(max_size, window, cx),
         }
     }
 
@@ -208,7 +196,6 @@ impl CodeContextMenu {
                 .get_or_create_entry_markdown(completions_menu.selected_item, cx)
                 .as_ref()
                 .is_some_and(|markdown| markdown.focus_handle(cx).contains_focused(window, cx)),
-            CodeContextMenu::CodeActions(_) => false,
         }
     }
 
@@ -222,14 +209,12 @@ impl CodeContextMenu {
             CodeContextMenu::Completions(completions_menu) => {
                 completions_menu.scroll_aside(scroll_amount, window, cx)
             }
-            CodeContextMenu::CodeActions(_) => (),
         }
     }
 
     pub fn primary_scroll_handle(&self) -> UniformListScrollHandle {
         match self {
             CodeContextMenu::Completions(menu) => menu.scroll_handle.clone(),
-            CodeContextMenu::CodeActions(menu) => menu.scroll_handle.clone(),
         }
     }
 }
@@ -1829,259 +1814,6 @@ fn exact_case_match_count(query: &str, string_match: &StringMatch) -> usize {
     }
 
     exact_matches
-}
-
-#[derive(Clone)]
-pub struct CodeActionContents {
-    tasks: Option<Rc<ResolvedTasks>>,
-}
-
-impl CodeActionContents {
-    pub(crate) fn new(tasks: Option<ResolvedTasks>) -> Self {
-        Self {
-            tasks: tasks.map(Rc::new),
-        }
-    }
-
-    pub fn tasks(&self) -> Option<&ResolvedTasks> {
-        self.tasks.as_deref()
-    }
-
-    fn len(&self) -> usize {
-        self.tasks.as_ref().map_or(0, |tasks| tasks.templates.len())
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
-    fn iter(&self) -> impl Iterator<Item = CodeActionsItem> + '_ {
-        self.tasks.iter().flat_map(|tasks| {
-            tasks
-                .templates
-                .iter()
-                .map(|(kind, task)| CodeActionsItem::Task(kind.clone(), task.clone()))
-        })
-    }
-
-    pub fn get(&self, index: usize) -> Option<CodeActionsItem> {
-        let (kind, task) = self.tasks.as_ref()?.templates.get(index)?;
-        Some(CodeActionsItem::Task(kind.clone(), task.clone()))
-    }
-}
-
-#[derive(Clone)]
-pub enum CodeActionsItem {
-    Task(TaskSourceKind, ResolvedTask),
-}
-
-impl CodeActionsItem {
-    pub fn label(&self) -> String {
-        match self {
-            Self::Task(_, task) => task.resolved_label.clone(),
-        }
-    }
-
-    pub fn menu_label(&self) -> String {
-        match self {
-            Self::Task(_, task) => task.resolved_label.replace("\n", ""),
-        }
-    }
-}
-
-pub struct CodeActionsMenu {
-    pub actions: CodeActionContents,
-    pub buffer: Entity<Buffer>,
-    pub selected_item: usize,
-    pub scroll_handle: UniformListScrollHandle,
-    pub deployed_from: Option<CodeActionSource>,
-}
-
-impl CodeActionsMenu {
-    fn select_first(&mut self, cx: &mut Context<Editor>) {
-        self.selected_item = if self.scroll_handle.y_flipped() {
-            self.actions.len() - 1
-        } else {
-            0
-        };
-        self.scroll_handle
-            .scroll_to_item(self.selected_item, ScrollStrategy::Top);
-        cx.notify()
-    }
-
-    fn select_last(&mut self, cx: &mut Context<Editor>) {
-        self.selected_item = if self.scroll_handle.y_flipped() {
-            0
-        } else {
-            self.actions.len() - 1
-        };
-        self.scroll_handle
-            .scroll_to_item(self.selected_item, ScrollStrategy::Top);
-        cx.notify()
-    }
-
-    fn select_prev(&mut self, cx: &mut Context<Editor>) {
-        self.selected_item = if self.scroll_handle.y_flipped() {
-            self.next_match_index()
-        } else {
-            self.prev_match_index()
-        };
-        self.scroll_handle
-            .scroll_to_item(self.selected_item, ScrollStrategy::Top);
-        cx.notify();
-    }
-
-    fn select_next(&mut self, cx: &mut Context<Editor>) {
-        self.selected_item = if self.scroll_handle.y_flipped() {
-            self.prev_match_index()
-        } else {
-            self.next_match_index()
-        };
-        self.scroll_handle
-            .scroll_to_item(self.selected_item, ScrollStrategy::Top);
-        cx.notify();
-    }
-
-    fn prev_match_index(&self) -> usize {
-        if self.selected_item > 0 {
-            self.selected_item - 1
-        } else {
-            self.actions.len() - 1
-        }
-    }
-
-    fn next_match_index(&self) -> usize {
-        if self.selected_item + 1 < self.actions.len() {
-            self.selected_item + 1
-        } else {
-            0
-        }
-    }
-
-    pub fn visible(&self) -> bool {
-        !self.actions.is_empty()
-    }
-
-    fn origin(&self) -> ContextMenuOrigin {
-        match &self.deployed_from {
-            Some(CodeActionSource::RunMenu(row)) => ContextMenuOrigin::GutterIndicator(*row),
-            None => ContextMenuOrigin::Cursor,
-        }
-    }
-
-    fn render(
-        &self,
-        _style: &EditorStyle,
-        max_height_in_lines: u32,
-        window: &mut Window,
-        cx: &mut Context<Editor>,
-    ) -> AnyElement {
-        let actions = self.actions.clone();
-        let selected_item = self.selected_item;
-        let is_quick_action_bar = matches!(self.origin(), ContextMenuOrigin::QuickActionBar);
-
-        let list = uniform_list(
-            "code_actions_menu",
-            self.actions.len(),
-            cx.processor(move |_this, range: Range<usize>, _, cx| {
-                actions
-                    .iter()
-                    .skip(range.start)
-                    .take(range.end - range.start)
-                    .enumerate()
-                    .map(|(ix, action)| {
-                        let item_ix = range.start + ix;
-                        let selected = item_ix == selected_item;
-                        let colors = cx.theme().colors();
-
-                        ListItem::new(item_ix)
-                            .inset(true)
-                            .toggle_state(selected)
-                            .overflow_x()
-                            .child(
-                                div()
-                                    .min_w(CODE_ACTION_MENU_MIN_WIDTH)
-                                    .max_w(CODE_ACTION_MENU_MAX_WIDTH)
-                                    .overflow_hidden()
-                                    .text_ellipsis()
-                                    .when(is_quick_action_bar, |this| this.text_ui(cx))
-                                    .when(selected, |this| this.text_color(colors.text_accent))
-                                    .child(action.menu_label()),
-                            )
-                            .on_click(cx.listener(move |editor, _, window, cx| {
-                                cx.stop_propagation();
-                                if let Some(task) = editor.confirm_code_action(
-                                    &ConfirmCodeAction {
-                                        item_ix: Some(item_ix),
-                                    },
-                                    window,
-                                    cx,
-                                ) {
-                                    task.detach_and_log_err(cx)
-                                }
-                            }))
-                    })
-                    .collect()
-            }),
-        )
-        .occlude()
-        .max_h(max_height_in_lines as f32 * window.line_height())
-        .track_scroll(&self.scroll_handle)
-        .with_width_from_item(
-            self.actions
-                .iter()
-                .enumerate()
-                .max_by_key(|(_, action)| match action {
-                    CodeActionsItem::Task(_, task) => task.resolved_label.chars().count(),
-                })
-                .map(|(ix, _)| ix),
-        )
-        .with_sizing_behavior(ListSizingBehavior::Infer);
-
-        Popover::new().child(list).into_any_element()
-    }
-
-    fn render_aside(
-        &mut self,
-        max_size: Size<Pixels>,
-        window: &mut Window,
-        _cx: &mut Context<Editor>,
-    ) -> Option<AnyElement> {
-        let Some(action) = self.actions.get(self.selected_item) else {
-            return None;
-        };
-
-        let label = action.menu_label();
-        let text_system = window.text_system();
-        let mut line_wrapper = text_system.line_wrapper(
-            window.text_style().font(),
-            window.text_style().font_size.to_pixels(window.rem_size()),
-        );
-        let is_truncated = line_wrapper.should_truncate_line(
-            &label,
-            CODE_ACTION_MENU_MAX_WIDTH,
-            "…",
-            gpui::TruncateFrom::End,
-        );
-
-        if is_truncated.is_none() {
-            return None;
-        }
-
-        Some(
-            Popover::new()
-                .child(
-                    div()
-                        .child(label)
-                        .id("code_actions_menu_extended")
-                        .px(MENU_ASIDE_X_PADDING / 2.)
-                        .max_w(max_size.width)
-                        .max_h(max_size.height)
-                        .occlude(),
-                )
-                .into_any_element(),
-        )
-    }
 }
 
 #[cfg(test)]
