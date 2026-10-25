@@ -737,7 +737,6 @@ fn main() {
         vim::init(cx);
         terminal_view::init(cx);
         journal::init(app_state.clone(), cx);
-        encoding_selector::init(cx);
         language_selector::init(cx);
         line_ending_selector::init(cx);
         theme_selector::init(cx);
