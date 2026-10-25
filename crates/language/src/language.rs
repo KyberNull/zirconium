@@ -358,23 +358,6 @@ impl Language {
             .unwrap_or_else(|| self.config.name.as_ref().to_lowercase().into())
     }
 
-    pub fn matches_kernel_language(&self, kernel_language: &str) -> bool {
-        let kernel_language_lower = kernel_language.to_lowercase();
-
-        if self.code_fence_block_name().to_lowercase() == kernel_language_lower {
-            return true;
-        }
-
-        if self.config.name.as_ref().to_lowercase() == kernel_language_lower {
-            return true;
-        }
-
-        self.config
-            .kernel_language_names
-            .iter()
-            .any(|name| name.to_lowercase() == kernel_language_lower)
-    }
-
     pub fn context_provider(&self) -> Option<Arc<dyn ContextProvider>> {
         self.context_provider.clone()
     }

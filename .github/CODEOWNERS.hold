@@ -104,7 +104,7 @@
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # developer-tools-team
-# Terminal, REPL, tasks, git integration
+# Terminal, tasks, git integration
 # ═══════════════════════════════════════════════════════════════════════════════
 
 /crates/git/ @zed-industries/developer-tools-team
@@ -114,7 +114,6 @@
 /crates/git_ui/ @zed-industries/developer-tools-team
 /crates/inspector_ui/ @zed-industries/developer-tools-team
 /crates/miniprofiler_ui/ @zed-industries/developer-tools-team
-/crates/repl/ @zed-industries/developer-tools-team
 /crates/task/ @zed-industries/developer-tools-team
 /crates/tasks_ui/ @zed-industries/developer-tools-team
 /crates/terminal/ @zed-industries/developer-tools-team

@@ -51,7 +51,6 @@ pub struct EditorSettings {
     pub auto_signature_help: bool,
     pub show_signature_help_after_edits: bool,
     pub go_to_definition_scroll_strategy: GoToDefinitionScrollStrategy,
-    pub jupyter: Jupyter,
     pub snippet_sort_order: SnippetSortOrder,
     pub diagnostics_max_severity: Option<DiagnosticSeverity>,
     pub drag_and_drop_selection: DragAndDropSelection,
@@ -71,14 +70,6 @@ pub struct FileDiffSettings {
     /// Default: true
     pub show_full_file: bool,
 }
-#[derive(Debug, Clone)]
-pub struct Jupyter {
-    /// Whether the Jupyter feature is enabled.
-    ///
-    /// Default: true
-    pub enabled: bool,
-}
-
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct StickyScroll {
     pub enabled: bool,
@@ -188,12 +179,6 @@ pub struct SearchSettings {
     pub center_on_match: bool,
 }
 
-impl EditorSettings {
-    pub fn jupyter_enabled(cx: &App) -> bool {
-        EditorSettings::get_global(cx).jupyter.enabled
-    }
-}
-
 impl Settings for EditorSettings {
     fn from_settings(content: &settings::SettingsContent) -> Self {
         let editor = content.editor.clone();
@@ -290,9 +275,6 @@ impl Settings for EditorSettings {
             auto_signature_help: editor.auto_signature_help.unwrap(),
             show_signature_help_after_edits: editor.show_signature_help_after_edits.unwrap(),
             go_to_definition_scroll_strategy: editor.go_to_definition_scroll_strategy.unwrap(),
-            jupyter: Jupyter {
-                enabled: editor.jupyter.unwrap().enabled.unwrap(),
-            },
             snippet_sort_order: editor.snippet_sort_order.unwrap(),
             diagnostics_max_severity: editor.diagnostics_max_severity.map(Into::into),
             drag_and_drop_selection: DragAndDropSelection {
