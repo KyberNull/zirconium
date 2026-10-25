@@ -66,7 +66,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 
 /crates/client/ @zed-industries/collab-team
-/crates/dev_container/ @zed-industries/collab-team
 /crates/proto/ @zed-industries/collab-team
 /crates/remote/ @zed-industries/collab-team
 /crates/remote_server/ @zed-industries/collab-team

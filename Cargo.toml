@@ -41,7 +41,6 @@ members = [
     "crates/credentials_provider",
     "crates/db",
     "crates/deepseek",
-    "crates/dev_container",
     "crates/docs_preprocessor",
     "crates/edit_prediction",
     "crates/edit_prediction_cli",
@@ -155,7 +154,6 @@ members = [
     "crates/release_channel",
     "crates/remote",
     "crates/remote_connection",
-    "crates/remote_server",
     "crates/repl",
     "crates/reqwest_client",
     "crates/rope",
@@ -295,7 +293,6 @@ credentials_provider = { path = "crates/credentials_provider" }
 db = { path = "crates/db" }
 deepseek = { path = "crates/deepseek" }
 derive_refineable = { path = "crates/refineable/derive_refineable" }
-dev_container = { path = "crates/dev_container" }
 edit_prediction = { path = "crates/edit_prediction" }
 edit_prediction_context = { path = "crates/edit_prediction_context" }
 edit_prediction_metrics = { path = "crates/edit_prediction_metrics" }
@@ -400,7 +397,6 @@ refineable = { path = "crates/refineable" }
 release_channel = { path = "crates/release_channel" }
 remote = { path = "crates/remote" }
 remote_connection = { path = "crates/remote_connection" }
-remote_server = { path = "crates/remote_server" }
 repl = { path = "crates/repl" }
 reqwest_client = { path = "crates/reqwest_client" }
 rodio = { git = "https://github.com/RustAudio/rodio", rev = "e50e726ddd0292f6ef9de0dda6b90af4ed1fb66a", features = ["wav", "playback", "wav_output", "recording"] }

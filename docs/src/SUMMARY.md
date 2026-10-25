@@ -26,12 +26,7 @@
   - [REPL](./repl.md)
 - [Git](./git.md)
 - [Modelines](./modelines.md)
-
-# Remote Development
-
-- [Overview](./remote-development.md)
 - [Environment Variables](./environment.md)
-- [Dev Containers](./dev-containers.md)
 
 # AI
 
