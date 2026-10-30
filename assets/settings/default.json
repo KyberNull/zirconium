@@ -1357,7 +1357,7 @@
   //
   // The EditorConfig `end_of_line` property overrides this setting and behaves
   // like `enforce_lf` or `enforce_crlf`.
-  "line_ending": "detect",
+  "line_ending": "enforce_lf",
   // Whether or not to perform a buffer format before saving:
   //   "on" — format the whole buffer
   //   "off" — do not format

@@ -1685,7 +1685,7 @@ This setting enables integration with macOS’s native window tabbing feature. W
 
 - Description: How line endings should be handled for new files and during format and save. This can be specified on a per-language basis.
 - Setting: `line_ending`
-- Default: `detect`
+- Default: `enforce_lf`
 
 **Options**
 
