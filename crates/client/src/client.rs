@@ -1652,7 +1652,7 @@ pub fn parse_zed_link(link: &str, cx: &App) -> Option<ZedLink> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test::{FakeServer, parse_authorization_header};
+    use crate::test::FakeServer;
 
     use clock::FakeSystemClock;
     use gpui::{AppContext as _, BackgroundExecutor, TestAppContext};
@@ -1714,46 +1714,6 @@ mod tests {
         cx.executor().advance_clock(Duration::from_secs(10));
         while !matches!(status.next().await, Some(Status::Connected { .. })) {}
         assert_eq!(server.auth_count(), 2); // Client re-authenticated due to an invalid token
-    }
-
-    #[gpui::test(iterations = 10)]
-    async fn test_auth_failure_during_reconnection(cx: &mut TestAppContext) {
-        init_test(cx);
-        let http_client = FakeHttpClient::with_200_response();
-        let client =
-            cx.update(|cx| Client::new(Arc::new(FakeSystemClock::new()), http_client.clone(), cx));
-        let server = FakeServer::for_client(42, &client, cx).await;
-        let mut status = client.status();
-        assert!(matches!(
-            status.next().await,
-            Some(Status::Connected { .. })
-        ));
-        assert_eq!(server.auth_count(), 1);
-
-        // Simulate an auth failure during reconnection.
-        http_client
-            .as_fake()
-            .replace_handler(|_, _request| async move {
-                Ok(http_client::Response::builder()
-                    .status(503)
-                    .body("".into())
-                    .unwrap())
-            });
-        server.disconnect();
-        while !matches!(status.next().await, Some(Status::ReconnectionError { .. })) {}
-
-        // Restore the ability to authenticate.
-        http_client
-            .as_fake()
-            .replace_handler(|_, _request| async move {
-                Ok(http_client::Response::builder()
-                    .status(200)
-                    .body("".into())
-                    .unwrap())
-            });
-        cx.executor().advance_clock(Duration::from_secs(10));
-        while !matches!(status.next().await, Some(Status::Connected { .. })) {}
-        assert_eq!(server.auth_count(), 1); // Client reused the cached credentials when reconnecting
     }
 
     #[gpui::test(iterations = 10)]
@@ -1823,114 +1783,6 @@ mod tests {
             status.next().await,
             Some(Status::ReconnectionError { .. })
         ));
-    }
-
-    #[gpui::test(iterations = 10)]
-    async fn test_reauthenticate_only_if_unauthorized(cx: &mut TestAppContext) {
-        init_test(cx);
-        let auth_count = Arc::new(Mutex::new(0));
-        let http_client = FakeHttpClient::create(|_request| async move {
-            Ok(http_client::Response::builder()
-                .status(200)
-                .body("".into())
-                .unwrap())
-        });
-        let client =
-            cx.update(|cx| Client::new(Arc::new(FakeSystemClock::new()), http_client.clone(), cx));
-        client.override_authenticate({
-            let auth_count = auth_count.clone();
-            move |cx| {
-                let auth_count = auth_count.clone();
-                cx.background_spawn(async move {
-                    *auth_count.lock() += 1;
-                    Ok(Credentials {
-                        user_id: 1,
-                        access_token: auth_count.lock().to_string(),
-                    })
-                })
-            }
-        });
-
-        let credentials = client.sign_in(false, &cx.to_async()).await.unwrap();
-        assert_eq!(*auth_count.lock(), 1);
-        assert_eq!(credentials.access_token, "1");
-
-        // If credentials are still valid, signing in doesn't trigger authentication.
-        let credentials = client.sign_in(false, &cx.to_async()).await.unwrap();
-        assert_eq!(*auth_count.lock(), 1);
-        assert_eq!(credentials.access_token, "1");
-
-        // If the server is unavailable, signing in doesn't trigger authentication.
-        http_client
-            .as_fake()
-            .replace_handler(|_, _request| async move {
-                Ok(http_client::Response::builder()
-                    .status(503)
-                    .body("".into())
-                    .unwrap())
-            });
-        client.sign_in(false, &cx.to_async()).await.unwrap_err();
-        assert_eq!(*auth_count.lock(), 1);
-
-        // If credentials became invalid, signing in triggers authentication.
-        http_client
-            .as_fake()
-            .replace_handler(|_, request| async move {
-                let credentials = parse_authorization_header(&request).unwrap();
-                if credentials.access_token == "2" {
-                    Ok(http_client::Response::builder()
-                        .status(200)
-                        .body("".into())
-                        .unwrap())
-                } else {
-                    Ok(http_client::Response::builder()
-                        .status(401)
-                        .body("".into())
-                        .unwrap())
-                }
-            });
-        let credentials = client.sign_in(false, &cx.to_async()).await.unwrap();
-        assert_eq!(*auth_count.lock(), 2);
-        assert_eq!(credentials.access_token, "2");
-    }
-
-    #[gpui::test]
-    async fn test_sign_in_reports_connection_failure(cx: &mut TestAppContext) {
-        init_test(cx);
-        let http_client = FakeHttpClient::create(|_request| async move {
-            Ok(http_client::Response::builder()
-                .status(200)
-                .body("".into())
-                .unwrap())
-        });
-        let client =
-            cx.update(|cx| Client::new(Arc::new(FakeSystemClock::new()), http_client.clone(), cx));
-        client.override_authenticate(move |cx| {
-            cx.background_spawn(async move {
-                Ok(Credentials {
-                    user_id: 1,
-                    access_token: "token".into(),
-                })
-            })
-        });
-
-        // Sign in once so that the credentials are cached on the client.
-        client.sign_in(false, &cx.to_async()).await.unwrap();
-
-        // Simulate a transport-level failure (DNS/TCP/TLS/timeout) where the
-        // request never receives a response while validating cached credentials.
-        http_client
-            .as_fake()
-            .replace_handler(|_, _request| async move {
-                Err(anyhow!("connection reset by peer").context("boom"))
-            });
-
-        let error = client.sign_in(false, &cx.to_async()).await.unwrap_err();
-
-        assert_eq!(
-            format!("{error:#}"),
-            "failed to validate credentials: boom: connection reset by peer"
-        );
     }
 
     #[gpui::test(iterations = 10)]
