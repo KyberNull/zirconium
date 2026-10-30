@@ -1,6 +1,6 @@
 use gpui::{Action as _, App};
 use settings::{
-    AudioInputDeviceName, AudioOutputDeviceName, EditPredictionDataCollectionChoice,
+    EditPredictionDataCollectionChoice,
     LanguageSettingsContent, SettingsContent,
 };
 use std::sync::Arc;
@@ -12,7 +12,7 @@ use crate::{
     ActionLink, DynamicItem, PROJECT, SettingField, SettingItem, SettingsFieldMetadata,
     SettingsPage, SettingsPageItem, SubPageLink, USER, active_language, all_language_names,
     pages::{
-        open_audio_test_window, render_edit_prediction_setup_page, render_external_agents_page,
+        render_edit_prediction_setup_page, render_external_agents_page,
         render_llm_providers_page, render_mcp_servers_page, render_sandbox_settings_page,
         render_skills_setup_page, render_tool_permissions_setup_page,
     },
@@ -23,10 +23,6 @@ const DEFAULT_STRING: String = String::new();
 /// to avoid the "NO DEFAULT" case.
 const DEFAULT_EMPTY_STRING: Option<&String> = Some(&DEFAULT_STRING);
 
-const DEFAULT_AUDIO_OUTPUT: AudioOutputDeviceName = AudioOutputDeviceName(None);
-const DEFAULT_EMPTY_AUDIO_OUTPUT: Option<&AudioOutputDeviceName> = Some(&DEFAULT_AUDIO_OUTPUT);
-const DEFAULT_AUDIO_INPUT: AudioInputDeviceName = AudioInputDeviceName(None);
-const DEFAULT_EMPTY_AUDIO_INPUT: Option<&AudioInputDeviceName> = Some(&DEFAULT_AUDIO_INPUT);
 
 macro_rules! concat_sections {
     (@vec, $($arr:expr),+ $(,)?) => {{
@@ -73,7 +69,6 @@ pub(crate) fn settings_data(cx: &App) -> Vec<SettingsPage> {
         panels_page(),
         terminal_page(),
         version_control_page(),
-        audio_page(),
         ai_page(cx),
         network_page(),
         developer_page(cx),
@@ -7589,75 +7584,6 @@ fn version_control_page() -> SettingsPage {
             file_diff_section(),
             git_hunks_section(),
         ],
-    }
-}
-
-fn audio_page() -> SettingsPage {
-    fn audio_settings() -> [SettingsPageItem; 3] {
-        [
-            SettingsPageItem::ActionLink(ActionLink {
-                title: "Test Audio".into(),
-                description: Some("Test your microphone and speaker setup".into()),
-                button_text: "Test Audio".into(),
-                on_click: Arc::new(|_settings_window, window, cx| {
-                    open_audio_test_window(window, cx);
-                }),
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Output Audio Device",
-                description: "Select output audio device",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("audio.experimental.output_audio_device"),
-                    pick: |settings_content| {
-                        settings_content
-                            .audio
-                            .as_ref()?
-                            .output_audio_device
-                            .as_ref()
-                            .or(DEFAULT_EMPTY_AUDIO_OUTPUT)
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .audio
-                            .get_or_insert_default()
-                            .output_audio_device = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Input Audio Device",
-                description: "Select input audio device",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("audio.experimental.input_audio_device"),
-                    pick: |settings_content| {
-                        settings_content
-                            .audio
-                            .as_ref()?
-                            .input_audio_device
-                            .as_ref()
-                            .or(DEFAULT_EMPTY_AUDIO_INPUT)
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .audio
-                            .get_or_insert_default()
-                            .input_audio_device = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-        ]
-    }
-
-    SettingsPage {
-        title: "Audio",
-        items: concat_sections![audio_settings()],
     }
 }
 
