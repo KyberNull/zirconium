@@ -80,7 +80,6 @@
 /crates/breadcrumbs/ @zed-industries/core-team
 /crates/buffer_diff/ @zed-industries/core-team
 /crates/editor/ @zed-industries/core-team
-/crates/encoding_selector/ @zed-industries/core-team
 /crates/go_to_line/ @zed-industries/core-team
 /crates/gpui/ @zed-industries/core-team
 /crates/gpui_macros/ @zed-industries/core-team
@@ -104,7 +103,7 @@
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # developer-tools-team
-# Terminal, REPL, tasks, git integration
+# Terminal, tasks, git integration
 # ═══════════════════════════════════════════════════════════════════════════════
 
 /crates/git/ @zed-industries/developer-tools-team
@@ -114,7 +113,6 @@
 /crates/git_ui/ @zed-industries/developer-tools-team
 /crates/inspector_ui/ @zed-industries/developer-tools-team
 /crates/miniprofiler_ui/ @zed-industries/developer-tools-team
-/crates/repl/ @zed-industries/developer-tools-team
 /crates/task/ @zed-industries/developer-tools-team
 /crates/tasks_ui/ @zed-industries/developer-tools-team
 /crates/terminal/ @zed-industries/developer-tools-team

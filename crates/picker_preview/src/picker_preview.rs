@@ -84,7 +84,6 @@ impl EditorPreview {
             editor.set_show_line_numbers(editor_settings.gutter.line_numbers, cx);
             editor.set_show_breakpoints(false, cx);
             editor.set_show_bookmarks(false, cx);
-            editor.set_show_runnables(false, cx);
             editor.set_show_git_diff_gutter(false, cx);
             editor.set_show_wrap_guides(false, cx);
             editor.set_show_indent_guides(false, cx);

@@ -1615,13 +1615,9 @@ impl Editor {
         }
 
         if local {
-            let mut context_menu = self.context_menu.borrow_mut();
+            let context_menu = self.context_menu.borrow();
             let completion_menu = match context_menu.as_ref() {
                 Some(CodeContextMenu::Completions(menu)) => Some(menu),
-                Some(CodeContextMenu::CodeActions(_)) => {
-                    *context_menu = None;
-                    None
-                }
                 None => None,
             };
             let completion_position = completion_menu.map(|menu| menu.initial_position);

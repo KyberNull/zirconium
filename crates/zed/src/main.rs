@@ -701,14 +701,12 @@ fn main() {
         );
         zed::watch_user_agents_md(app_state.fs.clone(), cx);
 
-        repl::init(app_state.fs.clone(), cx);
         recent_projects::init(cx);
 
         load_embedded_fonts(cx);
 
         editor::init(cx);
         image_viewer::init(cx);
-        repl::notebook::init(cx);
 
         audio::init(cx);
         workspace::init(app_state.clone(), cx);
@@ -736,7 +734,6 @@ fn main() {
         vim::init(cx);
         terminal_view::init(cx);
         journal::init(app_state.clone(), cx);
-        encoding_selector::init(cx);
         language_selector::init(cx);
         line_ending_selector::init(cx);
         theme_selector::init(cx);

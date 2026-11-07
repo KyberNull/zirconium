@@ -172,14 +172,6 @@
     },
   },
   {
-    "context": "Editor && jupyter",
-    "use_key_equivalents": true,
-    "bindings": {
-      "ctrl-shift-enter": "repl::Run",
-      "ctrl-alt-enter": "repl::RunInPlace",
-    },
-  },
-  {
     "context": "Editor && !agent_diff",
     "use_key_equivalents": true,
     "bindings": {
@@ -576,7 +568,6 @@
       "ctrl-k ctrl-j": "editor::UnfoldAll",
       "ctrl-space": "editor::ShowCompletions",
       "ctrl-shift-space": "editor::ShowWordCompletions",
-      "ctrl-.": "editor::ToggleCodeActions",
       "ctrl-k r": "editor::RevealInFileManager",
       "ctrl-k p": "editor::CopyPath",
       "ctrl-\\": "pane::SplitRight",
@@ -674,7 +665,6 @@
       "ctrl-shift-g": "git_panel::ToggleFocus",
       "ctrl-shift-/": "agent::ToggleFocus",
       "ctrl-k s": "workspace::SaveAll",
-      "ctrl-k n": "encoding_selector::Toggle",
       "ctrl-k m": "language_selector::Toggle",
       "escape": "workspace::Unfollow",
       "ctrl-k ctrl-left": "workspace::ActivatePaneLeft",
@@ -815,14 +805,7 @@
     },
   },
   {
-    "context": "Editor && showing_code_actions",
-    "use_key_equivalents": true,
-    "bindings": {
-      "enter": "editor::ConfirmCodeAction",
-    },
-  },
-  {
-    "context": "Editor && (showing_code_actions || showing_completions)",
+    "context": "Editor && showing_completions",
     "use_key_equivalents": true,
     "bindings": {
       "ctrl-p": "editor::ContextMenuPrevious",

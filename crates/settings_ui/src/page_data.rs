@@ -2182,7 +2182,7 @@ fn editor_page() -> SettingsPage {
         ]
     }
 
-    fn gutter_section() -> [SettingsPageItem; 9] {
+    fn gutter_section() -> [SettingsPageItem; 8] {
         [
             SettingsPageItem::SectionHeader("Gutter"),
             SettingsPageItem::SettingItem(SettingItem {
@@ -2218,30 +2218,6 @@ fn editor_page() -> SettingsPage {
                     pick: |settings_content| settings_content.editor.relative_line_numbers.as_ref(),
                     write: |settings_content, value, _| {
                         settings_content.editor.relative_line_numbers = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Show Runnables",
-                description: "Show runnable buttons in the gutter.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("gutter.runnables"),
-                    pick: |settings_content| {
-                        settings_content
-                            .editor
-                            .gutter
-                            .as_ref()
-                            .and_then(|gutter| gutter.runnables.as_ref())
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .editor
-                            .gutter
-                            .get_or_insert_default()
-                            .runnables = value;
                     },
                 }),
                 metadata: None,
