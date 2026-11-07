@@ -840,7 +840,6 @@ List of `string` values
 {
   "gutter": {
     "line_numbers": true,
-    "runnables": true,
     "breakpoints": true,
     "folds": true,
     "min_line_number_digits": 4,
@@ -852,7 +851,6 @@ List of `string` values
 **Options**
 
 - `line_numbers`: Whether to show line numbers in the gutter
-- `runnables`: Whether to show runnable buttons in the gutter
 - `breakpoints`: Whether to show breakpoints in the gutter
 - `folds`: Whether to show fold buttons in the gutter
 - `min_line_number_digits`: Minimum number of characters to reserve space for in the gutter
@@ -4483,25 +4481,6 @@ Example command to set the title: `echo -e "\e]2;New Title\007";`
 - Description: Maximum time to search for a path hyperlink. When set to 0, path hyperlinks are disabled.
 - Setting: `path_hyperlink_timeout_ms`
 - Default: `1`
-
-## REPL
-
-- Description: Repl settings.
-- Setting: `repl`
-- Default:
-
-```json [settings]
-{
-  "repl": {
-    // Maximum number of columns to keep in REPL's scrollback buffer.
-    // Clamped with [20, 512] range.
-    "max_columns": 128,
-    // Maximum number of lines to keep in REPL's scrollback buffer.
-    // Clamped with [4, 256] range.
-    "max_lines": 32
-  }
-}
-```
 
 ## Theme
 

@@ -13,8 +13,8 @@ use language::{
 };
 use rpc::{AnyProtoClient, TypedEnvelope, proto};
 use settings::{InvalidSettingsError, SettingsLocation};
-use task::{TaskContext, TaskVariables, VariableName};
-use text::{BufferId, OffsetRangeExt};
+use task::{TaskContext, TaskVariables};
+use text::BufferId;
 use util::ResultExt;
 
 use crate::{
@@ -124,25 +124,13 @@ impl TaskStore {
             range: start..end,
         };
         let context_task = store.update(&mut cx, |store, cx| {
-            let captured_variables = {
-                let mut variables = TaskVariables::from_iter(
-                    envelope
-                        .payload
-                        .task_variables
-                        .into_iter()
-                        .filter_map(|(k, v)| Some((k.parse().ok()?, v))),
-                );
-
-                let snapshot = location.buffer.read(cx).snapshot();
-                let range = location.range.to_offset(&snapshot);
-
-                for range in snapshot.runnable_ranges(range) {
-                    for (capture_name, value) in range.extra_captures {
-                        variables.insert(VariableName::Custom(capture_name.into()), value);
-                    }
-                }
-                variables
-            };
+            let captured_variables = TaskVariables::from_iter(
+                envelope
+                    .payload
+                    .task_variables
+                    .into_iter()
+                    .filter_map(|(k, v)| Some((k.parse().ok()?, v))),
+            );
             store.task_context_for_location(captured_variables, location, cx)
         });
         let task_context = context_task.await?.unwrap_or_default();

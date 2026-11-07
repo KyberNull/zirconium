@@ -224,7 +224,6 @@ TBD: Centered layout related settings
   // Gutter Settings
   "gutter": {
     "line_numbers": true,         // Show/hide line numbers in the gutter.
-    "runnables": true,            // Show/hide runnables buttons in the gutter.
     "breakpoints": true,          // Show/hide show breakpoints in the gutter.
     "folds": true,                // Show/hide show fold buttons in the gutter.
     "min_line_number_digits": 4   // Reserve space for N digit line numbers

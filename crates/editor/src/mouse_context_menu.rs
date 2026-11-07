@@ -1,7 +1,6 @@
 use crate::{
     Copy, CopyAndTrim, CopyPermalinkToLine, Cut, DisplayPoint, DisplaySnapshot, Editor, Paste,
     RevealInFileManager, SelectMode, SelectionEffects, SelectionExt, ToDisplayPoint,
-    ToggleCodeActions,
     actions::{Format, FormatSelections},
     selections_collection::SelectionsCollection,
 };
@@ -247,13 +246,6 @@ pub fn deploy_context_menu(
                 .when(format_selections, |cx| {
                     cx.action("Format Selections", Box::new(FormatSelections))
                 })
-                .action(
-                    "Show Code Actions",
-                    Box::new(ToggleCodeActions {
-                        deployed_from: None,
-                        quick_launch: false,
-                    }),
-                )
                 .when(!disable_ai && has_selections, |this| {
                     this.action("Add to Agent Thread", Box::new(AddSelectionToThread))
                 })

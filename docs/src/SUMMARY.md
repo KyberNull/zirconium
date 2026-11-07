@@ -23,7 +23,6 @@
 - [Running & Testing](./running-testing.md)
   - [Terminal](./terminal.md)
   - [Tasks](./tasks.md)
-  - [REPL](./repl.md)
 - [Git](./git.md)
 - [Modelines](./modelines.md)
 

@@ -570,8 +570,6 @@ pub fn initialize_workspace(app_state: Arc<AppState>, cx: &mut App) {
         let search_button = cx.new(|_| search::search_status_button::SearchButton::new());
         let active_file_name = cx.new(|_| workspace::active_file_name::ActiveFileName::new());
         let activity_indicator = activity_indicator::ActivityIndicator::new(workspace, window, cx);
-        let active_buffer_encoding =
-            cx.new(|_| encoding_selector::ActiveBufferEncoding::new(workspace));
         let active_buffer_language =
             cx.new(|_| language_selector::ActiveBufferLanguage::new(workspace));
         let vim_mode_indicator = cx.new(|cx| vim::ModeIndicator::new(window, cx));
@@ -589,7 +587,6 @@ pub fn initialize_workspace(app_state: Arc<AppState>, cx: &mut App) {
             status_bar.add_left_item(merge_conflict_indicator, window, cx);
             status_bar.add_left_item(activity_indicator, window, cx);
             status_bar.add_right_item(edit_prediction_ui, window, cx);
-            status_bar.add_right_item(active_buffer_encoding, window, cx);
             status_bar.add_right_item(active_buffer_language, window, cx);
             status_bar.add_right_item(vim_mode_indicator, window, cx);
             status_bar.add_right_item(cursor_position, window, cx);
@@ -5949,8 +5946,6 @@ mod tests {
                 cx,
             );
 
-            repl::init(app_state.fs.clone(), cx);
-            repl::notebook::init(cx);
             tasks_ui::init(cx);
             initialize_workspace(app_state.clone(), cx);
             search::init(cx);
