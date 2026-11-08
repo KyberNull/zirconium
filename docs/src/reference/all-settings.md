@@ -1685,7 +1685,7 @@ This setting enables integration with macOS’s native window tabbing feature. W
 
 - Description: How line endings should be handled for new files and during format and save. This can be specified on a per-language basis.
 - Setting: `line_ending`
-- Default: `detect`
+- Default: `enforce_lf`
 
 **Options**
 
@@ -1771,8 +1771,7 @@ Positive `integer` value between 1 and 32. Values outside of this range will be 
 {
   "status_bar": {
     "active_language_button": true,
-    "cursor_position_button": true,
-    "line_endings_button": false
+    "cursor_position_button": true
   }
 }
 ```

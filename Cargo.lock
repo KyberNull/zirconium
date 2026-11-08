@@ -9045,20 +9045,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "line_ending_selector"
-version = "0.1.0"
-dependencies = [
- "editor",
- "gpui",
- "language",
- "picker",
- "project",
- "ui",
- "util",
- "workspace",
-]
-
-[[package]]
 name = "linebender_resource_handle"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -20974,7 +20960,6 @@ dependencies = [
  "language_selector",
  "language_tools",
  "languages",
- "line_ending_selector",
  "log",
  "markdown",
  "markdown_preview",
