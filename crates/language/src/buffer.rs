@@ -4,8 +4,8 @@ pub mod row_chunk;
 pub use bracket_ranges::BracketMatch;
 
 use crate::{
-    ByteContent, LanguageScope, ModelineSettings, Outline, OutlineConfig, PLAIN_TEXT,
-    TextObject, TreeSitterOptions, analyze_byte_content,
+    ByteContent, LanguageScope, ModelineSettings, Outline, OutlineConfig, PLAIN_TEXT, TextObject,
+    TreeSitterOptions, analyze_byte_content,
     diagnostic_set::{DiagnosticEntry, DiagnosticEntryRef, DiagnosticGroup},
     language_settings::{AutoIndentMode, LanguageSettings},
     outline::OutlineItem,

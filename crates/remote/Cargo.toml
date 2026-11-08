@@ -15,7 +15,6 @@ doctest = false
 
 [features]
 default = []
-build-remote-server-binary = []
 test-support = ["fs/test-support"]
 
 [dependencies]

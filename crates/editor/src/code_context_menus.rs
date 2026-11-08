@@ -31,11 +31,10 @@ use ui::{
 };
 use util::ResultExt;
 
-use crate::hover_popover::{hover_markdown_style, open_markdown_url};
 use crate::EditorSettings;
+use crate::hover_popover::{hover_markdown_style, open_markdown_url};
 use crate::{
-    CompletionId, CompletionProvider, DisplayRow, Editor, EditorStyle,
-    actions::ConfirmCompletion,
+    CompletionId, CompletionProvider, DisplayRow, Editor, EditorStyle, actions::ConfirmCompletion,
     split_words, styled_runs_for_code_label,
 };
 use collections::{HashSet, VecDeque};

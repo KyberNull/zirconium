@@ -221,30 +221,6 @@ impl WslRemoteConnection {
             .await
             .is_ok();
 
-        #[cfg(any(debug_assertions, feature = "build-remote-server-binary"))]
-        if let Some(remote_server_path) = super::build_remote_server_from_source(
-            &self.platform,
-            delegate.as_ref(),
-            binary_exists_on_server,
-            cx,
-        )
-        .await?
-        {
-            let tmp_path = paths::remote_server_dir_relative().join(
-                &RelPath::from_unix_str(&format!(
-                    "download-{}-{}",
-                    std::process::id(),
-                    remote_server_path.file_name().unwrap().to_string_lossy()
-                ))
-                .unwrap(),
-            );
-            self.upload_file(&remote_server_path, &tmp_path, delegate, cx)
-                .await?;
-            self.extract_and_install(&tmp_path, &dst_path, delegate, cx)
-                .await?;
-            return Ok(dst_path.into());
-        }
-
         if binary_exists_on_server {
             return Ok(dst_path.into());
         }

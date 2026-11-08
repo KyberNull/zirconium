@@ -44,10 +44,10 @@ pub use language_core::{
     BracketsPatternConfig, CodeLabel, CodeLabelBuilder, DecreaseIndentConfig, Grammar, GrammarId,
     HighlightsConfig, IndentConfig, InjectionConfig, InjectionPatternConfig, JsxTagAutoCloseConfig,
     LanguageConfig, LanguageConfigOverride, LanguageId, LanguageMatcher, OrderedListConfig,
-    OutlineConfig, Override, OverrideConfig, OverrideEntry, RedactionConfig,
-    SoftWrap, Symbol, TaskListConfig, TextObject, TextObjectConfig,
-    WrapCharactersConfig, default_true, deserialize_regex, deserialize_regex_vec,
-    regex_json_schema, regex_vec_json_schema, serialize_regex,
+    OutlineConfig, Override, OverrideConfig, OverrideEntry, RedactionConfig, SoftWrap, Symbol,
+    TaskListConfig, TextObject, TextObjectConfig, WrapCharactersConfig, default_true,
+    deserialize_regex, deserialize_regex_vec, regex_json_schema, regex_vec_json_schema,
+    serialize_regex,
 };
 pub use language_registry::{LanguageLoader, LanguageName, LoadedLanguage};
 pub use manifest::{ManifestDelegate, ManifestName, ManifestProvider, ManifestQuery};
