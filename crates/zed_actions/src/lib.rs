@@ -693,23 +693,6 @@ pub struct OpenRecent {
     pub create_new_window: Option<bool>,
 }
 
-/// Creates a project from a selected template.
-#[derive(PartialEq, Clone, Deserialize, Default, JsonSchema, Action)]
-#[action(namespace = projects)]
-#[serde(deny_unknown_fields)]
-pub struct OpenRemote {
-    #[serde(default)]
-    pub from_existing_connection: bool,
-    #[serde(default)]
-    pub create_new_window: Option<bool>,
-}
-
-/// Opens the dev container connection modal.
-#[derive(PartialEq, Clone, Deserialize, Default, JsonSchema, Action)]
-#[action(namespace = projects)]
-#[serde(deny_unknown_fields)]
-pub struct OpenDevContainer;
-
 /// Where to spawn the task in the UI.
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -820,38 +803,6 @@ pub mod vim {
             OpenDefaultKeymap
         ]
     );
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct WslConnectionOptions {
-    pub distro_name: String,
-    pub user: Option<String>,
-}
-
-// `debug_assertions` makes the actions visible for the docs preprocessor
-#[cfg(any(debug_assertions, target_os = "windows"))]
-pub mod wsl_actions {
-    use gpui::Action;
-    use schemars::JsonSchema;
-    use serde::Deserialize;
-
-    /// Opens a folder inside Wsl.
-    #[derive(PartialEq, Clone, Deserialize, Default, JsonSchema, Action)]
-    #[action(namespace = projects)]
-    #[serde(deny_unknown_fields)]
-    pub struct OpenFolderInWsl {
-        #[serde(default)]
-        pub create_new_window: Option<bool>,
-    }
-
-    /// Open a wsl distro.
-    #[derive(PartialEq, Clone, Deserialize, Default, JsonSchema, Action)]
-    #[action(namespace = projects)]
-    #[serde(deny_unknown_fields)]
-    pub struct OpenWsl {
-        #[serde(default)]
-        pub create_new_window: Option<bool>,
-    }
 }
 
 pub mod preview {

@@ -630,7 +630,6 @@ pub struct ThreadView {
     /// snapshot stays in sync via the parent's project-event subscription.
     pub(crate) code_span_resolver: AgentCodeSpanResolver,
     pub show_external_source_prompt_warning: bool,
-    pub show_codex_windows_warning: bool,
     sandbox_status: Option<VerifiedSandboxStatus>,
     sandbox_status_key: Option<SandboxStatusKey>,
     pending_sandbox_status_key: Option<SandboxStatusKey>,
@@ -854,10 +853,6 @@ impl ThreadView {
             editor
         });
 
-        let show_codex_windows_warning = cfg!(windows)
-            && project.upgrade().is_some_and(|p| p.read(cx).is_local())
-            && agent_id.as_ref() == "Codex";
-
         if let Some(project) = project.upgrade() {
             subscriptions.push(cx.subscribe(&project, {
                 let resolver = code_span_resolver.clone();
@@ -1040,7 +1035,6 @@ impl ThreadView {
             project,
             code_span_resolver,
             show_external_source_prompt_warning,
-            show_codex_windows_warning,
             sandbox_status: None,
             sandbox_status_key: None,
             pending_sandbox_status_key: None,
@@ -11488,39 +11482,6 @@ impl ThreadView {
             .into_any_element()
     }
 
-    fn render_codex_windows_warning(&self, cx: &mut Context<Self>) -> Callout {
-        Callout::new()
-            .border_position(self.callout_border_position())
-            .icon(IconName::Warning)
-            .severity(Severity::Warning)
-            .title("Codex on Windows")
-            .description("For best performance, run Codex in Windows Subsystem for Linux (WSL2)")
-            .actions_slot(
-                Button::new("open-wsl-modal", "Open in WSL").on_click(cx.listener({
-                    move |_, _, _window, cx| {
-                        #[cfg(windows)]
-                        _window.dispatch_action(
-                            zed_actions::wsl_actions::OpenWsl::default().boxed_clone(),
-                            cx,
-                        );
-                        cx.notify();
-                    }
-                })),
-            )
-            .dismiss_action(
-                IconButton::new("dismiss", IconName::Close)
-                    .icon_size(IconSize::Small)
-                    .icon_color(Color::Muted)
-                    .tooltip(Tooltip::text("Dismiss Warning"))
-                    .on_click(cx.listener({
-                        move |this, _, _, cx| {
-                            this.show_codex_windows_warning = false;
-                            cx.notify();
-                        }
-                    })),
-            )
-    }
-
     fn render_skill_loading_issues(&self, cx: &mut Context<Self>) -> Vec<Callout> {
         let border_position = self.callout_border_position();
 
@@ -12455,9 +12416,6 @@ impl Render for ThreadView {
             .children(self.render_activity_bar(window, cx))
             .when(self.show_external_source_prompt_warning, |this| {
                 this.child(self.render_external_source_prompt_warning(cx))
-            })
-            .when(self.show_codex_windows_warning, |this| {
-                this.child(self.render_codex_windows_warning(cx))
             })
             .children(self.render_skill_loading_issues(cx))
             .children(self.render_thread_retry_status_callout(cx))
