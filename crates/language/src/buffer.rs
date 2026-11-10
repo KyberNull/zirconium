@@ -4,13 +4,12 @@ pub mod row_chunk;
 pub use bracket_ranges::BracketMatch;
 
 use crate::{
-    ByteContent, LanguageScope, ModelineSettings, Outline, OutlineConfig, PLAIN_TEXT, RunnableTag,
+    ByteContent, LanguageScope, ModelineSettings, Outline, OutlineConfig, PLAIN_TEXT,
     TextObject, TreeSitterOptions, analyze_byte_content,
     diagnostic_set::{DiagnosticEntry, DiagnosticEntryRef, DiagnosticGroup},
     language_settings::{AutoIndentMode, LanguageSettings},
     outline::OutlineItem,
     row_chunk::RowChunks,
-    runnable::{self, RunnableRange},
     syntax_map::{
         MAX_BYTES_TO_QUERY, SyntaxLayer, SyntaxMap, SyntaxMapCapture, SyntaxMapCaptures,
         SyntaxMapMatch, SyntaxMapMatches, SyntaxSnapshot, ToTreeSitterPoint,
@@ -39,7 +38,6 @@ use gpui::{
 use lsp::LanguageServerId;
 use parking_lot::Mutex;
 use settings::WorktreeId;
-use smallvec::SmallVec;
 use std::{
     any::Any,
     borrow::Cow,
@@ -602,13 +600,6 @@ pub enum CharScopeContext {
     /// identifiers during linked editing operations, such as '.' in JSX
     /// component names like `<Animated.View>`.
     LinkedEdit,
-}
-
-/// A runnable is a set of data about a region that could be resolved into a task
-pub struct Runnable {
-    pub tags: SmallVec<[RunnableTag; 1]>,
-    pub language: Arc<Language>,
-    pub buffer: BufferId,
 }
 
 #[derive(Default, Clone, Debug)]
@@ -4962,13 +4953,6 @@ impl BufferSnapshot {
             syntax_matches.advance();
             ranges
         })
-    }
-
-    pub fn runnable_ranges(
-        &self,
-        offset_range: Range<usize>,
-    ) -> impl Iterator<Item = RunnableRange> + '_ {
-        runnable::runnable_ranges(self, offset_range)
     }
 
     /// Returns selections for remote peers intersecting the given range.

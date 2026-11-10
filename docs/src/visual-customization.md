@@ -224,7 +224,6 @@ TBD: Centered layout related settings
   // Gutter Settings
   "gutter": {
     "line_numbers": true,         // Show/hide line numbers in the gutter.
-    "runnables": true,            // Show/hide runnables buttons in the gutter.
     "breakpoints": true,          // Show/hide show breakpoints in the gutter.
     "folds": true,                // Show/hide show fold buttons in the gutter.
     "min_line_number_digits": 4   // Reserve space for N digit line numbers
@@ -347,10 +346,6 @@ TBD: Centered layout related settings
     // Clicking the button brings up an input for jumping to a line and column.
     // Defaults to true.
     "cursor_position_button": true,
-    // Show/hide a button that displays the buffer's line-ending mode.
-    // Clicking the button brings up the line-ending selector.
-    // Defaults to false.
-    "line_endings_button": false,
     // Show/hide a button that displays the buffer's character encoding.
     // If set to "non_utf8", the button is hidden only for UTF-8 without BOM.
     // Defaults to "non_utf8".

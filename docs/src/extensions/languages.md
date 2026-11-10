@@ -71,7 +71,6 @@ several features:
 - Code injections
 - Syntax overrides
 - Text redactions
-- Runnable code detection
 - Selecting classes, functions, etc.
 
 The following sections elaborate on how [Tree-sitter queries](https://tree-sitter.github.io/tree-sitter/using-parsers/queries/index.html) enable these
@@ -347,45 +346,3 @@ This query marks number and string values in key-value pairs and arrays for reda
 | Capture | Description                    |
 | ------- | ------------------------------ |
 | @redact | Captures values to be redacted |
-
-### Runnable code detection
-
-The `runnables.scm` file defines rules for detecting runnable code.
-
-Here's an example from a `runnables.scm` file for JSON:
-
-```scheme
-(
-    (document
-        (object
-            (pair
-                key: (string
-                    (string_content) @_name
-                    (#eq? @_name "scripts")
-                )
-                value: (object
-                    (pair
-                        key: (string (string_content) @run @script)
-                    )
-                )
-            )
-        )
-    )
-    (#set! tag package-script)
-    (#set! tag composer-script)
-)
-```
-
-This query detects runnable scripts in package.json and composer.json files.
-
-The `@run` capture specifies where the run button should appear in the editor. Other captures, except those prefixed with an underscore, are exposed as environment variables with a prefix of `ZED_CUSTOM_$(capture_name)` when running the code.
-
-| Capture | Description                                            |
-| ------- | ------------------------------------------------------ |
-| @\_name | Captures the "scripts" key                             |
-| @run    | Captures the script name                               |
-| @script | Also captures the script name (for different purposes) |
-
-<!--
-TBD: `#set! tag`
--->

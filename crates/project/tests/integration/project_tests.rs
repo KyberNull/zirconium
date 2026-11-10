@@ -2508,9 +2508,9 @@ async fn test_line_ending_user_settings_on_format(cx: &mut gpui::TestAppContext)
             "default",
             None,
             [
-                ("crlf_file.rs", LineEnding::Windows),
+                ("crlf_file.rs", LineEnding::Unix),
                 ("lf_file.rs", LineEnding::Unix),
-                ("no_newline.rs", LineEnding::default()),
+                ("no_newline.rs", LineEnding::Unix),
             ],
         ),
         (

@@ -652,8 +652,6 @@
   "gutter": {
     // Whether to show line numbers in the gutter.
     "line_numbers": true,
-    // Whether to show runnables buttons in the gutter.
-    "runnables": true,
     // Whether to show bookmarks in the gutter.
     "bookmarks": true,
     // Whether to show breakpoints in the gutter.
@@ -1355,7 +1353,7 @@
   //
   // The EditorConfig `end_of_line` property overrides this setting and behaves
   // like `enforce_lf` or `enforce_crlf`.
-  "line_ending": "detect",
+  "line_ending": "enforce_lf",
   // Whether or not to perform a buffer format before saving:
   //   "on" — format the whole buffer
   //   "off" — do not format
@@ -1669,8 +1667,6 @@
     "active_language_button": true,
     // Whether to show the cursor position button in the status bar.
     "cursor_position_button": true,
-    // Whether to show active line endings button in the status bar.
-    "line_endings_button": false,
     // Control when to show the active encoding in the status bar.
     "active_encoding_button": "non_utf8",
   },
@@ -2268,31 +2264,6 @@
     //
     // Default: 120
     "request_timeout": 120,
-  },
-  // Jupyter settings
-  "jupyter": {
-    "enabled": true,
-    "kernel_selections": {},
-    // Specify the language name as the key and the kernel name as the value.
-    // "kernel_selections": {
-    //    "python": "conda-base"
-    //    "typescript": "deno"
-    // }
-  },
-  // REPL settings.
-  "repl": {
-    // Maximum number of columns to keep in REPL's scrollback buffer.
-    // Clamped with [20, 512] range.
-    "max_columns": 128,
-    // Maximum number of lines to keep in REPL's scrollback buffer.
-    // Clamped with [4, 256] range.
-    "max_lines": 32,
-    // Maximum number of lines of output to display before scrolling.
-    // Set to 0 to disable output height limits.
-    "output_max_height_lines": 0,
-    // Maximum number of columns of output to display before scaling images.
-    // Set to 0 to disable output width limits.
-    "output_max_width_columns": 0,
   },
   // Vim settings
   "vim": {

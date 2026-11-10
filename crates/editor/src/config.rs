@@ -208,11 +208,6 @@ impl Editor {
         }
     }
 
-    pub fn set_show_runnables(&mut self, show_runnables: bool, cx: &mut Context<Self>) {
-        self.show_runnables = Some(show_runnables);
-        cx.notify();
-    }
-
     pub fn set_show_breakpoints(&mut self, show_breakpoints: bool, cx: &mut Context<Self>) {
         self.show_breakpoints = Some(show_breakpoints);
         cx.notify();
