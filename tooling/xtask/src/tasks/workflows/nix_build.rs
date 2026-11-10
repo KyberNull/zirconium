@@ -145,7 +145,7 @@ pub(crate) fn build_nix(
             "ZED_CLOUD_PROVIDER_ADDITIONAL_MODELS_JSON",
             vars::ZED_CLOUD_PROVIDER_ADDITIONAL_MODELS_JSON,
         ))
-        .add_env(("GIT_LFS_SKIP_SMUDGE", "1")) // breaks the livekit rust sdk examples which we don't actually depend on
+        .add_env(("GIT_LFS_SKIP_SMUDGE", "1"))
         .add_step(steps::checkout_repo());
 
     if deps.len() > 0 {

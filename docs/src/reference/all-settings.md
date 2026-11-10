@@ -5214,23 +5214,6 @@ You can define these in user or project settings; project settings are merged on
 }
 ```
 
-## Calls
-
-- Description: Customize behavior when participating in a call
-- Setting: `calls`
-- Default:
-
-```json [settings]
-{
-  "calls": {
-    // Join calls with the microphone live by default
-    "mute_on_join": false,
-    // Share your project when you are the first to join a channel
-    "share_on_join": false
-  }
-}
-```
-
 ## Colorize Brackets
 
 - Description: Whether to use tree-sitter bracket queries to detect and colorize the brackets in the editor (also known as "rainbow brackets").

@@ -74,7 +74,6 @@ fi
 export CC=${CC:-$(which clang)}
 
 # Build binary in release mode
-# We need lld to link libwebrtc.a successfully on aarch64-linux.
 # NOTE: Since RUSTFLAGS env var overrides all .cargo/config.toml rustflags
 # (see https://github.com/rust-lang/cargo/issues/5376), the
 # [target.aarch64-unknown-linux-gnu] section in config.toml has no effect here.

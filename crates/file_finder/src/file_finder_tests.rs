@@ -5061,9 +5061,9 @@ async fn test_start_of_word_preferred_over_scattered_match(cx: &mut TestAppConte
             "/src",
             json!({
                 "crates": {
-                    "livekit_client": {
+                    "audio_client": {
                         "src": {
-                            "livekit_client": {
+                            "audio_client": {
                                 "playback.rs": "",
                             }
                         }
@@ -5084,7 +5084,7 @@ async fn test_start_of_word_preferred_over_scattered_match(cx: &mut TestAppConte
         .update_in(cx, |picker, window, cx| {
             picker
                 .delegate
-                .spawn_search(test_path_position("live pla"), window, cx)
+                .spawn_search(test_path_position("audio pla"), window, cx)
         })
         .await;
     picker.update(cx, |picker, _| {
@@ -5092,7 +5092,7 @@ async fn test_start_of_word_preferred_over_scattered_match(cx: &mut TestAppConte
         assert!(!matches.is_empty(),);
         assert_eq!(
             matches[0].path.as_unix_str(),
-            "crates/livekit_client/src/livekit_client/playback.rs",
+            "crates/audio_client/src/audio_client/playback.rs",
         );
     });
 }
