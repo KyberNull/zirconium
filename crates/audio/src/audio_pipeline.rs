@@ -32,8 +32,7 @@ impl Audio {
         );
 
         if self.output.is_none() {
-            let (output_handle, output_mixer) =
-                open_output_stream(output_audio_device)?;
+            let (output_handle, output_mixer) = open_output_stream(output_audio_device)?;
             self.output = Some((output_handle, output_mixer));
         }
 

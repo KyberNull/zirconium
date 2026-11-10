@@ -57,9 +57,7 @@ use crate::components::{
     SettingsSectionHeader, font_picker, icon_theme_picker, render_ollama_model_picker,
     text_field_a11y_state, theme_picker,
 };
-use crate::pages::{
-    CustomAgentForm, LlmProviderForm, McpServerForm,
-};
+use crate::pages::{CustomAgentForm, LlmProviderForm, McpServerForm};
 
 const NAVBAR_CONTAINER_TAB_INDEX: isize = 0;
 const NAVBAR_GROUP_TAB_INDEX: isize = 1;

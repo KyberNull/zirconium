@@ -13,11 +13,11 @@ pub mod pane_group;
 pub mod path_list {
     pub use util::path_list::{PathList, SerializedPathList};
 }
+pub mod focus_follows_mouse;
 pub mod path_link;
 mod persistence;
 pub mod searchable;
 pub mod security_modal;
-pub mod focus_follows_mouse;
 mod status_bar;
 pub mod tasks;
 mod theme_preview;
@@ -5505,7 +5505,7 @@ impl Workspace {
                 serialize_workspace = *focus_changed || pane != self.active_pane();
                 if pane == self.active_pane() {
                     self.active_item_path_changed(*focus_changed, window, cx);
-                            } else if *local {
+                } else if *local {
                     self.set_active_pane(pane, window, cx);
                 }
             }
@@ -6339,10 +6339,9 @@ impl Workspace {
         this.update_in(cx, |this, window, cx| {
             let state = this.follower_states.get_mut(&leader_id.into())?;
             item.set_leader_id(Some(leader_id.into()), window, cx);
-            state.items_by_leader_view_id.insert(
-                id,
-                FollowerView { view: item },
-            );
+            state
+                .items_by_leader_view_id
+                .insert(id, FollowerView { view: item });
 
             Some(())
         })
@@ -6392,9 +6391,7 @@ impl Workspace {
                         })
                     });
 
-                    view.map(|view| {
-                        entry.insert(FollowerView { view })
-                    })
+                    view.map(|view| entry.insert(FollowerView { view }))
                 }
             };
 

@@ -252,7 +252,6 @@ impl HeadlessProject {
         session.add_entity_request_handler(BufferStore::handle_update_buffer);
         session.add_entity_message_handler(BufferStore::handle_close_buffer);
 
-
         BufferStore::init(&session);
         WorktreeStore::init(&session);
         SettingsObserver::init(&session);

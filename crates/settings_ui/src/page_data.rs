@@ -1,8 +1,5 @@
 use gpui::{Action as _, App};
-use settings::{
-    EditPredictionDataCollectionChoice,
-    LanguageSettingsContent, SettingsContent,
-};
+use settings::{EditPredictionDataCollectionChoice, LanguageSettingsContent, SettingsContent};
 use std::sync::Arc;
 use strum::IntoDiscriminant as _;
 use theme::SystemAppearance;
@@ -12,9 +9,9 @@ use crate::{
     ActionLink, DynamicItem, PROJECT, SettingField, SettingItem, SettingsFieldMetadata,
     SettingsPage, SettingsPageItem, SubPageLink, USER, active_language, all_language_names,
     pages::{
-        render_edit_prediction_setup_page, render_external_agents_page,
-        render_llm_providers_page, render_mcp_servers_page, render_sandbox_settings_page,
-        render_skills_setup_page, render_tool_permissions_setup_page,
+        render_edit_prediction_setup_page, render_external_agents_page, render_llm_providers_page,
+        render_mcp_servers_page, render_sandbox_settings_page, render_skills_setup_page,
+        render_tool_permissions_setup_page,
     },
 };
 
@@ -22,7 +19,6 @@ const DEFAULT_STRING: String = String::new();
 /// A default empty string reference. Useful in `pick` functions for cases either in dynamic item fields, or when dealing with `settings::Maybe`
 /// to avoid the "NO DEFAULT" case.
 const DEFAULT_EMPTY_STRING: Option<&String> = Some(&DEFAULT_STRING);
-
 
 macro_rules! concat_sections {
     (@vec, $($arr:expr),+ $(,)?) => {{

@@ -1,14 +1,13 @@
 use crate::{
-    AppState, CollaboratorId, FollowerState, Pane, Workspace,
-    WorkspaceSettings,
+    AppState, CollaboratorId, FollowerState, Pane, Workspace, WorkspaceSettings,
     pane_group::element::pane_axis,
     workspace_settings::{PaneSplitDirectionHorizontal, PaneSplitDirectionVertical},
 };
 use anyhow::Result;
 use collections::HashMap;
 use gpui::{
-    Along, AnyView, AnyWeakView, Axis, Bounds, Entity, Hsla, IntoElement, Pixels,
-    Point, StyleRefinement, WeakEntity, Window, point, size,
+    Along, AnyView, AnyWeakView, Axis, Bounds, Entity, Hsla, IntoElement, Pixels, Point,
+    StyleRefinement, WeakEntity, Window, point, size,
 };
 use parking_lot::Mutex;
 use project::Project;

@@ -30,7 +30,6 @@ use std::{
 use ui::{Color, Icon, IntoElement, Label, LabelCommon};
 use util::ResultExt;
 
-
 #[derive(Clone, Copy, Debug)]
 pub struct SaveOptions {
     pub format: bool,

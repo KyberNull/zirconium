@@ -16,15 +16,15 @@ use buffer_diff::{BufferDiff, DiffHunkSecondaryStatus, DiffHunkStatus, DiffHunkS
 use collections::HashMap;
 use fs::Fs as _;
 use gpui::{
-    BackgroundExecutor, DismissEvent, TaskExt, TestAppContext, UpdateGlobal,
-    VisualTestContext, WindowBounds, WindowOptions, div,
+    BackgroundExecutor, DismissEvent, TaskExt, TestAppContext, UpdateGlobal, VisualTestContext,
+    WindowBounds, WindowOptions, div,
 };
 use indoc::indoc;
 use language::{
     BracketPair, BracketPairConfig,
     Capability::ReadWrite,
-    IndentGuideSettings, LanguageConfig, LanguageMatcher,
-    LanguageName, LanguageQueries, PLAIN_TEXT, Point,
+    IndentGuideSettings, LanguageConfig, LanguageMatcher, LanguageName, LanguageQueries,
+    PLAIN_TEXT, Point,
     language_settings::{CompletionSettingsContent, FormatterList, LanguageSettingsContent},
     tree_sitter_python,
 };
