@@ -4,9 +4,18 @@ use anyhow::Context as _;
 use language_core::{LanguageConfig, LanguageQueries, QueryFile, QueryFileContents};
 use rust_embed::RustEmbed;
 
+// Grammars that only tests exercise are kept on disk so editor and language tests can load their
+// queries, but are left out of the embedded assets of regular builds.
 #[derive(RustEmbed)]
 #[folder = "src/"]
 #[exclude = "*.rs"]
+#[cfg_attr(not(feature = "test-support"), exclude = "bash/*")]
+#[cfg_attr(not(feature = "test-support"), exclude = "c/*")]
+#[cfg_attr(not(feature = "test-support"), exclude = "go/*")]
+#[cfg_attr(not(feature = "test-support"), exclude = "python/*")]
+#[cfg_attr(not(feature = "test-support"), exclude = "rust/*")]
+#[cfg_attr(not(feature = "test-support"), exclude = "tsx/*")]
+#[cfg_attr(not(feature = "test-support"), exclude = "typescript/*")]
 struct GrammarDir;
 
 /// Register all built-in native tree-sitter grammars with the provided registration function.
@@ -16,27 +25,12 @@ struct GrammarDir;
 #[cfg(feature = "load-grammars")]
 pub fn native_grammars() -> Vec<(&'static str, tree_sitter::Language)> {
     vec![
-        ("bash", tree_sitter_bash::LANGUAGE.into()),
-        ("c", tree_sitter_c::LANGUAGE.into()),
-        ("cpp", tree_sitter_cpp::LANGUAGE.into()),
-        ("css", tree_sitter_css::LANGUAGE.into()),
         ("diff", tree_sitter_diff::LANGUAGE.into()),
-        ("go", tree_sitter_go::LANGUAGE.into()),
-        ("gomod", tree_sitter_go_mod::LANGUAGE.into()),
-        ("gowork", tree_sitter_gowork::LANGUAGE.into()),
-        ("jsdoc", tree_sitter_jsdoc::LANGUAGE.into()),
         ("json", tree_sitter_json::LANGUAGE.into()),
         ("jsonc", tree_sitter_json::LANGUAGE.into()),
         ("markdown", tree_sitter_md::LANGUAGE.into()),
         ("markdown-inline", tree_sitter_md::INLINE_LANGUAGE.into()),
-        ("python", tree_sitter_python::LANGUAGE.into()),
         ("regex", tree_sitter_regex::LANGUAGE.into()),
-        ("rust", tree_sitter_rust::LANGUAGE.into()),
-        ("tsx", tree_sitter_typescript::LANGUAGE_TSX.into()),
-        (
-            "typescript",
-            tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
-        ),
         ("yaml", tree_sitter_yaml::LANGUAGE.into()),
         ("gitcommit", tree_sitter_gitcommit::LANGUAGE.into()),
     ]

@@ -16,7 +16,7 @@ doctest = false
 test-support = [
     "rand",
     "collections/test-support",
-    "grammars",
+    "grammars/test-support",
     "lsp/test-support",
     "text/test-support",
     "tree-sitter-rust",
@@ -84,7 +84,7 @@ diffy = "0.4.2"
 [dev-dependencies]
 collections = { workspace = true, features = ["test-support"] }
 ctor.workspace = true
-grammars.workspace = true
+grammars = { workspace = true, features = ["test-support"] }
 gpui = { workspace = true, features = ["test-support"] }
 indoc.workspace = true
 lsp = { workspace = true, features = ["test-support"] }
