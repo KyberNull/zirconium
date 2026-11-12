@@ -80,14 +80,6 @@ This subprocessor list is reviewed regularly. Zed will notify customers of mater
 
 ---
 
-## Collaboration Services
-
-| Subprocessor | Purpose                                                        | Data Location |
-| ------------ | -------------------------------------------------------------- | ------------- |
-| **LiveKit**  | Real-time audio/video and collaborative session infrastructure | United States |
-
----
-
 ## AI Services (Zed-Hosted Models)
 
 _These subprocessors apply only when customers opt to use Zed's hosted AI models. When users supply their own API keys, or use external agents, data is sent directly to the provider and does not pass through Zed's infrastructure._

@@ -116,9 +116,7 @@ use anyhow::{Context as _, Result, anyhow, bail};
 use blink_manager::BlinkManager;
 use client::{Collaborator, ParticipantIndex, parse_zed_link};
 use clock::ReplicaId;
-use code_context_menus::{
-    CodeContextMenu, CompletionsMenu, ContextMenuOrigin,
-};
+use code_context_menus::{CodeContextMenu, CompletionsMenu, ContextMenuOrigin};
 use collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use convert_case::{Case, Casing};
 use display_map::*;
@@ -142,8 +140,8 @@ use gpui::{
     Modifiers, MouseButton, MouseDownEvent, MouseMoveEvent, PaintQuad, ParentElement, Pixels,
     PressureStage, Render, ScrollHandle, SharedString, SharedUri, Size, Stateful, Styled,
     Subscription, Task, TextRun, TextStyle, TextStyleRefinement, UTF16Selection, UnderlineStyle,
-    WeakEntity, WeakFocusHandle, Window, div, point, prelude::*,
-    pulsating_between, px, relative, size,
+    WeakEntity, WeakFocusHandle, Window, div, point, prelude::*, pulsating_between, px, relative,
+    size,
 };
 use hover_links::{HoverLink, HoveredLinkState, find_file};
 use hover_popover::{HoverState, hide_hover};

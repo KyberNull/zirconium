@@ -7,171 +7,6 @@ import "core.proto";
 import "git.proto";
 import "lsp.proto";
 import "worktree.proto";
-
-message CreateRoom {}
-
-message CreateRoomResponse {
-  Room room = 1;
-  optional LiveKitConnectionInfo live_kit_connection_info = 2;
-}
-
-message JoinRoom {
-  uint64 id = 1;
-}
-
-message JoinRoomResponse {
-  Room room = 1;
-  optional uint64 channel_id = 2;
-  optional LiveKitConnectionInfo live_kit_connection_info = 3;
-}
-
-message RejoinRoom {
-  uint64 id = 1;
-  repeated UpdateProject reshared_projects = 2;
-  repeated RejoinProject rejoined_projects = 3;
-}
-
-message RejoinRemoteProjects {
-  repeated RejoinProject rejoined_projects = 1;
-}
-
-message RejoinRemoteProjectsResponse {
-  repeated RejoinedProject rejoined_projects = 1;
-}
-
-message RejoinProject {
-  uint64 id = 1;
-  repeated RejoinWorktree worktrees = 2;
-  repeated RejoinRepository repositories = 3;
-}
-
-message RejoinWorktree {
-  uint64 id = 1;
-  uint64 scan_id = 2;
-}
-
-message RejoinRepository {
-  uint64 id = 1;
-  uint64 scan_id = 2;
-}
-
-message RejoinRoomResponse {
-  Room room = 1;
-  repeated ResharedProject reshared_projects = 2;
-  repeated RejoinedProject rejoined_projects = 3;
-  // Field 4 (live_kit_connection_info) was used by the reverted channel-rejoin
-  // LiveKit token-refresh fix (#59388/#59195). Reserved so the number is not
-  // reused with an incompatible type if/when that fix is reattempted.
-  reserved 4;
-  reserved "live_kit_connection_info";
-}
-
-message ResharedProject {
-  uint64 id = 1;
-  repeated Collaborator collaborators = 2;
-}
-
-message RejoinedProject {
-  uint64 id = 1;
-  repeated WorktreeMetadata worktrees = 2;
-  repeated Collaborator collaborators = 3;
-  reserved 4, 5;
-}
-
-message LeaveRoom {}
-
-message Room {
-  uint64 id = 1;
-  repeated Participant participants = 2;
-  repeated PendingParticipant pending_participants = 3;
-  repeated Follower followers = 4;
-  string livekit_room = 5;
-}
-
-message Participant {
-  uint64 user_id = 1;
-  PeerId peer_id = 2;
-  repeated ParticipantProject projects = 3;
-  ParticipantLocation location = 4;
-  uint32 participant_index = 5;
-  ChannelRole role = 6;
-  reserved 7;
-}
-
-message PendingParticipant {
-  uint64 user_id = 1;
-  uint64 calling_user_id = 2;
-  optional uint64 initial_project_id = 3;
-}
-
-message ParticipantProject {
-  uint64 id = 1;
-  repeated string worktree_root_names = 2;
-}
-
-message Follower {
-  PeerId leader_id = 1;
-  PeerId follower_id = 2;
-  uint64 project_id = 3;
-}
-
-message ParticipantLocation {
-  oneof variant {
-    SharedProject shared_project = 1;
-    UnsharedProject unshared_project = 2;
-    External external = 3;
-  }
-
-  message SharedProject {
-    uint64 id = 1;
-  }
-
-  message UnsharedProject {}
-
-  message External {}
-}
-
-message Call {
-  uint64 room_id = 1;
-  uint64 called_user_id = 2;
-  optional uint64 initial_project_id = 3;
-}
-
-message IncomingCall {
-  uint64 room_id = 1;
-  uint64 calling_user_id = 2;
-  repeated uint64 participant_user_ids = 3;
-  optional ParticipantProject initial_project = 4;
-}
-
-message CallCanceled {
-  uint64 room_id = 1;
-}
-
-message CancelCall {
-  uint64 room_id = 1;
-  uint64 called_user_id = 2;
-}
-
-message DeclineCall {
-  uint64 room_id = 1;
-}
-
-message UpdateParticipantLocation {
-  uint64 room_id = 1;
-  ParticipantLocation location = 2;
-}
-
-message RoomUpdated {
-  Room room = 1;
-}
-
-message LiveKitConnectionInfo {
-  string server_url = 1;
-  string token = 2;
-  bool can_publish = 3;
-}
-
 message ShareProject {
   uint64 room_id = 1;
   repeated WorktreeMetadata worktrees = 2;
@@ -436,8 +271,38 @@ message Contact {
   bool busy = 3;
 }
 
-message SetRoomParticipantRole {
-  uint64 room_id = 1;
-  uint64 user_id = 2;
-  ChannelRole role = 3;
+message RejoinRemoteProjects {
+  repeated RejoinProject rejoined_projects = 1;
+}
+
+message RejoinRemoteProjectsResponse {
+  repeated RejoinedProject rejoined_projects = 1;
+}
+
+message RejoinProject {
+  uint64 id = 1;
+  repeated RejoinWorktree worktrees = 2;
+  repeated RejoinRepository repositories = 3;
+}
+
+message RejoinWorktree {
+  uint64 id = 1;
+  uint64 scan_id = 2;
+}
+
+message RejoinRepository {
+  uint64 id = 1;
+  uint64 scan_id = 2;
+}
+
+message ResharedProject {
+  uint64 id = 1;
+  repeated Collaborator collaborators = 2;
+}
+
+message RejoinedProject {
+  uint64 id = 1;
+  repeated WorktreeMetadata worktrees = 2;
+  repeated Collaborator collaborators = 3;
+  reserved 4, 5;
 }
