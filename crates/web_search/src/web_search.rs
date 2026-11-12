@@ -1,9 +1,21 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use cloud_llm_client::WebSearchResponse;
 use collections::HashMap;
 use gpui::{App, AppContext as _, Context, Entity, Global, SharedString, Task};
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct WebSearchResponse {
+    pub results: Vec<WebSearchResult>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct WebSearchResult {
+    pub title: String,
+    pub url: String,
+    pub text: String,
+}
 
 pub fn init(cx: &mut App) {
     let registry = cx.new(|_cx| WebSearchRegistry::default());

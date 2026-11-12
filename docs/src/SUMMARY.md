@@ -23,7 +23,6 @@
 - [Running & Testing](./running-testing.md)
   - [Terminal](./terminal.md)
   - [Tasks](./tasks.md)
-  - [REPL](./repl.md)
 - [Git](./git.md)
 - [Modelines](./modelines.md)
 
@@ -66,7 +65,6 @@
 
 - [Authenticate](./authentication.md)
 - [Plans & Pricing](./account/plans-and-pricing.md)
-- [Zed-Hosted Models](./account/zed-hosted-models.md)
 - [Billing](./account/billing.md)
 
 # Zed Business

@@ -90,7 +90,6 @@ pub struct Grammar {
     pub highlights_config: Option<HighlightsConfig>,
     pub brackets_config: Option<BracketsConfig>,
     pub redactions_config: Option<RedactionConfig>,
-    pub runnable_config: Option<RunnableConfig>,
     pub indents_config: Option<IndentConfig>,
     pub outline_config: Option<OutlineConfig>,
     pub text_object_config: Option<TextObjectConfig>,
@@ -172,29 +171,6 @@ pub struct InjectionConfig {
 pub struct RedactionConfig {
     pub query: Query,
     pub redaction_capture_ix: u32,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum RunnableCapture {
-    /// `@run` — marks the node that identifies the runnable (e.g. the test
-    /// function name, the subtest string literal).
-    Run,
-    /// `@run_item` — marks one candidate runnable inside a larger grammar
-    /// match. Used by the per-match dispatch pipeline so a single tree-sitter
-    /// match can produce multiple runnables (e.g. Go table-test rows).
-    RunItem,
-    /// Any other named capture, exposed by name to language resolvers and used
-    /// to populate `RunnableRange::extra_captures`.
-    Named(SharedString),
-}
-
-pub struct RunnableConfig {
-    pub query: Query,
-    /// A mapping from capture index to capture kind
-    pub extra_captures: Vec<RunnableCapture>,
-    /// `true` if the query uses `@run_item`, the marker for matches that
-    /// emit multiple runnables.
-    pub supports_grouped_runnables: bool,
 }
 
 pub struct OverrideConfig {
@@ -308,7 +284,6 @@ impl Grammar {
             injection_config: None,
             override_config: None,
             redactions_config: None,
-            runnable_config: None,
             error_query,
             #[cfg(not(target_family = "wasm"))]
             ts_language: parseable_language
@@ -401,11 +376,6 @@ impl Grammar {
                 .with_redaction_query(query.as_ref(), name)
                 .context("Error loading redaction query")?;
         }
-        if let Some(query) = queries.runnables {
-            self = self
-                .with_runnable_query(query.as_ref())
-                .context("Error loading runnables query")?;
-        }
         if let Some(query) = queries.text_objects {
             self = self
                 .with_text_object_query(query.as_ref(), name)
@@ -436,30 +406,6 @@ impl Grammar {
         self.highlights_config = Some(HighlightsConfig {
             query,
             identifier_capture_indices,
-        });
-
-        Ok(self)
-    }
-
-    pub fn with_runnable_query(mut self, source: &str) -> Result<Self> {
-        let query = Query::new(&self.parseable_language()?, source)?;
-        let extra_captures: Vec<_> = query
-            .capture_names()
-            .iter()
-            .map(|&name| match name {
-                "run" => RunnableCapture::Run,
-                "run_item" => RunnableCapture::RunItem,
-                name => RunnableCapture::Named(name.to_string().into()),
-            })
-            .collect();
-        let supports_grouped_runnables = extra_captures
-            .iter()
-            .any(|capture| matches!(capture, RunnableCapture::RunItem));
-
-        self.runnable_config = Some(RunnableConfig {
-            extra_captures,
-            query,
-            supports_grouped_runnables,
         });
 
         Ok(self)

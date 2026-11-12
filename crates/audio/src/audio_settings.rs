@@ -7,8 +7,6 @@ use settings::{RegisterSetting, Settings};
 pub struct AudioSettings {
     /// Select specific output audio device.
     pub output_audio_device: Option<DeviceId>,
-    /// Select specific input audio device.
-    pub input_audio_device: Option<DeviceId>,
 }
 
 /// Configuration of audio in Zed
@@ -18,10 +16,6 @@ impl Settings for AudioSettings {
         AudioSettings {
             output_audio_device: audio
                 .output_audio_device
-                .as_ref()
-                .and_then(|x| x.0.as_ref().and_then(|id| DeviceId::from_str(&id).ok())),
-            input_audio_device: audio
-                .input_audio_device
                 .as_ref()
                 .and_then(|x| x.0.as_ref().and_then(|id| DeviceId::from_str(&id).ok())),
         }

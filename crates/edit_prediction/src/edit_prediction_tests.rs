@@ -1,3 +1,9 @@
+use crate::predict_edits::{
+    EditPredictionRejectReason, EditPredictionRejection, PredictEditsRequestTrigger,
+    PredictEditsV3Request, PredictEditsV3Response, PredictEditsV4Request, PredictEditsV4Response,
+    RawCompletionChoice, RawCompletionRequest, RawCompletionResponse, RawCompletionUsage,
+    RejectEditPredictionsBody,
+};
 use client::{RefreshLlmTokenListener, UserStore, test::FakeServer};
 use clock::FakeSystemClock;
 use clock::ReplicaId;
@@ -5,15 +11,6 @@ use cloud_api_types::{
     CreateLlmTokenResponse, LlmToken, Organization, OrganizationConfiguration,
     OrganizationEditPredictionConfiguration, OrganizationId, SettledEditPrediction,
     SubmitEditPredictionSettledBatchBody, SubmitEditPredictionSettledResponse,
-};
-use cloud_llm_client::{
-    EditPredictionRejectReason, EditPredictionRejection, PredictEditsRequestTrigger,
-    RejectEditPredictionsBody,
-    predict_edits_v3::{
-        PredictEditsV3Request, PredictEditsV3Response, RawCompletionChoice, RawCompletionRequest,
-        RawCompletionResponse, RawCompletionUsage,
-    },
-    predict_edits_v4::{PredictEditsV4Request, PredictEditsV4Response},
 };
 use db::AppDatabase;
 use edit_prediction_types::EditPredictionRequestTrigger;

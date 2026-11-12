@@ -57,10 +57,7 @@ use crate::components::{
     SettingsSectionHeader, font_picker, icon_theme_picker, render_ollama_model_picker,
     text_field_a11y_state, theme_picker,
 };
-use crate::pages::{
-    CustomAgentForm, LlmProviderForm, McpServerForm, render_input_audio_device_dropdown,
-    render_output_audio_device_dropdown,
-};
+use crate::pages::{CustomAgentForm, LlmProviderForm, McpServerForm};
 
 const NAVBAR_CONTAINER_TAB_INDEX: isize = 0;
 const NAVBAR_GROUP_TAB_INDEX: isize = 1;
@@ -640,8 +637,6 @@ fn init_renderers(cx: &mut App) {
         .add_basic_renderer::<settings::ScanSymlinksSetting>(render_dropdown)
         .add_basic_renderer::<settings::FontSize>(render_editable_number_field)
         .add_basic_renderer::<settings::OllamaModelName>(render_ollama_model_picker)
-        .add_basic_renderer::<settings::AudioInputDeviceName>(render_input_audio_device_dropdown)
-        .add_basic_renderer::<settings::AudioOutputDeviceName>(render_output_audio_device_dropdown)
         .add_basic_renderer::<settings::TerminalBell>(render_dropdown)
         // please semicolon stay on next line
         ;

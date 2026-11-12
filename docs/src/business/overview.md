@@ -11,7 +11,7 @@ It's for teams that want modern AI tooling without security trade-offs, and for 
 
 ## What's included
 
-Every member gets access to all [hosted AI models](../account/zed-hosted-models.md) and [Edit Predictions](../ai/edit-prediction.md).
+Every member gets access to all hosted AI models and [Edit Predictions](../ai/edit-prediction.md).
 
 For the organization:
 

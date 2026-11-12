@@ -171,7 +171,6 @@ Where you might notice differences:
 
 **How to adapt:**
 
-- Use {#kb:jetbrains editor::ToggleCodeActions} for available code actions—the list will vary by language server
 - Ensure your `tsconfig.json` is properly configured so the language server understands your project structure
 - Use Prettier for consistent formatting (it's enabled by default for JS/TS)
 - For code inspection similar to WebStorm's "Inspect Code," check the Diagnostics panel ({#kb:jetbrains diagnostics::Deploy})—ESLint and TypeScript together catch many of the same issues
@@ -325,7 +324,6 @@ Once signed in, just start typing. Zed will offer suggestions inline for you to 
 
 To use other AI models in Zed, you have several options:
 
-- Use Zed's hosted models, with higher rate limits. Requires [authentication](https://zed.dev/docs/authentication) and access through [Zed Pro](https://zed.dev/docs/account/zed-hosted-models.html).
 - Bring your own [API keys](https://zed.dev/docs/ai/use-api-access.html), no authentication needed
 - Use [External Agents like Claude Agent](https://zed.dev/docs/ai/external-agents.html)
 

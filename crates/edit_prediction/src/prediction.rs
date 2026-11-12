@@ -1,6 +1,6 @@
 use std::{ops::Range, sync::Arc};
 
-use cloud_llm_client::{EditPredictionRejectReason, PredictEditsRequestTrigger};
+use crate::predict_edits::{EditPredictionRejectReason, PredictEditsRequestTrigger};
 use edit_prediction_types::{PredictedCursorPosition, interpolate_edits};
 use gpui::{AsyncApp, Entity, SharedString};
 use language::{Anchor, Buffer, BufferSnapshot, EditPreview, TextBufferSnapshot};

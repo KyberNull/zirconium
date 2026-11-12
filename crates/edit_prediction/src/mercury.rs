@@ -1,3 +1,4 @@
+use crate::predict_edits::EditPredictionRejectReason;
 use crate::{
     DebugEvent, EditPredictionFinishedDebugEvent, EditPredictionId, EditPredictionModelInput,
     EditPredictionStartedDebugEvent, EditPredictionStore,
@@ -6,7 +7,6 @@ use crate::{
     zeta::compute_edits,
 };
 use anyhow::{Context as _, Result};
-use cloud_llm_client::EditPredictionRejectReason;
 use credentials_provider::CredentialsProvider;
 use futures::AsyncReadExt as _;
 use gpui::{

@@ -840,7 +840,6 @@ List of `string` values
 {
   "gutter": {
     "line_numbers": true,
-    "runnables": true,
     "breakpoints": true,
     "folds": true,
     "min_line_number_digits": 4,
@@ -852,7 +851,6 @@ List of `string` values
 **Options**
 
 - `line_numbers`: Whether to show line numbers in the gutter
-- `runnables`: Whether to show runnable buttons in the gutter
 - `breakpoints`: Whether to show breakpoints in the gutter
 - `folds`: Whether to show fold buttons in the gutter
 - `min_line_number_digits`: Minimum number of characters to reserve space for in the gutter
@@ -1687,7 +1685,7 @@ This setting enables integration with macOS’s native window tabbing feature. W
 
 - Description: How line endings should be handled for new files and during format and save. This can be specified on a per-language basis.
 - Setting: `line_ending`
-- Default: `detect`
+- Default: `enforce_lf`
 
 **Options**
 
@@ -1773,8 +1771,7 @@ Positive `integer` value between 1 and 32. Values outside of this range will be 
 {
   "status_bar": {
     "active_language_button": true,
-    "cursor_position_button": true,
-    "line_endings_button": false
+    "cursor_position_button": true
   }
 }
 ```
@@ -4485,25 +4482,6 @@ Example command to set the title: `echo -e "\e]2;New Title\007";`
 - Setting: `path_hyperlink_timeout_ms`
 - Default: `1`
 
-## REPL
-
-- Description: Repl settings.
-- Setting: `repl`
-- Default:
-
-```json [settings]
-{
-  "repl": {
-    // Maximum number of columns to keep in REPL's scrollback buffer.
-    // Clamped with [20, 512] range.
-    "max_columns": 128,
-    // Maximum number of lines to keep in REPL's scrollback buffer.
-    // Clamped with [4, 256] range.
-    "max_lines": 32
-  }
-}
-```
-
 ## Theme
 
 - Description: The theme setting can be specified in two forms - either as the name of a theme or as an object containing the `mode`, `dark`, and `light` themes for the Zed UI.
@@ -5232,23 +5210,6 @@ You can define these in user or project settings; project settings are merged on
     "scrollbar": {
       "show": null
     }
-  }
-}
-```
-
-## Calls
-
-- Description: Customize behavior when participating in a call
-- Setting: `calls`
-- Default:
-
-```json [settings]
-{
-  "calls": {
-    // Join calls with the microphone live by default
-    "mute_on_join": false,
-    // Share your project when you are the first to join a channel
-    "share_on_join": false
   }
 }
 ```

@@ -111,7 +111,6 @@ impl Editor {
             .as_ref()
             .and_then(|menu| match menu {
                 CodeContextMenu::Completions(completions_menu) => Some(completions_menu.source),
-                CodeContextMenu::CodeActions(_) => None,
             });
 
         match completions_source {
@@ -171,7 +170,6 @@ impl Editor {
             .as_ref()
             .and_then(|menu| match menu {
                 CodeContextMenu::Completions(completions_menu) => Some(completions_menu.source),
-                CodeContextMenu::CodeActions(_) => None,
             });
 
         let multibuffer_snapshot = self.buffer.read(cx).read(cx);
@@ -689,10 +687,7 @@ impl Editor {
     ) -> Option<Task<Result<()>>> {
         use language::ToOffset as _;
 
-        let CodeContextMenu::Completions(completions_menu) = self.hide_context_menu(window, cx)?
-        else {
-            return None;
-        };
+        let CodeContextMenu::Completions(completions_menu) = self.hide_context_menu(window, cx)?;
 
         let candidate_id = {
             let entries = completions_menu.entries.borrow();
@@ -895,12 +890,9 @@ impl Editor {
 
     pub fn current_completions(&self) -> Option<Vec<project::Completion>> {
         let menu = self.context_menu.borrow();
-        if let CodeContextMenu::Completions(menu) = menu.as_ref()? {
-            let completions = menu.completions.borrow();
-            Some(completions.to_vec())
-        } else {
-            None
-        }
+        let CodeContextMenu::Completions(menu) = menu.as_ref()?;
+        let completions = menu.completions.borrow();
+        Some(completions.to_vec())
     }
 
     #[cfg(test)]

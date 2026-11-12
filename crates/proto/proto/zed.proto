@@ -4,7 +4,7 @@ package zed.messages;
 import "ai.proto";
 import "app.proto";
 import "buffer.proto";
-import "call.proto";
+import "project.proto";
 import "channel.proto";
 import "core.proto";
 import "download.proto";
@@ -30,21 +30,6 @@ message Envelope {
     Ping ping = 7;
     Test test = 8;
     EndStream end_stream = 165;
-
-    CreateRoom create_room = 9;
-    CreateRoomResponse create_room_response = 10;
-    JoinRoom join_room = 11;
-    JoinRoomResponse join_room_response = 12;
-    RejoinRoom rejoin_room = 13;
-    RejoinRoomResponse rejoin_room_response = 14;
-    LeaveRoom leave_room = 15;
-    Call call = 16;
-    IncomingCall incoming_call = 17;
-    CallCanceled call_canceled = 18;
-    CancelCall cancel_call = 19;
-    DeclineCall decline_call = 20;
-    UpdateParticipantLocation update_participant_location = 21;
-    RoomUpdated room_updated = 22;
 
     ShareProject share_project = 23;
     ShareProjectResponse share_project_response = 24;
@@ -124,6 +109,8 @@ message Envelope {
     LeaveChannelBuffer leave_channel_buffer = 129;
     UpdateChannelBufferCollaborators update_channel_buffer_collaborators = 130;
     RejoinChannelBuffers rejoin_channel_buffers = 131;
+    RejoinRemoteProjects rejoin_remote_projects = 186;
+    RejoinRemoteProjectsResponse rejoin_remote_projects_response = 187;
     RejoinChannelBuffersResponse rejoin_channel_buffers_response = 132;
     AckBufferOperation ack_buffer_operation = 133;
 
@@ -148,7 +135,6 @@ message Envelope {
     GetNotificationsResponse get_notifications_response = 151;
     DeleteNotification delete_notification = 152;
     MarkNotificationRead mark_notification_read = 153;
-    SetRoomParticipantRole set_room_participant_role = 156;
 
     UpdateUserChannels update_user_channels = 157;
 
@@ -159,9 +145,6 @@ message Envelope {
     BlameBufferResponse blame_buffer_response = 173;
 
     UpdateNotification update_notification = 174;
-
-    RejoinRemoteProjects rejoin_remote_projects = 186;
-    RejoinRemoteProjectsResponse rejoin_remote_projects_response = 187;
 
     OpenNewBuffer open_new_buffer = 196;
 
@@ -329,9 +312,6 @@ message Envelope {
     GetRemoteProfilingData get_remote_profiling_data = 423;
     GetRemoteProfilingDataResponse get_remote_profiling_data_response = 424;
 
-    SpawnKernel spawn_kernel = 426;
-    SpawnKernelResponse spawn_kernel_response = 427;
-    KillKernel kill_kernel = 428;
     GitRemoveWorktree git_remove_worktree = 431;
     GitRenameWorktree git_rename_worktree = 432;
     GitCreateCheckpoint git_create_checkpoint = 433;
@@ -475,20 +455,3 @@ message FlushBufferedMessagesResponse {}
 
 message RemoteStarted {}
 
-message SpawnKernel {
-  string kernel_name = 1;
-  string working_directory = 2;
-  uint64 project_id = 3;
-  string command = 4;
-  repeated string args = 5;
-}
-
-message SpawnKernelResponse {
-  string kernel_id = 1;
-  string connection_file = 2;
-}
-
-message KillKernel {
-  string kernel_id = 1;
-  uint64 project_id = 2;
-}

@@ -43,10 +43,6 @@ In release mode, the primary user interface is the `cli` crate. You can run it i
 cargo run -p cli
 ```
 
-### WebRTC Notice
-
-Building `webrtc-sys` on FreeBSD currently fails due to missing upstream support and unavailable prebuilt binaries. As a result, collaboration features that depend on WebRTC (audio calls and screen sharing) are temporarily disabled.
-
 See [Issue #15309: FreeBSD Support] and [Discussion #29550: Unofficial FreeBSD port for Zed] for more.
 
 ## Troubleshooting

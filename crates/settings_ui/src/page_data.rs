@@ -1,8 +1,5 @@
 use gpui::{Action as _, App};
-use settings::{
-    AudioInputDeviceName, AudioOutputDeviceName, EditPredictionDataCollectionChoice,
-    LanguageSettingsContent, SettingsContent,
-};
+use settings::{EditPredictionDataCollectionChoice, LanguageSettingsContent, SettingsContent};
 use std::sync::Arc;
 use strum::IntoDiscriminant as _;
 use theme::SystemAppearance;
@@ -12,9 +9,9 @@ use crate::{
     ActionLink, DynamicItem, PROJECT, SettingField, SettingItem, SettingsFieldMetadata,
     SettingsPage, SettingsPageItem, SubPageLink, USER, active_language, all_language_names,
     pages::{
-        open_audio_test_window, render_edit_prediction_setup_page, render_external_agents_page,
-        render_llm_providers_page, render_mcp_servers_page, render_sandbox_settings_page,
-        render_skills_setup_page, render_tool_permissions_setup_page,
+        render_edit_prediction_setup_page, render_external_agents_page, render_llm_providers_page,
+        render_mcp_servers_page, render_sandbox_settings_page, render_skills_setup_page,
+        render_tool_permissions_setup_page,
     },
 };
 
@@ -22,11 +19,6 @@ const DEFAULT_STRING: String = String::new();
 /// A default empty string reference. Useful in `pick` functions for cases either in dynamic item fields, or when dealing with `settings::Maybe`
 /// to avoid the "NO DEFAULT" case.
 const DEFAULT_EMPTY_STRING: Option<&String> = Some(&DEFAULT_STRING);
-
-const DEFAULT_AUDIO_OUTPUT: AudioOutputDeviceName = AudioOutputDeviceName(None);
-const DEFAULT_EMPTY_AUDIO_OUTPUT: Option<&AudioOutputDeviceName> = Some(&DEFAULT_AUDIO_OUTPUT);
-const DEFAULT_AUDIO_INPUT: AudioInputDeviceName = AudioInputDeviceName(None);
-const DEFAULT_EMPTY_AUDIO_INPUT: Option<&AudioInputDeviceName> = Some(&DEFAULT_AUDIO_INPUT);
 
 macro_rules! concat_sections {
     (@vec, $($arr:expr),+ $(,)?) => {{
@@ -73,7 +65,6 @@ pub(crate) fn settings_data(cx: &App) -> Vec<SettingsPage> {
         panels_page(),
         terminal_page(),
         version_control_page(),
-        audio_page(),
         ai_page(cx),
         network_page(),
         developer_page(cx),
@@ -2182,7 +2173,7 @@ fn editor_page() -> SettingsPage {
         ]
     }
 
-    fn gutter_section() -> [SettingsPageItem; 9] {
+    fn gutter_section() -> [SettingsPageItem; 8] {
         [
             SettingsPageItem::SectionHeader("Gutter"),
             SettingsPageItem::SettingItem(SettingItem {
@@ -2218,30 +2209,6 @@ fn editor_page() -> SettingsPage {
                     pick: |settings_content| settings_content.editor.relative_line_numbers.as_ref(),
                     write: |settings_content, value, _| {
                         settings_content.editor.relative_line_numbers = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Show Runnables",
-                description: "Show runnable buttons in the gutter.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("gutter.runnables"),
-                    pick: |settings_content| {
-                        settings_content
-                            .editor
-                            .gutter
-                            .as_ref()
-                            .and_then(|gutter| gutter.runnables.as_ref())
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .editor
-                            .gutter
-                            .get_or_insert_default()
-                            .runnables = value;
                     },
                 }),
                 metadata: None,
@@ -3697,7 +3664,7 @@ fn search_and_files_page() -> SettingsPage {
 }
 
 fn window_and_layout_page() -> SettingsPage {
-    fn status_bar_section() -> [SettingsPageItem; 9] {
+    fn status_bar_section() -> [SettingsPageItem; 8] {
         [
             SettingsPageItem::SectionHeader("Status Bar"),
             SettingsPageItem::SettingItem(SettingItem {
@@ -3783,29 +3750,6 @@ fn window_and_layout_page() -> SettingsPage {
                             .status_bar
                             .get_or_insert_default()
                             .cursor_position_button = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Line Endings Button",
-                description: "Show the active line endings button in the status bar.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("status_bar.line_endings_button"),
-                    pick: |settings_content| {
-                        settings_content
-                            .status_bar
-                            .as_ref()?
-                            .line_endings_button
-                            .as_ref()
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .status_bar
-                            .get_or_insert_default()
-                            .line_endings_button = value;
                     },
                 }),
                 metadata: None,
@@ -7613,75 +7557,6 @@ fn version_control_page() -> SettingsPage {
             file_diff_section(),
             git_hunks_section(),
         ],
-    }
-}
-
-fn audio_page() -> SettingsPage {
-    fn audio_settings() -> [SettingsPageItem; 3] {
-        [
-            SettingsPageItem::ActionLink(ActionLink {
-                title: "Test Audio".into(),
-                description: Some("Test your microphone and speaker setup".into()),
-                button_text: "Test Audio".into(),
-                on_click: Arc::new(|_settings_window, window, cx| {
-                    open_audio_test_window(window, cx);
-                }),
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Output Audio Device",
-                description: "Select output audio device",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("audio.experimental.output_audio_device"),
-                    pick: |settings_content| {
-                        settings_content
-                            .audio
-                            .as_ref()?
-                            .output_audio_device
-                            .as_ref()
-                            .or(DEFAULT_EMPTY_AUDIO_OUTPUT)
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .audio
-                            .get_or_insert_default()
-                            .output_audio_device = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Input Audio Device",
-                description: "Select input audio device",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("audio.experimental.input_audio_device"),
-                    pick: |settings_content| {
-                        settings_content
-                            .audio
-                            .as_ref()?
-                            .input_audio_device
-                            .as_ref()
-                            .or(DEFAULT_EMPTY_AUDIO_INPUT)
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .audio
-                            .get_or_insert_default()
-                            .input_audio_device = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-        ]
-    }
-
-    SettingsPage {
-        title: "Audio",
-        items: concat_sections![audio_settings()],
     }
 }
 

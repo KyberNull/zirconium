@@ -1,5 +1,5 @@
+use crate::predict_edits::{RawCompletionRequest, RawCompletionResponse};
 use anyhow::{Context as _, Result};
-use cloud_llm_client::predict_edits_v3::{RawCompletionRequest, RawCompletionResponse};
 use futures::AsyncReadExt as _;
 use gpui::{App, AppContext as _, Entity, Global, SharedString, Task, http_client};
 use language::language_settings::{OpenAiCompatibleEditPredictionSettings, all_language_settings};

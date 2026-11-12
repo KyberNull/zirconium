@@ -51,7 +51,7 @@ Profiles are stored under `agent.profiles` in your settings.
         "enable_all_context_servers": false,
         "context_servers": {},
         "default_model": {
-          "provider": "zed.dev",
+          "provider": "anthropic",
           "model": "claude-sonnet-4-5"
         }
       }

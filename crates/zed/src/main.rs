@@ -677,13 +677,12 @@ fn main() {
             app_state.user_store.clone(),
             cx,
         );
-        language_models::init(app_state.user_store.clone(), app_state.client.clone(), cx);
+        language_models::init(app_state.client.clone(), cx);
         acp_tools::init(cx);
         zed::telemetry_log::init(cx);
         zed::remote_debug::init(cx);
         edit_prediction_ui::init(cx);
         web_search::init(cx);
-        web_search_providers::init(app_state.client.clone(), app_state.user_store.clone(), cx);
         snippet_provider::init(cx);
         edit_prediction_registry::init(app_state.client.clone(), app_state.user_store.clone(), cx);
         let prompt_builder = PromptBuilder::load(app_state.fs.clone(), stdout_is_a_pty(), cx);
@@ -702,7 +701,6 @@ fn main() {
         );
         zed::watch_user_agents_md(app_state.fs.clone(), cx);
 
-        repl::init(app_state.fs.clone(), cx);
         recent_projects::init(cx);
         dev_container::init(cx);
 
@@ -710,7 +708,6 @@ fn main() {
 
         editor::init(cx);
         image_viewer::init(cx);
-        repl::notebook::init(cx);
 
         audio::init(cx);
         workspace::init(app_state.clone(), cx);
@@ -738,9 +735,7 @@ fn main() {
         vim::init(cx);
         terminal_view::init(cx);
         journal::init(app_state.clone(), cx);
-        encoding_selector::init(cx);
         language_selector::init(cx);
-        line_ending_selector::init(cx);
         theme_selector::init(cx);
         settings_profile_selector::init(cx);
         language_tools::init(cx);

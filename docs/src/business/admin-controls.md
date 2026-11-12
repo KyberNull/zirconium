@@ -23,7 +23,7 @@ This control is configured from the Data & Privacy page in the organization dash
 
 ## Hosted AI models
 
-The **Zed Model Provider** toggle controls whether members can use Zed's [hosted AI models](../account/zed-hosted-models.md):
+The **Zed Model Provider** toggle controls whether members can use Zed's hosted AI models:
 
 - **On:** Members can use Zed's hosted models for AI features.
 - **Off:** Members must bring their own model access via [LLM Providers](../ai/llm-providers.md) or use [External Agents](../ai/external-agents.md) for AI features.

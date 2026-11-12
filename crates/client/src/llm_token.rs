@@ -2,7 +2,7 @@ use super::{Client, UserStore};
 use anyhow::anyhow;
 use cloud_api_client::LlmApiToken;
 use cloud_api_types::websocket_protocol::MessageToClient;
-use cloud_llm_client::{EXPIRED_LLM_TOKEN_HEADER_NAME, OUTDATED_LLM_TOKEN_HEADER_NAME};
+use cloud_api_types::{EXPIRED_LLM_TOKEN_HEADER_NAME, OUTDATED_LLM_TOKEN_HEADER_NAME};
 use futures::StreamExt;
 use gpui::{
     App, AppContext as _, Context, Entity, EventEmitter, Global, ReadGlobal as _, Subscription,

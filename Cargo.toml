@@ -28,7 +28,6 @@ members = [
     "crates/clock",
     "crates/cloud_api_client",
     "crates/cloud_api_types",
-    "crates/cloud_llm_client",
     "crates/codestral",
     "crates/collections",
     "crates/command_palette",
@@ -52,7 +51,6 @@ members = [
     "crates/edit_prediction_ui",
     "crates/editor",
     "crates/editor_benchmarks",
-    "crates/encoding_selector",
     "crates/env_var",
     "crates/etw_tracing",
     "crates/eval_cli",
@@ -108,11 +106,9 @@ members = [
     "crates/language_model",
     "crates/language_model_core",
     "crates/language_models",
-    "crates/language_models_cloud",
     "crates/language_selector",
     "crates/language_tools",
     "crates/languages",
-    "crates/line_ending_selector",
 
     "crates/llama_cpp",
     "crates/lmstudio",
@@ -159,7 +155,6 @@ members = [
     "crates/remote",
     "crates/remote_connection",
     "crates/remote_server",
-    "crates/repl",
     "crates/reqwest_client",
     "crates/rope",
     "crates/rpc",
@@ -212,7 +207,6 @@ members = [
     "crates/vim_mode_setting",
     "crates/watch",
     "crates/web_search",
-    "crates/web_search_providers",
     "crates/which_key",
     "crates/windows_resources",
     "crates/workspace",
@@ -283,7 +277,6 @@ client = { path = "crates/client" }
 clock = { path = "crates/clock" }
 cloud_api_client = { path = "crates/cloud_api_client" }
 cloud_api_types = { path = "crates/cloud_api_types" }
-cloud_llm_client = { path = "crates/cloud_llm_client" }
 codestral = { path = "crates/codestral" }
 collections = { path = "crates/collections", version = "0.1.0" }
 command_palette = { path = "crates/command_palette" }
@@ -307,7 +300,6 @@ edit_prediction_metrics = { path = "crates/edit_prediction_metrics" }
 edit_prediction_types = { path = "crates/edit_prediction_types" }
 edit_prediction_ui = { path = "crates/edit_prediction_ui" }
 editor = { path = "crates/editor" }
-encoding_selector = { path = "crates/encoding_selector" }
 env_var = { path = "crates/env_var" }
 etw_tracing = { path = "crates/etw_tracing" }
 eval_utils = { path = "crates/eval_utils" }
@@ -358,11 +350,9 @@ language_extension = { path = "crates/language_extension" }
 language_model = { path = "crates/language_model" }
 language_model_core = { path = "crates/language_model_core" }
 language_models = { path = "crates/language_models" }
-language_models_cloud = { path = "crates/language_models_cloud" }
 language_selector = { path = "crates/language_selector" }
 language_tools = { path = "crates/language_tools" }
 languages = { path = "crates/languages" }
-line_ending_selector = { path = "crates/line_ending_selector" }
 
 llama_cpp = { path = "crates/llama_cpp" }
 lmstudio = { path = "crates/lmstudio" }
@@ -408,7 +398,6 @@ release_channel = { path = "crates/release_channel" }
 remote = { path = "crates/remote" }
 remote_connection = { path = "crates/remote_connection" }
 remote_server = { path = "crates/remote_server" }
-repl = { path = "crates/repl" }
 reqwest_client = { path = "crates/reqwest_client" }
 rodio = { git = "https://github.com/RustAudio/rodio", rev = "e50e726ddd0292f6ef9de0dda6b90af4ed1fb66a", features = ["wav", "playback", "wav_output", "recording"] }
 rope = { path = "crates/rope" }
@@ -461,7 +450,6 @@ vim = { path = "crates/vim" }
 vim_mode_setting = { path = "crates/vim_mode_setting" }
 watch = { path = "crates/watch" }
 web_search = { path = "crates/web_search" }
-web_search_providers = { path = "crates/web_search_providers" }
 which_key = { path = "crates/which_key" }
 workspace = { path = "crates/workspace" }
 worktree = { path = "crates/worktree" }
@@ -499,7 +487,6 @@ ashpd = { version = "0.13", default-features = false, features = [
 async-channel = "2.5.0"
 async-compat = "0.2.1"
 async-compression = { version = "0.4", features = ["bzip2", "gzip", "futures-io"] }
-async-dispatcher = "0.1"
 async-fs = "2.1"
 async-io = "2.6.0"
 async-lock = "3.4.2"
@@ -629,11 +616,8 @@ js-sys = "0.3"
 json_dotpath = "1.1"
 jsonschema = "0.37.0"
 jsonwebtoken = "10.0"
-jupyter-protocol = "1.4.0"
-jupyter-websocket-client = "1.1.0"
 libc = "0.2"
 libsqlite3-sys = { version = "0.30.1", features = ["bundled"] }
-libwebrtc = "0.3.26"
 linkify = "0.10.0"
 log = { version = "0.4.16", features = ["kv_unstable_serde", "serde"] }
 lru = "0.16"
@@ -645,7 +629,6 @@ mime = "0.3.17"
 minidumper = "0.9"
 moka = { version = "0.12.10", features = ["sync"] }
 nanoid = "0.4"
-nbformat = "1.2.0"
 nix = "0.29"
 notify-rust = "4"
 nucleo = "0.5"
@@ -742,9 +725,6 @@ resvg = { version = "0.46.0", default-features = false, features = [
     "raster-images",
 ] }
 rsa = "0.9.6"
-runtimelib = { version = "1.4.0", default-features = false, features = [
-    "async-dispatcher-runtime", "aws-lc-rs"
-] }
 rust-embed = { version = "8.11", features = ["include-exclude"] }
 rustc-hash = "2.1.0"
 rustix = { version = "1.1", features = ["fs"] }
@@ -850,7 +830,6 @@ wasm-bindgen-futures = "0.4"
 wasmtime-wasi = "36"
 wax = "0.7"
 web-time = "1.1.0"
-webrtc-sys = "0.3.23"
 wgpu = "29.0.4"
 which = "6.0.0"
 windows-core = "0.61"
@@ -931,7 +910,6 @@ async-process = { git = "https://github.com/zed-industries/async-process.git", r
 async-task = { git = "https://github.com/smol-rs/async-task.git", rev = "b4486cd71e4e94fbda54ce6302444de14f4d190e" }
 windows-capture = { git = "https://github.com/zed-industries/windows-capture.git", rev = "f0d6c1b6691db75461b732f6d5ff56eed002eeb9" }
 calloop = { git = "https://github.com/zed-industries/calloop" }
-libwebrtc = { git = "https://github.com/zed-industries/livekit-rust-sdks", rev = "d0e27be0cdad89eadab3e36207cda0a2b6e359ee" }
 notify = { git = "https://github.com/zed-industries/notify", rev = "0890bbb8ca40a4b5d1f67031698dd7918b37d991" }
 notify-types = { git = "https://github.com/zed-industries/notify", rev = "0890bbb8ca40a4b5d1f67031698dd7918b37d991" }
 
